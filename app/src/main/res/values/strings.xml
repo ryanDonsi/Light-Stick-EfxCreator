@@ -1,0 +1,76 @@
+<resources>
+    <string name="app_name">EFX Creator</string>
+
+    <!-- Common -->
+    <string name="ok">확인</string>
+    <string name="cancel">취소</string>
+    <string name="save">저장</string>
+    <string name="delete">삭제</string>
+    <string name="back">뒤로</string>
+    <string name="edit">편집</string>
+    <string name="export">내보내기</string>
+    <string name="settings">설정</string>
+
+    <!-- EFX List Screen -->
+    <string name="efx_list">EFX 목록</string>
+    <string name="create_new">새로 만들기</string>
+    <string name="no_projects">EFX 프로젝트가 없습니다.\n+ 버튼을 눌러 생성하세요!</string>
+    <string name="music_id">Music ID</string>
+    <string name="no_music">음악 없음</string>
+    <string name="timeline">타임라인</string>
+    <string name="entries">엔트리</string>
+    <string name="delete_project">프로젝트 삭제</string>
+    <string name="delete_project_confirm">정말로 \"%s\"를 삭제하시겠습니까?</string>
+
+    <!-- EFX Edit Screen -->
+    <string name="edit_efx">EFX 편집</string>
+    <string name="efx_name">EFX 이름</string>
+    <string name="music_file">음악 파일</string>
+    <string name="select_music">음악 선택</string>
+    <string name="remove_music">음악 제거</string>
+    <string name="no_timeline_entries">타임라인 엔트리가 없습니다.\n+ 버튼을 눌러 추가하세요!</string>
+    <string name="add_timeline">타임라인 추가</string>
+    <string name="edit_name">이름 편집</string>
+    <string name="storage_permission">저장소 권한</string>
+    <string name="storage_permission_message">파일 선택기를 통해 저장소 권한 없이도 음악 파일에 접근할 수 있습니다. 권한은 Android 13+ 에서 더 나은 사용자 경험을 위해서만 요청됩니다.</string>
+
+    <!-- Timeline Entry Dialog -->
+    <string name="add_timeline_entry">타임라인 엔트리 추가</string>
+    <string name="edit_timeline_entry">타임라인 엔트리 편집</string>
+    <string name="timestamp_ms">타임스탬프 (ms)</string>
+    <string name="effect_type">이펙트 타입</string>
+    <string name="foreground_color">전경색</string>
+    <string name="background_color">배경색</string>
+    <string name="effect_parameters">이펙트 파라미터</string>
+    <string name="transit">트랜지션 (x10ms)</string>
+    <string name="period">주기 (x10ms)</string>
+    <string name="advanced_parameters">고급 파라미터</string>
+
+    <!-- Settings Screen -->
+    <string name="efx_file_storage">EFX 파일 저장</string>
+    <string name="save_location">저장 위치</string>
+    <string name="change_efx_save_location">EFX 저장 위치 변경</string>
+    <string name="music_file_loading">음악 파일 불러오기</string>
+    <string name="default_load_location">기본 불러오기 위치</string>
+    <string name="change_music_load_location">음악 불러오기 위치 변경</string>
+    <string name="about_folder_settings">폴더 설정 안내</string>
+    <string name="folder_settings_info">• EFX 저장 위치: 생성된 .efx 파일이 저장되는 곳\n• 음악 불러오기 위치: 음악 파일 선택 시 기본 폴더\n• 두 위치 모두 사용자 지정 경로 설정 가능</string>
+
+    <!-- Folder Selection -->
+    <string name="select_efx_save_location">EFX 저장 위치 선택</string>
+    <string name="select_music_load_location">음악 불러오기 위치 선택</string>
+    <string name="internal_storage">내부 저장소</string>
+    <string name="internal_storage_desc">앱 전용 저장소 (가장 빠르고 안전)</string>
+    <string name="external_storage">외부 저장소</string>
+    <string name="external_storage_desc">공유 저장소 (파일 관리자에서 접근 가능)</string>
+    <string name="music_folder">음악 폴더</string>
+    <string name="download_folder">다운로드 폴더</string>
+    <string name="custom_path">사용자 지정 경로</string>
+    <string name="custom_path_desc">직접 폴더 경로 입력</string>
+    <string name="enter_folder_path">폴더 경로 입력</string>
+    <string name="absolute_path">절대 경로</string>
+    <string name="example_paths">예시 경로:\n• /storage/emulated/0/Documents/EFX\n• /storage/emulated/0/Music/MyMusic</string>
+    <string name="apply">적용</string>
+    <string name="efx_save_location_changed">EFX 저장 위치가 변경되었습니다.</string>
+    <string name="music_load_location_changed">음악 불러오기 위치가 변경되었습니다.</string>
+</resources>
