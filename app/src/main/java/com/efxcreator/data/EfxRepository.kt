@@ -25,10 +25,6 @@ class EfxRepository(private val context: Context) {
 
     companion object {
         private const val TAG = "EfxRepository"
-
-        // EFX Header 상수
-        private const val EFX_MAGIC = "EFX1"       // Magic string
-        private const val EFX_VERSION = 0x0104     // Version 1.4
     }
 
     // 메타데이터 파일 (항상 내부 저장소)
@@ -238,13 +234,7 @@ class EfxRepository(private val context: Context) {
             payload = defaultPayload
         )
 
-        val header = EfxHeader(
-            magic = EFX_MAGIC,                 // "EFX1"
-            version = EFX_VERSION,             // 0x0104 (Version 1.4)
-            reserved = byteArrayOf(0, 0, 0),   // Reserved field (3 bytes)
-            musicId = 0,
-            entryCount = 1
-        )
+        val header = EfxHeader(entryCount = 1)
 
         val body = EfxBody(
             entries = listOf(defaultEntry)
