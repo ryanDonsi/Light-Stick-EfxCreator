@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.efxcreator.ui
 
 import androidx.compose.foundation.background
@@ -8,8 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,14 +18,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import com.lightstick.efx.EfxEntry
+import com.efxcreator.ui.components.NumberTextField
 import com.lightstick.types.Color
 import com.lightstick.types.Colors
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
+import com.lightstick.efx.EfxEntry
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * ✅ 리팩토링: NumberTextField 컴포넌트 사용
+ *
+ * Timeline Entry 추가/편집 다이얼로그
+ * - NumberTextField로 간결한 코드
+ * - 포커스 시 "0" 자동 지우기
+ * - 숫자 키보드 자동 표시
+ */
 @Composable
 fun TimelineEntryDialog(
     entry: EfxEntry?,
@@ -34,33 +41,23 @@ fun TimelineEntryDialog(
     onSave: (EfxEntry) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
-    // Timestamp (분:초:밀리초)
     val initialTimestamp = entry?.timestampMs ?: lastEntryTimestamp
-    var minutes by remember { mutableIntStateOf((initialTimestamp / 60000).toInt()) }
-    var seconds by remember { mutableIntStateOf(((initialTimestamp % 60000) / 1000).toInt()) }
-    var millis by remember { mutableIntStateOf((initialTimestamp % 1000).toInt()) }
+    val initialMinutes = (initialTimestamp / 60000).toInt()
+    val initialSeconds = ((initialTimestamp % 60000) / 1000).toInt()
+    val initialMillis = (initialTimestamp % 1000).toInt()
 
-    // Effect Type
+    // ✅ 간결해진 상태 변수 (String 불필요)
+    var minutes by remember { mutableIntStateOf(initialMinutes) }
+    var seconds by remember { mutableIntStateOf(initialSeconds) }
+    var millis by remember { mutableIntStateOf(initialMillis) }
+
     var effectType by remember { mutableStateOf(entry?.payload?.effectType ?: EffectType.ON) }
+    var period by remember { mutableIntStateOf(entry?.payload?.period ?: 0) }
 
-    // Period
-    var period by remember {
-        mutableIntStateOf(
-            entry?.payload?.period ?: when (effectType) {
-                EffectType.ON, EffectType.OFF -> 0
-                EffectType.STROBE -> 2
-                EffectType.BLINK -> 5
-                EffectType.BREATH -> 10
-            }
-        )
-    }
-
-    // Color
+    // Colors
     var colorR by remember { mutableIntStateOf(entry?.payload?.color?.r ?: 255) }
     var colorG by remember { mutableIntStateOf(entry?.payload?.color?.g ?: 255) }
     var colorB by remember { mutableIntStateOf(entry?.payload?.color?.b ?: 255) }
-
-    // Background Color
     var bgColorR by remember { mutableIntStateOf(entry?.payload?.backgroundColor?.r ?: 0) }
     var bgColorG by remember { mutableIntStateOf(entry?.payload?.backgroundColor?.g ?: 0) }
     var bgColorB by remember { mutableIntStateOf(entry?.payload?.backgroundColor?.b ?: 0) }
@@ -97,33 +94,38 @@ fun TimelineEntryDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Timestamp
+                // ========== Timestamp ==========
                 Text("Timestamp", style = MaterialTheme.typography.labelMedium)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
-                        value = minutes.toString(),
-                        onValueChange = { minutes = it.toIntOrNull()?.coerceAtLeast(0) ?: 0 },
-                        label = { Text("min") },
+                    // ✅ 간결해진 코드 - NumberTextField 사용
+                    NumberTextField(
+                        value = minutes,
+                        onValueChange = { minutes = it },
+                        label = "min",
                         modifier = Modifier.weight(1f)
                     )
-                    OutlinedTextField(
-                        value = seconds.toString(),
-                        onValueChange = { seconds = it.toIntOrNull()?.coerceIn(0, 59) ?: 0 },
-                        label = { Text("sec") },
+
+                    NumberTextField(
+                        value = seconds,
+                        onValueChange = { seconds = it },
+                        label = "sec",
+                        range = 0..59,
                         modifier = Modifier.weight(1f)
                     )
-                    OutlinedTextField(
-                        value = millis.toString(),
-                        onValueChange = { millis = it.toIntOrNull()?.coerceIn(0, 999) ?: 0 },
-                        label = { Text("ms") },
+
+                    NumberTextField(
+                        value = millis,
+                        onValueChange = { millis = it },
+                        label = "ms",
+                        range = 0..999,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                // Effect Type
+                // ========== Effect Type ==========
                 Text("Effect Type", style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
@@ -169,22 +171,19 @@ fun TimelineEntryDialog(
                     }
                 }
 
-                // Period (범위 표시 추가)
-                OutlinedTextField(
-                    value = period.toString(),
-                    onValueChange = { period = it.toIntOrNull() ?: 0 },
-                    label = {
-                        Text(
-                            if (effectType in listOf(EffectType.ON, EffectType.OFF))
-                                "Transit (0-255)"
-                            else
-                                "Period (0-255)"
-                        )
-                    },
+                // ========== Period / Transit ==========
+                NumberTextField(
+                    value = period,
+                    onValueChange = { period = it },
+                    label = if (effectType in listOf(EffectType.ON, EffectType.OFF))
+                        "Transit (0-255)"
+                    else
+                        "Period (0-255)",
+                    range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Foreground Color (OFF Effect는 제외)
+                // ========== Foreground Color ==========
                 if (effectType != EffectType.OFF) {
                     Text("Foreground Color", style = MaterialTheme.typography.labelMedium)
                     Row(
@@ -211,7 +210,7 @@ fun TimelineEntryDialog(
                     }
                 }
 
-                // Background Color
+                // ========== Background Color ==========
                 if (effectType in listOf(EffectType.BLINK, EffectType.STROBE, EffectType.BREATH)) {
                     Text("Background Color", style = MaterialTheme.typography.labelMedium)
                     Row(
@@ -240,25 +239,26 @@ fun TimelineEntryDialog(
 
                 HorizontalDivider()
 
+                // ========== Advanced Parameters ==========
                 Text("Advanced Parameters", style = MaterialTheme.typography.titleSmall)
 
-                // SPF (약어 제거, 범위 추가)
-                OutlinedTextField(
-                    value = spf.toString(),
-                    onValueChange = { spf = it.toIntOrNull()?.coerceIn(0, 255) ?: 100 },
-                    label = { Text("SPF (0-255)") },
+                NumberTextField(
+                    value = spf,
+                    onValueChange = { spf = it },
+                    label = "SPF (0-255)",
+                    range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Fade (범위 추가)
-                OutlinedTextField(
-                    value = fade.toString(),
-                    onValueChange = { fade = it.toIntOrNull()?.coerceIn(0, 255) ?: 100 },
-                    label = { Text("Fade (0-255)") },
+                NumberTextField(
+                    value = fade,
+                    onValueChange = { fade = it },
+                    label = "Fade (0-255)",
+                    range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Random Color (0 or 1)
+                // Random Color Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -270,51 +270,56 @@ fun TimelineEntryDialog(
                     )
                 }
 
-                // Random Delay (이미 범위 표시 있음)
-                OutlinedTextField(
-                    value = randomDelay.toString(),
-                    onValueChange = { randomDelay = it.toIntOrNull()?.coerceIn(0, 255) ?: 0 },
-                    label = { Text("Random Delay (0-255)") },
+                NumberTextField(
+                    value = randomDelay,
+                    onValueChange = { randomDelay = it },
+                    label = "Random Delay (0-255, x10ms)",
+                    range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (onDelete != null) {
-                    TextButton(onClick = { showDeleteConfirm = true }) {
-                        Text("삭제", color = MaterialTheme.colorScheme.error)
-                    }
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("취소")
-                }
-                TextButton(
-                    onClick = {
-                        val timestampMs = (minutes * 60000L) + (seconds * 1000L) + millis
-                        val payload = LSEffectPayload(
-                            effectType = effectType,
-                            color = Color(colorR, colorG, colorB),
-                            backgroundColor = Color(bgColorR, bgColorG, bgColorB),
-                            period = period,
-                            spf = spf,
-                            fade = fade,
-                            randomColor = randomColor,
-                            randomDelay = randomDelay,
-                            broadcasting = 1,
-                            syncIndex = 0,
-                            effectIndex = 0
+                if (entry != null && onDelete != null) {
+                    TextButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
                         )
-                        onSave(EfxEntry(timestampMs, payload))
+                    ) {
+                        Text("삭제")
                     }
-                ) {
+                }
+                TextButton(onClick = {
+                    val timestampMs = (minutes * 60000L) + (seconds * 1000L) + millis
+                    val payload = LSEffectPayload(
+                        effectType = effectType,
+                        color = Color(colorR, colorG, colorB),
+                        backgroundColor = Color(bgColorR, bgColorG, bgColorB),
+                        period = period,
+                        spf = spf,
+                        fade = fade,
+                        randomColor = randomColor,
+                        randomDelay = randomDelay,
+                        broadcasting = 1,
+                        syncIndex = 0,
+                        effectIndex = 0
+                    )
+                    onSave(EfxEntry(timestampMs, payload))
+                }) {
                     Text("저장")
                 }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
             }
         }
     )
 
-    // Foreground Color Picker
+    // ========== Color Picker Dialogs ==========
     if (showFgColorPicker) {
         ColorPickerDialog(
             title = "전경색 선택",
@@ -329,7 +334,6 @@ fun TimelineEntryDialog(
         )
     }
 
-    // Background Color Picker
     if (showBgColorPicker) {
         ColorPickerDialog(
             title = "배경색 선택",
@@ -344,20 +348,23 @@ fun TimelineEntryDialog(
         )
     }
 
-    // 삭제 확인 다이얼로그
+    // ========== Delete Confirmation Dialog ==========
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Entry 삭제") },
+            title = { Text("Effect 삭제") },
             text = { Text("이 타임라인 엔트리를 삭제하시겠습니까?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onDelete?.invoke()
                         showDeleteConfirm = false
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
-                    Text("삭제", color = MaterialTheme.colorScheme.error)
+                    Text("삭제")
                 }
             },
             dismissButton = {
@@ -370,7 +377,9 @@ fun TimelineEntryDialog(
 }
 
 /**
- * Color Picker Dialog (SDK Colors 전체 사용)
+ * ✅ Color Picker Dialog (SDK Colors 사용)
+ *
+ * RGB 슬라이더와 프리셋 색상으로 색상 선택
  */
 @Composable
 fun ColorPickerDialog(
@@ -394,7 +403,7 @@ fun ColorPickerDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 색상 미리보기
+                // ========== 색상 미리보기 ==========
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -408,7 +417,7 @@ fun ColorPickerDialog(
                         )
                 )
 
-                // RGB 슬라이더
+                // ========== RGB 슬라이더 ==========
                 CompactColorSlider(
                     label = "R",
                     value = red,
@@ -427,7 +436,7 @@ fun ColorPickerDialog(
                     onValueChange = { blue = it }
                 )
 
-                // 프리셋 색상 (SDK Colors 전체)
+                // ========== 프리셋 색상 ==========
                 Text(
                     text = "프리셋",
                     style = MaterialTheme.typography.labelMedium,
@@ -437,10 +446,10 @@ fun ColorPickerDialog(
 
                 // SDK Colors 전체 사용 (11개)
                 val presetColors = listOf(
-                    Colors.RED,
-                    Colors.GREEN,
-                    Colors.BLUE,
-                    Colors.YELLOW,
+                    Color(153, 0, 255),
+                    Color(73,134,232),
+                    Color(255,64,0),
+                    Color(255,153,0),
                     Colors.MAGENTA,
                     Colors.CYAN,
                     Colors.ORANGE,
@@ -470,7 +479,7 @@ fun ColorPickerDialog(
                     }
                 }
 
-                // 두 번째 줄: 5개 + 빈 공간
+                // 두 번째 줄: 5개
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -488,15 +497,16 @@ fun ColorPickerDialog(
                             }
                         )
                     }
+                    // 빈 공간 추가 (6개 맞추기 위해)
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                onColorSelected(Color(red, green, blue))
+                onColorSelected(selectedColor)
             }) {
-                Text("선택")
+                Text("확인")
             }
         },
         dismissButton = {
@@ -508,46 +518,10 @@ fun ColorPickerDialog(
 }
 
 /**
- * 프리셋 색상 버튼
+ * ✅ 컴팩트 RGB 슬라이더
  */
 @Composable
-fun PresetColorButton(
-    color: Color,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(ComposeColor(color.r, color.g, color.b))
-            .border(
-                width = if (isSelected) 2.dp else 0.5.dp,
-                color = if (isSelected)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(6.dp)
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isSelected) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Selected",
-                tint = ComposeColor.White,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
-
-/**
- * 간결한 컬러 슬라이더 (회색 통일, 컴팩트한 크기)
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CompactColorSlider(
+private fun CompactColorSlider(
     label: String,
     value: Int,
     onValueChange: (Int) -> Unit
@@ -559,9 +533,8 @@ fun CompactColorSlider(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(24.dp),
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.width(20.dp)
         )
 
         Slider(
@@ -626,4 +599,40 @@ fun CompactColorSlider(
             fontWeight = FontWeight.Medium
         )
     }
+}
+
+/**
+ * ✅ 프리셋 색상 버튼
+ */
+@Composable
+private fun RowScope.PresetColorButton(
+    color: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(6.dp))
+            .background(ComposeColor(color.r, color.g, color.b))
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(6.dp)
+            )
+            .then(
+                if (!isSelected) {
+                    Modifier.border(
+                        width = 1.dp,
+                        color = ComposeColor.Black.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                } else Modifier
+            )
+            .clickable(onClick = onClick)
+    )
 }

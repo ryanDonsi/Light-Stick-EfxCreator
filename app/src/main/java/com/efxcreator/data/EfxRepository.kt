@@ -194,18 +194,95 @@ class EfxRepository(private val context: Context) {
     /**
      * EFX 파일 저장 (SDK 사용)
      */
+    /**
+     * EFX 파일 저장 (SDK 사용) - 디버깅 강화
+     */
     fun saveEfx(projectId: String, efx: Efx) {
         try {
             val efxFile = getEfxFile(projectId)
-            efx.write(efxFile)
-            Log.d(TAG, "Saved EFX file: ${efxFile.absolutePath}")
-            Log.d(TAG, "EFX file size: ${efxFile.length()} bytes, entries: ${efx.body.entries.size}")
 
-            if (!efxFile.exists()) {
-                Log.e(TAG, "ERROR: EFX file was not created!")
+            // ✅ 디버깅: 저장 전 상태 확인
+            Log.d(TAG, "═══════════════════════════════════════")
+            Log.d(TAG, "🔍 Saving EFX file...")
+            Log.d(TAG, "   ├─ Project ID: $projectId")
+            Log.d(TAG, "   ├─ File path: ${efxFile.absolutePath}")
+            Log.d(TAG, "   ├─ Directory exists: ${efxFile.parentFile?.exists()}")
+            Log.d(TAG, "   ├─ Directory writable: ${efxFile.parentFile?.canWrite()}")
+            Log.d(TAG, "   └─ File exists (before): ${efxFile.exists()}")
+
+            // ✅ 디버깅: Efx 객체 상태 확인
+            Log.d(TAG, "🔍 EFX Object State:")
+            Log.d(TAG, "   ├─ Header:")
+            Log.d(TAG, "   │   ├─ magic: ${efx.header.magic}")
+            Log.d(TAG, "   │   ├─ version: 0x${efx.header.version.toString(16).uppercase()}")
+            Log.d(TAG, "   │   ├─ musicId: 0x${efx.header.musicId.toUInt().toString(16).uppercase().padStart(8, '0')}")
+            Log.d(TAG, "   │   └─ entryCount: ${efx.header.entryCount}")
+            Log.d(TAG, "   └─ Body:")
+            Log.d(TAG, "       └─ entries.size: ${efx.body.entries.size}")
+
+            // ✅ 디버깅: 각 엔트리 확인
+            efx.body.entries.take(3).forEachIndexed { index, entry ->
+                Log.d(TAG, "       [$index] ts=${entry.timestampMs}ms, effectType=${entry.payload.effectType}")
             }
+            if (efx.body.entries.size > 3) {
+                Log.d(TAG, "       ... and ${efx.body.entries.size - 3} more entries")
+            }
+
+            // ✅ entryCount와 실제 entries 개수 불일치 체크
+            if (efx.header.entryCount != efx.body.entries.size) {
+                Log.e(TAG, "❌ WARNING: entryCount mismatch!")
+                Log.e(TAG, "   header.entryCount = ${efx.header.entryCount}")
+                Log.e(TAG, "   body.entries.size = ${efx.body.entries.size}")
+
+                // 수정: header를 실제 entries 개수로 업데이트
+                val correctedHeader = efx.header.copy(entryCount = efx.body.entries.size)
+                val correctedEfx = Efx(correctedHeader, efx.body)
+
+                Log.d(TAG, "✅ Corrected header.entryCount to ${correctedHeader.entryCount}")
+
+                // 수정된 Efx 사용
+                correctedEfx.write(efxFile)
+            } else {
+                // 정상적으로 저장
+                efx.write(efxFile)
+            }
+
+            // ✅ 디버깅: 저장 후 파일 확인
+            Log.d(TAG, "🔍 After write():")
+            Log.d(TAG, "   ├─ File exists: ${efxFile.exists()}")
+            Log.d(TAG, "   ├─ File size: ${efxFile.length()} bytes")
+            Log.d(TAG, "   └─ File readable: ${efxFile.canRead()}")
+
+            // ✅ 0바이트 파일 에러 체크
+            if (efxFile.exists() && efxFile.length() == 0L) {
+                Log.e(TAG, "❌ ERROR: EFX file is 0 bytes!")
+                Log.e(TAG, "   Attempting to read back the file...")
+
+                try {
+                    val readBack = Efx.read(efxFile)
+                    Log.e(TAG, "   Read back succeeded (unexpected)")
+                } catch (e: Exception) {
+                    Log.e(TAG, "   Read back failed: ${e.message}")
+                }
+            } else if (efxFile.exists()) {
+                Log.d(TAG, "✅ EFX file saved successfully: ${efxFile.length()} bytes")
+
+                // ✅ 검증: 파일을 다시 읽어서 확인
+                try {
+                    val verification = Efx.read(efxFile)
+                    Log.d(TAG, "✅ Verification: Read back ${verification.body.entries.size} entries")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Verification failed: ${e.message}")
+                }
+            } else {
+                Log.e(TAG, "❌ ERROR: EFX file was not created!")
+            }
+
+            Log.d(TAG, "═══════════════════════════════════════")
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving EFX file for $projectId", e)
+            Log.e(TAG, "❌ Error saving EFX file for $projectId", e)
+            e.printStackTrace()
         }
     }
 
