@@ -179,6 +179,9 @@ class EfxRepository(private val context: Context) {
 
             if (efxFile.exists()) {
                 val efx = Efx.read(efxFile)
+                val major = (efx.header.version shr 8) and 0xFF
+                val minor = efx.header.version and 0xFF
+                Log.d(TAG, "Loaded EFX with version: v$major.$minor (0x${efx.header.version.toString(16).padStart(4, '0').uppercase()})")
                 Log.d(TAG, "Loaded EFX with ${efx.body.entries.size} entries")
                 efx
             } else {
@@ -293,17 +296,17 @@ class EfxRepository(private val context: Context) {
         Log.d(TAG, "Creating new EFX")
 
         val defaultPayload = LSEffectPayload(
-            effectType = EffectType.OFF,
-            color = Color(0, 0, 0),
+            effectIndex = 1,  // 첫 번째 Entry는 Index 1
+            effectType = EffectType.ON,
+            color = Color(255, 255, 255),
             backgroundColor = Color(0, 0, 0),
             period = 0,
-            spf = 0,
-            fade = 0,
+            spf = 100,
+            fade = 100,
             randomColor = 0,
             randomDelay = 0,
             broadcasting = 1,
-            syncIndex = 0,
-            effectIndex = 1  // 첫 번째 Entry는 Index 1
+            syncIndex = 0
         )
 
         val defaultEntry = EfxEntry(
