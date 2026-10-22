@@ -162,6 +162,10 @@ class EfxRepository(private val context: Context) {
             }
         }
 
+        // 보관된 음악/분석 결과 삭제
+        deleteMusicFiles(projectId)
+        getAnalysisFile(projectId).delete()
+
         // 메타데이터에서 제거
         val removed = projects.removeAll { it.id == projectId }
         Log.d(TAG, "Removed project from metadata: $removed")
@@ -334,6 +338,86 @@ class EfxRepository(private val context: Context) {
             Log.e(TAG, "Error calculating Music ID for $uri", e)
             0
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // 음악 보관 / 분석 결과 저장
+    // ──────────────────────────────────────────────────────────────
+
+    private val musicDir get() = File(context.filesDir, "music").apply { mkdirs() }
+    private val analysisDir get() = File(context.filesDir, "analysis").apply { mkdirs() }
+
+    private fun getAnalysisFile(projectId: String) = File(analysisDir, "$projectId.json")
+
+    /** 프로젝트에 보관된 음악 파일(없으면 null) */
+    fun getStoredMusicFile(projectId: String): File? =
+        musicDir.listFiles { f -> f.nameWithoutExtension == projectId }?.firstOrNull()
+
+    /**
+     * 선택한 음악을 앱 내부 저장소로 복사한다. SAF Uri 는 권한이 만료될 수 있어,
+     * 재생/분석은 항상 이 사본을 사용한다. 기존 사본은 교체된다.
+     */
+    fun importMusic(projectId: String, uri: Uri): File {
+        val mime = context.contentResolver.getType(uri)
+        val ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime)
+            ?: getDisplayFileName(uri)?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() }
+            ?: "audio"
+        // 임시 파일로 먼저 복사해, 실패하거나 원본이 기존 사본인 경우에도 기존 음악을 잃지 않는다
+        val temp = File(musicDir, "$projectId.$ext.tmp")
+        val input = context.contentResolver.openInputStream(uri)
+            ?: throw java.io.IOException("음악 파일을 열 수 없습니다.")
+        try {
+            input.use { src -> temp.outputStream().use { dst -> src.copyTo(dst) } }
+        } catch (e: Exception) {
+            temp.delete()
+            throw e
+        }
+        deleteMusicFiles(projectId)
+        val dest = File(musicDir, "$projectId.$ext")
+        if (!temp.renameTo(dest)) {
+            temp.copyTo(dest, overwrite = true)
+            temp.delete()
+        }
+        Log.d(TAG, "Imported music: ${dest.absolutePath} (${dest.length()} bytes)")
+        return dest
+    }
+
+    fun deleteMusicFiles(projectId: String) {
+        musicDir.listFiles { f -> f.nameWithoutExtension == projectId }?.forEach { it.delete() }
+    }
+
+    fun saveAnalysis(projectId: String, analysis: com.efxcreator.music.MusicAnalysis) {
+        try {
+            getAnalysisFile(projectId).writeText(gson.toJson(analysis))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving analysis for $projectId", e)
+        }
+    }
+
+    fun loadAnalysis(projectId: String): com.efxcreator.music.MusicAnalysis? {
+        val file = getAnalysisFile(projectId)
+        if (!file.exists()) return null
+        return try {
+            gson.fromJson(file.readText(), com.efxcreator.music.MusicAnalysis::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading analysis for $projectId", e)
+            null
+        }
+    }
+
+    fun deleteAnalysis(projectId: String) {
+        getAnalysisFile(projectId).delete()
+    }
+
+    /** Uri 의 표시 이름(확장자 포함). 조회 실패 시 null. */
+    private fun getDisplayFileName(uri: Uri): String? = try {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (index < 0) null else cursor.getString(index)
+        }
+    } catch (e: Exception) {
+        null
     }
 
     /**

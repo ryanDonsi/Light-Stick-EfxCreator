@@ -11,6 +11,7 @@ import com.efxcreator.music.AutoEfxGenerator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +38,7 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
     private val _autoGenState = MutableStateFlow<AutoGenState>(AutoGenState.Idle)
     val autoGenState: StateFlow<AutoGenState> = _autoGenState.asStateFlow()
 
-    private val autoEfxGenerator = AutoEfxGenerator(application)
+    private val autoEfxGenerator = AutoEfxGenerator()
     private var autoGenJob: Job? = null
 
     companion object {
@@ -98,25 +99,29 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
         _autoGenState.value = AutoGenState.Generating(displayName)
 
         autoGenJob = viewModelScope.launch {
+            val metadata = EfxProjectMetadata(name = displayName)
             try {
-                val efx = autoEfxGenerator.generate(uri)
+                // 재생/분석은 앱 내부 사본을 사용한다 (SAF 권한 만료 방지)
+                val musicFile = withContext(Dispatchers.IO) { repository.importMusic(metadata.id, uri) }
+                val result = autoEfxGenerator.generate(musicFile)
 
-                val metadata = EfxProjectMetadata(
-                    name = displayName,
-                    musicUriString = uri.toString()
-                )
                 withContext(Dispatchers.IO) {
-                    repository.saveEfx(metadata.id, efx)
-                    repository.saveProjectMetadata(metadata)
+                    repository.saveEfx(metadata.id, result.efx)
+                    result.analysis?.let { repository.saveAnalysis(metadata.id, it) }
+                    repository.saveProjectMetadata(
+                        metadata.copy(musicUriString = Uri.fromFile(musicFile).toString())
+                    )
                 }
                 loadProjects()
 
-                Log.d(TAG, "Auto-generated project: ${metadata.name} (${efx.body.entries.size} entries)")
+                Log.d(TAG, "Auto-generated project: ${metadata.name} (${result.efx.body.entries.size} entries)")
                 _autoGenState.value = AutoGenState.Done(metadata.id)
             } catch (e: CancellationException) {
                 // cancelAutoGeneration() 이 이미 상태를 Idle 로 되돌렸다
+                withContext(NonCancellable + Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
                 throw e
             } catch (e: Exception) {
+                withContext(Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
                 Log.e(TAG, "Auto generation failed", e)
                 _autoGenState.value = AutoGenState.Error(e.message ?: "자동 생성에 실패했습니다.")
             }

@@ -54,6 +54,14 @@ class AutoTimelineGeneratorBeat {
     fun generateWithSections(
         musicPath: String, musicId: Int, paletteSize: Int
     ): Pair<List<Pair<Long, ByteArray>>, List<SectionMeta>> {
+        val r = generateAnalyzed(musicPath, musicId, paletteSize)
+        return Pair(r.frames, r.sections)
+    }
+
+    /** 프레임·섹션 메타와 함께 에디터 표시용 [MusicAnalysis](파형/비트/섹션)까지 반환한다. */
+    fun generateAnalyzed(
+        musicPath: String, musicId: Int, paletteSize: Int
+    ): GenerationResult {
         val fileName = musicPath.substringAfterLast("/").substringBeforeLast(".")
         val t0Total = System.currentTimeMillis()
         val effectRuleVersion = AutoTimelineConfig.EFFECT_RULE_VERSION
@@ -77,7 +85,7 @@ class AutoTimelineGeneratorBeat {
         val envelopes = beatInfo.envelopes
         if (envelopes == null || envelopes.full.isEmpty()) {
             Log.w(TAG, "env empty")
-            return Pair(emptyList(), emptyList())
+            return GenerationResult(emptyList(), emptyList(), null)
         }
 
         val lowEnv = envelopes.low
@@ -93,7 +101,7 @@ class AutoTimelineGeneratorBeat {
 
         if (beatTimesMs.isEmpty()) {
             Log.w(TAG, "beat detect FAIL")
-            return Pair(emptyList(), emptyList())
+            return GenerationResult(emptyList(), emptyList(), null)
         }
 
         // 음악 종료 위치 감지
@@ -186,7 +194,15 @@ class AutoTimelineGeneratorBeat {
             sectionDetectorVer, true, tEffect, effectRuleVersion, tOverhead)
         Log.d(TAG, "[PERF] total=${tTotal}ms frames=${frames.size}")
 
-        return Pair(frames.sortedBy { it.first }, sectionMetas)
+        val analysis = MusicAnalysis(
+            durationMs = durationMs,
+            waveformHopMs = MusicAnalysis.WAVEFORM_HOP_MS,
+            waveform = MusicAnalysis.downsampleWaveform(fullEnv, effectiveHopMs),
+            beatTimesMs = beatTimesMs,
+            sections = sectionGroups.map { AnalysisSection(it.startMs, it.endMs, it.type.name) },
+            musicStyle = musicStyle.name
+        )
+        return GenerationResult(frames.sortedBy { it.first }, sectionMetas, analysis)
     }
 
     // ──────────────────────────────────────────────────────────────

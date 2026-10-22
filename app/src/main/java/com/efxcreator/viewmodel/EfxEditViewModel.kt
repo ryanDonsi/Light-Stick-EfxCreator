@@ -7,14 +7,19 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.efxcreator.data.EfxRepository
 import com.efxcreator.model.EfxProjectMetadata
+import com.efxcreator.music.AutoEfxGenerator
+import com.efxcreator.music.MusicAnalysis
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
 import com.lightstick.efx.EfxEntry
 import com.lightstick.efx.EfxHeader
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class EfxEditViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -33,8 +38,28 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
     private val _suggestedName = MutableStateFlow<String?>(null)
     val suggestedName: StateFlow<String?> = _suggestedName.asStateFlow()
 
+    /** 에디터 타임라인용 파형/섹션/비트 분석 결과 (음악이 없거나 분석 전이면 null) */
+    private val _analysis = MutableStateFlow<MusicAnalysis?>(null)
+    val analysis: StateFlow<MusicAnalysis?> = _analysis.asStateFlow()
+
+    private val _analyzing = MutableStateFlow(false)
+    val analyzing: StateFlow<Boolean> = _analyzing.asStateFlow()
+
+    /** 재생/분석에 사용하는 앱 내부 음악 사본 */
+    private val _musicFile = MutableStateFlow<File?>(null)
+    val musicFile: StateFlow<File?> = _musicFile.asStateFlow()
+
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val autoEfxGenerator = AutoEfxGenerator()
+
     companion object {
         private const val TAG = "EfxEditViewModel"
+    }
+
+    fun consumeMessage() {
+        _message.value = null
     }
 
     fun loadProject(projectId: String) {
@@ -48,6 +73,52 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
             _efx.value = loadedEfx
 
             Log.d(TAG, "Loaded project: ${loadedMetadata?.name}")
+
+            loadMusicAndAnalysis(loadedMetadata)
+        }
+    }
+
+    /**
+     * 앱 내부에 보관된 음악 사본과 분석 결과를 불러온다.
+     * 이전 버전 프로젝트(SAF Uri 만 저장)는 가능하면 내부 사본으로 이관하고,
+     * 분석 결과가 없으면 백그라운드에서 분석한다.
+     */
+    private suspend fun loadMusicAndAnalysis(metadata: EfxProjectMetadata?) {
+        metadata ?: return
+        var file = withContext(Dispatchers.IO) { repository.getStoredMusicFile(metadata.id) }
+
+        val legacyUri = metadata.musicUri
+        if (file == null && legacyUri != null) {
+            file = withContext(Dispatchers.IO) {
+                runCatching { repository.importMusic(metadata.id, legacyUri) }.getOrNull()
+            }
+            if (file != null) {
+                val migrated = metadata.copy(musicUriString = Uri.fromFile(file).toString())
+                repository.saveProjectMetadata(migrated)
+                _metadata.value = migrated
+            } else {
+                _message.value = "음악 파일에 접근할 수 없습니다. 음악을 다시 선택해 주세요."
+            }
+        }
+        _musicFile.value = file
+        _analysis.value = withContext(Dispatchers.IO) { repository.loadAnalysis(metadata.id) }
+
+        if (file != null && _analysis.value == null) runAnalysis(metadata.id, file)
+    }
+
+    private suspend fun runAnalysis(projectId: String, file: File) {
+        _analyzing.value = true
+        try {
+            val result = autoEfxGenerator.analyze(file)
+            withContext(Dispatchers.IO) { repository.saveAnalysis(projectId, result) }
+            _analysis.value = result
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Analysis failed", e)
+            _message.value = e.message ?: "음악 분석에 실패했습니다."
+        } finally {
+            _analyzing.value = false
         }
     }
 
@@ -91,13 +162,34 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveProjectMetadata(updatedMetadata)
                 _metadata.value = updatedMetadata
 
+                // 보관된 음악/분석 결과 삭제
+                repository.deleteMusicFiles(currentMetadata.id)
+                repository.deleteAnalysis(currentMetadata.id)
+                _musicFile.value = null
+                _analysis.value = null
+
                 // 제안 이름 초기화
                 _suggestedName.value = null
 
                 Log.d(TAG, "Music removed")
             } else {
-                // 음악 ID 계산 (SDK 사용)
-                val musicId = repository.calculateMusicId(uri)
+                // 앱 내부로 복사 후 그 사본으로 음악 ID 계산 (SDK 사용)
+                val file = try {
+                    withContext(Dispatchers.IO) { repository.importMusic(currentMetadata.id, uri) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Music import failed", e)
+                    _message.value = "음악 파일을 읽을 수 없습니다: ${e.message}"
+                    return@launch
+                }
+                val musicId = try {
+                    withContext(Dispatchers.IO) { autoEfxGenerator.computeMusicId(file) }
+                } catch (e: Exception) {
+                    _message.value = e.message ?: "음악 ID를 계산할 수 없습니다."
+                    return@launch
+                }
+                repository.deleteAnalysis(currentMetadata.id)
+                _analysis.value = null
+                _musicFile.value = file
 
                 val newHeader = currentEfx.header.copy(musicId = musicId)
                 val updatedEfx = Efx(newHeader, currentEfx.body)
@@ -107,7 +199,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
 
                 // 메타데이터에 음악 URI 저장
                 val updatedMetadata = currentMetadata.copy(
-                    musicUriString = uri.toString(),
+                    musicUriString = Uri.fromFile(file).toString(),
                     updatedAt = System.currentTimeMillis()
                 )
                 repository.saveProjectMetadata(updatedMetadata)
@@ -120,6 +212,8 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 Log.d(TAG, "Music set with ID: 0x${musicId.toUInt().toString(16).uppercase()}")
+
+                runAnalysis(currentMetadata.id, file)
             }
         }
     }

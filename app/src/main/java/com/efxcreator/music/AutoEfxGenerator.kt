@@ -1,7 +1,5 @@
 package com.efxcreator.music
 
-import android.content.Context
-import android.net.Uri
 import android.util.Log
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
@@ -16,52 +14,60 @@ import java.io.File
 import kotlin.coroutines.coroutineContext
 
 /**
- * 음악 파일(Uri) → 자동 분석 → [Efx] 변환.
+ * 음악 파일 → 자동 분석 → [Efx] + [MusicAnalysis].
  *
  * [AutoTimelineGeneratorBeat] 가 만든 (timestampMs, 20바이트 payload) 프레임을
  * Light-Stick-Music 의 EffectEngineController 와 동일하게
  * `EfxEntry(timestampMs, LSEffectPayload.fromByteArray(bytes))` 로 변환한다.
- * 분석 파이프라인은 파일 경로를 요구하므로 Uri 내용을 캐시 디렉토리에 임시 복사해서 사용한다.
+ * 분석 파이프라인은 파일 경로를 요구하므로 앱 내부 저장소에 보관된 음악 파일을 입력으로 받는다.
  */
-class AutoEfxGenerator(private val context: Context) {
+class AutoEfxGenerator {
 
     class GenerationException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+    data class Result(val efx: Efx, val analysis: MusicAnalysis?)
 
     companion object {
         private const val TAG = "AutoEfxGenerator"
     }
 
-    /** CPU 집약적(수십 초 가능)이므로 Dispatchers.Default 에서 실행한다. */
-    suspend fun generate(uri: Uri): Efx = withContext(Dispatchers.Default) {
-        val musicId = try {
-            MusicId.fromUri(context, uri)
-        } catch (e: Exception) {
-            throw GenerationException("음악 ID를 계산할 수 없습니다: ${e.message}", e)
+    /** 이펙트 타임라인까지 자동 생성. CPU 집약적(수십 초 가능)이므로 Dispatchers.Default 에서 실행한다. */
+    suspend fun generate(musicFile: File): Result = withContext(Dispatchers.Default) {
+        val musicId = computeMusicId(musicFile)
+        val r = runPipeline(musicFile, musicId)
+        coroutineContext.ensureActive()
+
+        val entries = framesToEntries(r.frames)
+        if (entries.isEmpty()) {
+            throw GenerationException("비트를 감지하지 못했습니다. 다른 음악 파일을 선택해 주세요.")
         }
+        Log.d(TAG, "Generated ${entries.size} entries, musicId=0x${musicId.toUInt().toString(16)}")
 
-        val tempFile = copyToCache(uri)
-        try {
-            coroutineContext.ensureActive()
-            val frames = try {
-                AutoTimelineGeneratorBeat().generate(
-                    musicPath = tempFile.absolutePath,
-                    musicId = musicId,
-                    paletteSize = AutoTimelineConfig.PALETTE_SIZE
-                )
-            } catch (e: Exception) {
-                throw GenerationException("음악 분석에 실패했습니다: ${e.message}", e)
-            }
-            coroutineContext.ensureActive()
+        Result(Efx(EfxHeader(musicId = musicId, entryCount = entries.size), EfxBody(entries)), r.analysis)
+    }
 
-            val entries = framesToEntries(frames)
-            if (entries.isEmpty()) {
-                throw GenerationException("비트를 감지하지 못했습니다. 다른 음악 파일을 선택해 주세요.")
-            }
-            Log.d(TAG, "Generated ${entries.size} entries, musicId=0x${musicId.toUInt().toString(16)}")
+    /** 이펙트는 만들지 않고 파형/섹션/비트 분석 결과만 필요할 때 사용한다. */
+    suspend fun analyze(musicFile: File): MusicAnalysis = withContext(Dispatchers.Default) {
+        val r = runPipeline(musicFile, computeMusicId(musicFile))
+        r.analysis ?: throw GenerationException("음악 분석에 실패했습니다.")
+    }
 
-            Efx(EfxHeader(musicId = musicId, entryCount = entries.size), EfxBody(entries))
-        } finally {
-            tempFile.delete()
+    fun computeMusicId(musicFile: File): Int = try {
+        MusicId.fromFile(musicFile)
+    } catch (e: Exception) {
+        throw GenerationException("음악 ID를 계산할 수 없습니다: ${e.message}", e)
+    }
+
+    private suspend fun runPipeline(musicFile: File, musicId: Int): GenerationResult {
+        coroutineContext.ensureActive()
+        return try {
+            AutoTimelineGeneratorBeat().generateAnalyzed(
+                musicPath = musicFile.absolutePath,
+                musicId = musicId,
+                paletteSize = AutoTimelineConfig.PALETTE_SIZE
+            )
+        } catch (e: Exception) {
+            throw GenerationException("음악 분석에 실패했습니다: ${e.message}", e)
         }
     }
 
@@ -74,19 +80,4 @@ class AutoEfxGenerator(private val context: Context) {
                 null
             }
         }.sortedBy { it.timestampMs }
-
-    private fun copyToCache(uri: Uri): File {
-        val dir = File(context.cacheDir, "auto_efx").apply { mkdirs() }
-        val file = File.createTempFile("music_", ".tmp", dir)
-        try {
-            val input = context.contentResolver.openInputStream(uri)
-                ?: throw GenerationException("음악 파일을 열 수 없습니다.")
-            input.use { src -> file.outputStream().use { dst -> src.copyTo(dst) } }
-        } catch (e: Exception) {
-            file.delete()
-            if (e is GenerationException) throw e
-            throw GenerationException("음악 파일을 읽을 수 없습니다: ${e.message}", e)
-        }
-        return file
-    }
 }

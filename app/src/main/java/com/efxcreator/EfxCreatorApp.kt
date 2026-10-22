@@ -1,12 +1,14 @@
 package com.efxcreator
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.efxcreator.ui.EfxEditScreen
+import com.efxcreator.ui.editor.EfxTabletEditorScreen
 import com.efxcreator.ui.EfxListScreen
 import com.efxcreator.ui.SettingsScreen
 
@@ -44,10 +46,13 @@ fun EfxCreatorApp() {
             )
         ) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString("projectId") ?: return@composable
-            EfxEditScreen(
-                projectId = projectId,
-                onNavigateBack = { navController.popBackStack() }
-            )
+            // 태블릿 전용 에디터 (파형/섹션 타임라인 + 드래그&드롭 + 재생/Preview)
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                EfxTabletEditorScreen(
+                    projectId = projectId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
         }
 
         // ← 설정 화면 추가
