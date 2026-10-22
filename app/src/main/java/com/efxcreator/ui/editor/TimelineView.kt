@@ -1,6 +1,8 @@
 package com.efxcreator.ui.editor
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.height
@@ -20,7 +22,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -57,6 +62,16 @@ class TimelineState {
         val anchorMs = msAtX(anchorX)
         pxPerMs = (pxPerMs * factor).coerceIn(MIN_PX_PER_MS, MAX_PX_PER_MS)
         viewStartMs = (anchorMs - anchorX / pxPerMs).coerceAtLeast(0f)
+    }
+
+    /**
+     * 핀치 제스처: 이전 중심점(prevCentroidX) 아래에 있던 시각이 새 중심점(centroidX) 아래에
+     * 오도록 줌과 스크롤을 함께 갱신한다 (손가락이 잡은 지점이 따라 움직임).
+     */
+    fun pinch(scale: Float, prevCentroidX: Float, centroidX: Float) {
+        val anchorMs = msAtX(prevCentroidX)
+        pxPerMs = (pxPerMs * scale).coerceIn(MIN_PX_PER_MS, MAX_PX_PER_MS)
+        viewStartMs = (anchorMs - centroidX / pxPerMs).coerceAtLeast(0f)
     }
 
     fun panByMs(deltaMs: Float, totalMs: Long) {
@@ -108,7 +123,7 @@ private class DragHolder {
  * 음악 파형 + 섹션 + 비트 + 이펙트 블록(다음 이펙트까지 구간)을 그리는 타임라인.
  *
  * 제스처: 위쪽(눈금/섹션/파형) 탭·드래그 = 재생 위치 이동, 이펙트 레인의 블록 탭 = 선택,
- * 블록 드래그 = 시간 이동(스냅), 레인의 빈 곳 드래그 = 좌우 스크롤.
+ * 블록 드래그 = 시간 이동(스냅), 레인의 빈 곳 드래그 = 좌우 스크롤, 두 손가락 핀치 = 줌.
  */
 @Composable
 fun TimelineView(
@@ -186,6 +201,29 @@ fun TimelineView(
             .onGloballyPositioned {
                 state.viewWidthPx = it.size.width.toFloat()
                 onBoundsChanged(it.boundsInWindow())
+            }
+            // 두 손가락 핀치 줌 — Initial 패스에서 먼저 보고, 두 손가락이 닿으면 변화를 소비해
+            // 아래의 탭/드래그 감지기가 (이동·시크 도중이던 것도) 취소되게 한다.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val pressed = event.changes.filter { it.pressed && !it.changedToUp() }
+                        if (pressed.size >= 2) {
+                            val a = pressed[0]
+                            val b = pressed[1]
+                            val prevDist = (a.previousPosition - b.previousPosition).getDistance()
+                            val dist = (a.position - b.position).getDistance()
+                            if (prevDist > 0f && dist > 0f) {
+                                val prevCentroidX = (a.previousPosition.x + b.previousPosition.x) / 2f
+                                val centroidX = (a.position.x + b.position.x) / 2f
+                                state.pinch(dist / prevDist, prevCentroidX, centroidX)
+                            }
+                            event.changes.forEach { if (it.positionChanged()) it.consume() }
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
             }
             .pointerInput(Unit) {
                 detectTapGestures { o ->
