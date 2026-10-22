@@ -23,6 +23,7 @@ import com.lightstick.types.Color
 import com.lightstick.types.Colors
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
+import com.lightstick.types.MsgType
 import com.lightstick.efx.EfxEntry
 
 /**
@@ -303,7 +304,8 @@ fun TimelineEntryDialog(
                         randomColor = randomColor,
                         randomDelay = randomDelay,
                         broadcasting = 1,
-                        syncIndex = 0,
+                        groupMask = 0L,
+                        msgType = MsgType.EFFECT,
                         effectIndex = 0
                     )
                     onSave(EfxEntry(timestampMs, payload))

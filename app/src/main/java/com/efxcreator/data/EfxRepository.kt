@@ -16,6 +16,7 @@ import com.lightstick.efx.MusicId
 import com.lightstick.types.Color
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
+import com.lightstick.types.MsgType
 import java.io.File
 
 class EfxRepository(private val context: Context) {
@@ -306,7 +307,8 @@ class EfxRepository(private val context: Context) {
             randomColor = 0,
             randomDelay = 0,
             broadcasting = 1,
-            syncIndex = 0
+            groupMask = 0L,
+            msgType = MsgType.EFFECT
         )
 
         val defaultEntry = EfxEntry(
@@ -334,6 +336,28 @@ class EfxRepository(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error calculating Music ID for $uri", e)
             0
+        }
+    }
+
+    /**
+     * 자동 생성 파이프라인(MediaExtractor 기반)은 content:// Uri를 직접 읽지 못하므로,
+     * 음악 Uri를 캐시 디렉토리의 임시 파일로 복사해 절대 경로를 돌려준다.
+     * 호출 측이 사용 후 반드시 delete() 해야 한다.
+     */
+    fun copyUriToTempAudioFile(uri: Uri): File? {
+        return try {
+            val tempFile = File(context.cacheDir, "auto_gen_${System.currentTimeMillis()}.tmp")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            } ?: run {
+                Log.e(TAG, "Failed to open input stream for $uri")
+                return null
+            }
+            Log.d(TAG, "Copied $uri to temp file: ${tempFile.absolutePath} (${tempFile.length()} bytes)")
+            tempFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Error copying uri to temp file: $uri", e)
+            null
         }
     }
 

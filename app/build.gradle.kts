@@ -71,7 +71,7 @@ android {
 
 dependencies {
     // ⭐ LightStick SDK (AAR 파일)
-    implementation(files("libs/lightstick-sdk-1.4.1.aar"))
+    implementation(files("libs/lightstick-sdk-2.0.0.aar"))
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
@@ -101,6 +101,9 @@ dependencies {
 
     // DocumentFile (SAF)
     implementation(libs.androidx.documentfile)
+
+    // JTransForms (자동 이펙트 생성 파이프라인의 BeatDetectorV2 FFT용)
+    implementation(libs.jtransforms)
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)

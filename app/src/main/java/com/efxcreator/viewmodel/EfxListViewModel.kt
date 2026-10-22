@@ -5,12 +5,18 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.efxcreator.automusic.AutoEfxGenerator
 import com.efxcreator.data.EfxRepository
 import com.efxcreator.model.EfxProjectMetadata
+import com.lightstick.efx.Efx
+import com.lightstick.efx.EfxBody
+import com.lightstick.efx.EfxHeader
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class EfxListViewModel(application: Application) : AndroidViewModel(application) {
@@ -20,6 +26,9 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
 
     private val _projects = MutableStateFlow<List<EfxProjectMetadata>>(emptyList())
     val projects: StateFlow<List<EfxProjectMetadata>> = _projects.asStateFlow()
+
+    private val _isGenerating = MutableStateFlow(false)
+    val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
 
     companion object {
         private const val TAG = "EfxListViewModel"
@@ -65,6 +74,59 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
 
         Log.d(TAG, "Project created successfully")
         return newMetadata.id
+    }
+
+    /**
+     * 음악 파일로부터 Beat/Section/MusicStyle/EffectMatching 파이프라인을 돌려
+     * 이펙트 타임라인을 자동 생성하고, 그 결과로 새 프로젝트를 만든다.
+     *
+     * 생성된 프로젝트는 [EfxEditScreen]에서 그대로 열려 기존 수동 편집 기능으로
+     * 추가 수정할 수 있다. 실패 시(디코딩 실패, 비트 미검출 등) onResult(null) 호출.
+     */
+    fun createProjectFromMusic(uri: Uri, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            _isGenerating.value = true
+            val newProjectId = try {
+                withContext(Dispatchers.Default) {
+                    val musicId = repository.calculateMusicId(uri)
+                    val tempFile = repository.copyUriToTempAudioFile(uri)
+                    if (tempFile == null) {
+                        Log.e(TAG, "createProjectFromMusic: failed to copy $uri to temp file")
+                        return@withContext null
+                    }
+                    try {
+                        val entries = AutoEfxGenerator.generate(tempFile.absolutePath, musicId)
+                        if (entries.isEmpty()) {
+                            Log.w(TAG, "createProjectFromMusic: generated 0 entries for $uri")
+                            null
+                        } else {
+                            val efx = Efx(
+                                EfxHeader(musicId = musicId, entryCount = entries.size),
+                                EfxBody(entries = entries)
+                            )
+                            val newMetadata = EfxProjectMetadata(
+                                name = "New EFX ${_projects.value.size + 1}",
+                                musicUriString = uri.toString()
+                            )
+                            repository.saveEfx(newMetadata.id, efx)
+                            repository.saveProjectMetadata(newMetadata)
+                            Log.d(TAG, "createProjectFromMusic: created ${newMetadata.id} with ${entries.size} entries")
+                            newMetadata.id
+                        }
+                    } finally {
+                        tempFile.delete()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "createProjectFromMusic failed for $uri", e)
+                null
+            } finally {
+                _isGenerating.value = false
+            }
+
+            loadProjects()
+            onResult(newProjectId)
+        }
     }
 
     fun deleteProject(projectId: String) {

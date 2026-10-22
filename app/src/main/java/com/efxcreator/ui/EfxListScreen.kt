@@ -1,6 +1,9 @@
 package com.efxcreator.ui
 
+import android.Manifest
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.model.EfxProjectMetadata
@@ -31,6 +35,35 @@ fun EfxListScreen(
     viewModel: EfxListViewModel = viewModel()
 ) {
     val projects by viewModel.projects.collectAsState()
+    val isGenerating by viewModel.isGenerating.collectAsState()
+
+    var showCreateMenu by remember { mutableStateOf(false) }
+    var showGenerateFailedDialog by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* 권한이 거부돼도 파일 선택기 자체는 동작하므로 별도 처리 불필요 */ }
+
+    val musicPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.createProjectFromMusic(uri) { newProjectId ->
+                if (newProjectId != null) {
+                    onNavigateToEdit(newProjectId)
+                } else {
+                    showGenerateFailedDialog = true
+                }
+            }
+        }
+    }
+
+    fun pickMusicForAutoGenerate() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+        }
+        musicPicker.launch("audio/*")
+    }
 
     Scaffold(
         topBar = {
@@ -45,10 +78,7 @@ fun EfxListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    val newProjectId = viewModel.createNewProject()
-                    onNavigateToEdit(newProjectId)
-                }
+                onClick = { showCreateMenu = true }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "새로 만들기")
             }
@@ -95,6 +125,62 @@ fun EfxListScreen(
                 }
             }
         }
+    }
+
+    // 새 프로젝트 생성 방식 선택 Dialog
+    if (showCreateMenu) {
+        AlertDialog(
+            onDismissRequest = { showCreateMenu = false },
+            title = { Text("새 EFX 만들기") },
+            text = { Text("빈 타임라인으로 시작하거나, 음악 파일을 분석해 이펙트 타임라인을 자동으로 생성할 수 있습니다.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCreateMenu = false
+                    pickMusicForAutoGenerate()
+                }) {
+                    Text("음악으로 자동 생성")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showCreateMenu = false
+                    val newProjectId = viewModel.createNewProject()
+                    onNavigateToEdit(newProjectId)
+                }) {
+                    Text("빈 프로젝트")
+                }
+            }
+        )
+    }
+
+    // 자동 생성 진행 중 오버레이
+    if (isGenerating) {
+        Dialog(onDismissRequest = {}) {
+            Card {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator()
+                    Text("음악을 분석해 이펙트를 생성하는 중...\n(곡 길이에 따라 다소 시간이 걸릴 수 있습니다)")
+                }
+            }
+        }
+    }
+
+    // 자동 생성 실패 안내 Dialog
+    if (showGenerateFailedDialog) {
+        AlertDialog(
+            onDismissRequest = { showGenerateFailedDialog = false },
+            title = { Text("자동 생성 실패") },
+            text = { Text("비트를 감지하지 못했거나 음악 파일을 분석할 수 없습니다. 다른 파일로 다시 시도해 주세요.") },
+            confirmButton = {
+                TextButton(onClick = { showGenerateFailedDialog = false }) {
+                    Text("확인")
+                }
+            }
+        )
     }
 }
 

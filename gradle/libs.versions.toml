@@ -32,6 +32,9 @@ gson = "2.11.0"
 # DocumentFile
 documentfile = "1.0.1"
 
+# JTransForms (BeatDetectorV2 FFT)
+jtransforms = "3.1"
+
 [libraries]
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -61,6 +64,9 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 # DocumentFile
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+
+# JTransForms
+jtransforms = { group = "com.github.wendykierp", name = "JTransforms", version.ref = "jtransforms" }
 
 # Debug
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
