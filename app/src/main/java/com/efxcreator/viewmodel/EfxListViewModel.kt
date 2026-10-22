@@ -7,10 +7,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.efxcreator.data.EfxRepository
 import com.efxcreator.model.EfxProjectMetadata
+import com.efxcreator.music.AutoEfxGenerator
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class EfxListViewModel(application: Application) : AndroidViewModel(application) {
@@ -20,6 +25,20 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
 
     private val _projects = MutableStateFlow<List<EfxProjectMetadata>>(emptyList())
     val projects: StateFlow<List<EfxProjectMetadata>> = _projects.asStateFlow()
+
+    /** 음악 기반 자동 생성 진행 상태 */
+    sealed class AutoGenState {
+        object Idle : AutoGenState()
+        data class Generating(val musicName: String) : AutoGenState()
+        data class Done(val projectId: String) : AutoGenState()
+        data class Error(val message: String) : AutoGenState()
+    }
+
+    private val _autoGenState = MutableStateFlow<AutoGenState>(AutoGenState.Idle)
+    val autoGenState: StateFlow<AutoGenState> = _autoGenState.asStateFlow()
+
+    private val autoEfxGenerator = AutoEfxGenerator(application)
+    private var autoGenJob: Job? = null
 
     companion object {
         private const val TAG = "EfxListViewModel"
@@ -65,6 +84,55 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
 
         Log.d(TAG, "Project created successfully")
         return newMetadata.id
+    }
+
+    /**
+     * 음악 파일을 분석해 이펙트 타임라인을 자동 생성하고 새 프로젝트로 저장한다.
+     * 완료되면 [autoGenState] 가 [AutoGenState.Done] 으로 바뀌며, 이후 편집 화면(EfxEditScreen)에서
+     * 기존 수동 편집 기능으로 추가 수정할 수 있다.
+     */
+    fun createProjectFromMusic(uri: Uri) {
+        if (autoGenJob?.isActive == true) return
+        val displayName = repository.getDisplayName(uri)
+            ?: "New EFX ${_projects.value.size + 1}"
+        _autoGenState.value = AutoGenState.Generating(displayName)
+
+        autoGenJob = viewModelScope.launch {
+            try {
+                val efx = autoEfxGenerator.generate(uri)
+
+                val metadata = EfxProjectMetadata(
+                    name = displayName,
+                    musicUriString = uri.toString()
+                )
+                withContext(Dispatchers.IO) {
+                    repository.saveEfx(metadata.id, efx)
+                    repository.saveProjectMetadata(metadata)
+                }
+                loadProjects()
+
+                Log.d(TAG, "Auto-generated project: ${metadata.name} (${efx.body.entries.size} entries)")
+                _autoGenState.value = AutoGenState.Done(metadata.id)
+            } catch (e: CancellationException) {
+                // cancelAutoGeneration() 이 이미 상태를 Idle 로 되돌렸다
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Auto generation failed", e)
+                _autoGenState.value = AutoGenState.Error(e.message ?: "자동 생성에 실패했습니다.")
+            }
+        }
+    }
+
+    fun cancelAutoGeneration() {
+        autoGenJob?.cancel()
+        _autoGenState.value = AutoGenState.Idle
+    }
+
+    /** Done/Error 상태를 UI 가 처리한 뒤 호출 */
+    fun consumeAutoGenState() {
+        if (_autoGenState.value !is AutoGenState.Generating) {
+            _autoGenState.value = AutoGenState.Idle
+        }
     }
 
     fun deleteProject(projectId: String) {

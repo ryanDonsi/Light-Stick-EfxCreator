@@ -337,6 +337,22 @@ class EfxRepository(private val context: Context) {
     }
 
     /**
+     * Uri 의 표시 이름(확장자 제외) 반환. 조회 실패 시 null.
+     */
+    fun getDisplayName(uri: Uri): String? {
+        return try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (index < 0) null else cursor.getString(index)?.substringBeforeLast(".")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting display name for $uri", e)
+            null
+        }
+    }
+
+    /**
      * .efx 파일을 외부로 익스포트
      */
     fun exportEfx(projectId: String, exportName: String): File {

@@ -31,6 +31,78 @@ fun EfxListScreen(
     viewModel: EfxListViewModel = viewModel()
 ) {
     val projects by viewModel.projects.collectAsState()
+    val autoGenState by viewModel.autoGenState.collectAsState()
+    val context = LocalContext.current
+    var showCreateDialog by remember { mutableStateOf(false) }
+
+    val autoMusicPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) viewModel.createProjectFromMusic(uri)
+    }
+
+    // 자동 생성 완료 → 편집 화면 이동 / 실패 → 안내
+    LaunchedEffect(autoGenState) {
+        when (val state = autoGenState) {
+            is EfxListViewModel.AutoGenState.Done -> {
+                viewModel.consumeAutoGenState()
+                onNavigateToEdit(state.projectId)
+            }
+            is EfxListViewModel.AutoGenState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                viewModel.consumeAutoGenState()
+            }
+            else -> Unit
+        }
+    }
+
+    if (showCreateDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateDialog = false },
+            title = { Text("새 EFX 만들기") },
+            text = { Text("빈 프로젝트에서 직접 편집하거나, 음악을 분석해 이펙트를 자동으로 생성할 수 있습니다.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCreateDialog = false
+                    autoMusicPicker.launch("audio/*")
+                }) {
+                    Text("음악으로 자동 생성")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showCreateDialog = false
+                    val newProjectId = viewModel.createNewProject()
+                    onNavigateToEdit(newProjectId)
+                }) {
+                    Text("빈 프로젝트")
+                }
+            }
+        )
+    }
+
+    (autoGenState as? EfxListViewModel.AutoGenState.Generating)?.let { generating ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("이펙트 자동 생성 중") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(generating.musicName, style = MaterialTheme.typography.bodyMedium)
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text(
+                        "비트·섹션·장르를 분석하고 있습니다. 곡 길이에 따라 수십 초가 걸릴 수 있습니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.cancelAutoGeneration() }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -45,10 +117,7 @@ fun EfxListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    val newProjectId = viewModel.createNewProject()
-                    onNavigateToEdit(newProjectId)
-                }
+                onClick = { showCreateDialog = true }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "새로 만들기")
             }
