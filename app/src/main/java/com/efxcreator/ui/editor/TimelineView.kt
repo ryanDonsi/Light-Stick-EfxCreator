@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -223,6 +224,8 @@ fun TimelineView(
 
     Canvas(
         modifier = modifier
+            // Canvas 는 고유 크기가 없어 폭을 지정하지 않으면 0 이 된다 — 반드시 가로를 채워야 한다
+            .fillMaxWidth()
             .height(TIMELINE_TOTAL_HEIGHT)
             .clipToBounds()
             .onGloballyPositioned {
