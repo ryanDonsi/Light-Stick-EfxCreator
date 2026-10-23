@@ -627,7 +627,7 @@ private fun RowScope.PresetColorButton(
                 if (!isSelected) {
                     Modifier.border(
                         width = 1.dp,
-                        color = ComposeColor.Black.copy(alpha = 0.1f),
+                        color = ComposeColor.White.copy(alpha = 0.3f),
                         shape = RoundedCornerShape(6.dp)
                     )
                 } else Modifier

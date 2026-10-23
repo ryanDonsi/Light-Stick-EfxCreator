@@ -1,7 +1,5 @@
 package com.efxcreator
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -50,13 +48,11 @@ fun EfxCreatorApp() {
         ) { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString("projectId") ?: return@composable
             // 태블릿 전용 에디터 (파형/섹션 타임라인 + 드래그&드롭 + 재생/Preview)
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                EfxTabletEditorScreen(
-                    projectId = projectId,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSets = { navController.navigate(Screen.Sets.route) }
-                )
-            }
+            EfxTabletEditorScreen(
+                projectId = projectId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSets = { navController.navigate(Screen.Sets.route) }
+            )
         }
 
         composable(Screen.Sets.route) {
