@@ -2,8 +2,11 @@ package com.efxcreator.viewmodel
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothManager
 import android.app.Application
+import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -31,6 +34,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning.asStateFlow()
+
+    /** 한 번이라도 스캔을 시작했는가 (결과 0개 안내를 "검색 전"과 구분하기 위함) */
+    private val _hasScanned = MutableStateFlow(false)
+    val hasScanned: StateFlow<Boolean> = _hasScanned.asStateFlow()
 
     private val _found = MutableStateFlow<List<Device>>(emptyList())
     val found: StateFlow<List<Device>> = _found.asStateFlow()
@@ -80,8 +87,26 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             _message.value = "블루투스 권한이 필요합니다."
             return
         }
+        // 시스템 설정 때문에 스캔이 조용히 실패하는 경우를 먼저 알려 준다
+        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        if (btManager?.adapter?.isEnabled != true) {
+            _message.value = "블루투스가 꺼져 있습니다. 켠 뒤 다시 검색해 주세요."
+            return
+        }
+        // Android 11 이하는 위치 서비스가 꺼져 있으면 BLE 스캔 결과가 오지 않는다
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            val locationOn = lm != null && (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || lm.isLocationEnabled)
+            if (!locationOn) {
+                _message.value = "위치 서비스가 꺼져 있습니다. 켠 뒤 다시 검색해 주세요."
+                return
+            }
+        }
+
         _found.value = emptyList()
+        _hasScanned.value = true
         _scanning.value = true
+        Log.d(TAG, "startScan: ${SCAN_SECONDS}s (name filter LS/GL/RL)")
         try {
             LSBluetooth.startScan(SCAN_SECONDS) { device ->
                 if (_found.value.none { it.mac == device.mac }) {

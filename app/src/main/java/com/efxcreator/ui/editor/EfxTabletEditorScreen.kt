@@ -883,6 +883,7 @@ private fun DeviceDialog(
     val found by bleVm.found.collectAsState()
     val connected by bleVm.connected.collectAsState()
     val connectingMac by bleVm.connectingMac.collectAsState()
+    val hasScanned by bleVm.hasScanned.collectAsState()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -912,6 +913,18 @@ private fun DeviceDialog(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+                if (hasScanned && !scanning && found.isEmpty()) {
+                    Text(
+                        "검색된 응원봉이 없습니다. 아래를 확인해 주세요.\n" +
+                            "• 응원봉 전원이 켜져 있고 연결 대기(광고) 상태인지\n" +
+                            "• 다른 앱(Light Stick Music 등)이나 다른 기기에 이미 연결돼 있지 않은지 — 연결된 응원봉은 검색되지 않습니다\n" +
+                            "• 기기 이름이 LS / GL / RL 로 끝나는지\n" +
+                            "• 블루투스가 켜져 있는지 (Android 11 이하는 위치도)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
                 LazyColumn(modifier = Modifier.height(200.dp)) {
                     items(found, key = { it.mac }) { device ->
                         Row(
