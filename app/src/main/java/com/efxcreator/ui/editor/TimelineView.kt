@@ -20,8 +20,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -140,6 +142,56 @@ private fun DrawScope.drawLabel(
     )
 }
 
+/**
+ * 이펙트 종류별 블록 표현 (위 → 아래):
+ * - ON      : FG 단색
+ * - OFF     : 어두운 회색
+ * - STROBE  : FG 3 : BG 7
+ * - BLINK   : FG 5 : BG 5
+ * - BREATH  : 그라데이션(BG→FG) 2.5 / FG 2.5 / 그라데이션(FG→BG) 2.5 / BG 2.5
+ */
+private fun DrawScope.drawEffectBlock(
+    type: EffectType, fg: Color, bg: Color,
+    left: Float, top: Float, width: Float, height: Float, alpha: Float
+) {
+    val f = fg.copy(alpha = alpha)
+    val b = bg.copy(alpha = alpha)
+    val size = { h: Float -> Size(width, h) }
+
+    when (type) {
+        EffectType.OFF -> drawRect(OFF_BLOCK.copy(alpha = alpha), Offset(left, top), size(height))
+        EffectType.ON -> drawRect(f, Offset(left, top), size(height))
+        EffectType.STROBE -> {
+            val h1 = height * 0.3f
+            drawRect(f, Offset(left, top), size(h1))
+            drawRect(b, Offset(left, top + h1), size(height - h1))
+        }
+        EffectType.BLINK -> {
+            val h1 = height * 0.5f
+            drawRect(f, Offset(left, top), size(h1))
+            drawRect(b, Offset(left, top + h1), size(height - h1))
+        }
+        EffectType.BREATH -> {
+            val q = height * 0.25f
+            drawRect(
+                Brush.verticalGradient(listOf(b, f), startY = top, endY = top + q),
+                Offset(left, top), size(q)
+            )
+            drawRect(f, Offset(left, top + q), size(q))
+            drawRect(
+                Brush.verticalGradient(listOf(f, b), startY = top + 2 * q, endY = top + 3 * q),
+                Offset(left, top + 2 * q), size(q)
+            )
+            drawRect(b, Offset(left, top + 3 * q), size(height - 3 * q))
+        }
+    }
+    // 배경색이 레인 색과 비슷해도 블록 경계가 보이도록 얇은 테두리
+    drawRect(
+        Color.White.copy(alpha = 0.22f * alpha), Offset(left, top), size(height),
+        style = Stroke(width = 1f)
+    )
+}
+
 private enum class DragMode { NONE, SEEK, PAN, MOVE }
 
 private class DragHolder {
@@ -149,6 +201,8 @@ private class DragHolder {
 
 /**
  * 음악 파형 + 섹션 + 비트 + 이펙트 블록(다음 이펙트까지 구간)을 그리는 타임라인.
+ *
+ * 이펙트 블록은 종류별로 FG/BG 를 나눠 그린다 ([drawEffectBlock] 참고).
  *
  * 제스처: 위쪽(눈금/섹션/파형) 탭·드래그 = 재생 위치 이동, 이펙트 레인의 블록 탭 = 선택,
  * 블록 드래그 = 시간 이동(스냅), 레인의 빈 곳 드래그 = 좌우 스크롤, 두 손가락 핀치 = 줌.
@@ -408,17 +462,16 @@ fun TimelineView(
             if (x1 < 0f || x0 > w) continue
 
             val p = b.entry.payload
-            val base = if (p.effectType == EffectType.OFF) OFF_BLOCK
-            else Color(p.color.r, p.color.g, p.color.b)
             val left = max(-2f, x0)
             val width = max(2f, min(x1, w + 2f) - left - 1f)
             val alpha = if (b.index == dragIndex) 0.7f else 1f
 
-            drawRect(base.copy(alpha = alpha), Offset(left, laneTop + 3f), Size(width, laneH - 6f))
-            val bgc = p.backgroundColor
-            if (bgc.r + bgc.g + bgc.b > 0) {
-                drawRect(Color(bgc.r, bgc.g, bgc.b), Offset(left, laneTop + laneH - 9f), Size(width, 6f))
-            }
+            drawEffectBlock(
+                p.effectType,
+                fg = Color(p.color.r, p.color.g, p.color.b),
+                bg = Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b),
+                left = left, top = laneTop + 3f, width = width, height = laneH - 6f, alpha = alpha
+            )
             if (b.index == selectedIndex) {
                 drawRect(
                     Color.White, Offset(left, laneTop + 3f), Size(width, laneH - 6f),
@@ -426,10 +479,13 @@ fun TimelineView(
                 )
             }
             if (width > 44f) {
-                val luminance = (0.299f * base.red + 0.587f * base.green + 0.114f * base.blue)
+                // 블록 안의 색이 위치마다 달라서, 어떤 색 위에서도 읽히도록 흰 글자 + 검은 그림자
                 drawLabel(
                     textMeasurer, p.effectType.name, left + 6f, laneTop + 8f,
-                    TextStyle(fontSize = 11.sp, color = if (luminance > 0.55f) Color.Black else Color.White),
+                    TextStyle(
+                        fontSize = 11.sp, color = Color.White,
+                        shadow = Shadow(Color.Black, Offset(1f, 1f), blurRadius = 4f)
+                    ),
                     maxWidth = width - 8f
                 )
             }
