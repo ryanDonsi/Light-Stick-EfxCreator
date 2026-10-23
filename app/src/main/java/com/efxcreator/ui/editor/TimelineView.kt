@@ -110,12 +110,14 @@ private val PLAYHEAD = Color(0xFFFFEB3B)
 private val DROP_LINE = Color(0xFF26C6DA)
 private val OFF_BLOCK = Color(0xFF2A2A30)
 
+// 위 → 아래: 시간 / 파형 / 섹션 / 비트 / 이펙트 블록
 private val RULER_H = 22.dp
+private val WAVE_H = 96.dp
 private val SECTION_H = 22.dp
-private val WAVE_H = 80.dp
+private val BEAT_H = 22.dp
 private val LANE_GAP = 6.dp
-private val LANE_H = 64.dp
-val TIMELINE_TOTAL_HEIGHT = RULER_H + SECTION_H + WAVE_H + LANE_GAP + LANE_H
+private val LANE_H = 72.dp
+val TIMELINE_TOTAL_HEIGHT = RULER_H + WAVE_H + SECTION_H + BEAT_H + LANE_GAP + LANE_H
 
 /**
  * 캔버스 오른쪽 끝에 걸친 라벨도 안전하게 그린다.
@@ -233,9 +235,13 @@ fun TimelineView(
     val rulerH = with(density) { RULER_H.toPx() }
     val sectionH = with(density) { SECTION_H.toPx() }
     val waveH = with(density) { WAVE_H.toPx() }
+    val beatH = with(density) { BEAT_H.toPx() }
     val laneGap = with(density) { LANE_GAP.toPx() }
     val laneH = with(density) { LANE_H.toPx() }
-    val laneTop = rulerH + sectionH + waveH + laneGap
+    val waveTop = rulerH
+    val sectionTop = waveTop + waveH
+    val beatTop = sectionTop + sectionH
+    val laneTop = beatTop + beatH + laneGap
 
     // 마디(bar) 표시용: 박자 수와, 강박(downbeat)에 해당하는 비트 인덱스 (엔진 입력이 없으면 마디 구분 없이 비트만)
     val beatList = analysis?.beatTimesMs.orEmpty()
@@ -384,7 +390,10 @@ fun TimelineView(
         fun xOf(ms: Float) = (ms - startMs) * pxPerMs
 
         /** 보이는 범위의 비트(가는 선)와 마디 시작(굵은 선)을 [yTop, yBottom] 에 그린다. */
-        fun drawBeats(yTop: Float, yBottom: Float, beatColor: Color, barColor: Color, withNumbers: Boolean) {
+        fun drawBeats(
+            yTop: Float, yBottom: Float, beatColor: Color, barColor: Color, withNumbers: Boolean,
+            beatInset: Float = 0f
+        ) {
             if (!showBeats || beatList.isEmpty()) return
             val beatPx = pxPerMs * globalBeatMs
             val barsOnly = beatPx < 5f && beatsPerBar > 0   // 너무 촘촘하면 마디 시작만
@@ -398,8 +407,8 @@ fun TimelineView(
                 val isBar = beatsPerBar > 0 && Math.floorMod(rel, beatsPerBar) == 0
                 if (!barsOnly || isBar) {
                     val x = xOf(t.toFloat())
-                    drawLine(if (isBar) barColor else beatColor, Offset(x, yTop), Offset(x, yBottom),
-                        strokeWidth = if (isBar) 2f else 1f)
+                    drawLine(if (isBar) barColor else beatColor, Offset(x, if (isBar) yTop else yTop + beatInset),
+                        Offset(x, yBottom), strokeWidth = if (isBar) 2f else 1f)
                     if (withNumbers && isBar && rel >= 0 && beatPx * beatsPerBar > 36f) {
                         drawLabel(
                             textMeasurer, (Math.floorDiv(rel, beatsPerBar) + 1).toString(), x + 3f, yTop + 2f,
@@ -436,11 +445,11 @@ fun TimelineView(
             if (x1 <= x0) continue
             drawRect(
                 SectionColors.of(s.type).copy(alpha = 0.9f),
-                Offset(x0, rulerH + 1f), Size(x1 - x0 - 1f, sectionH - 2f)
+                Offset(x0, sectionTop + 1f), Size(x1 - x0 - 1f, sectionH - 2f)
             )
             if (x1 - x0 > 46f) {
                 drawLabel(
-                    textMeasurer, s.type, x0 + 5f, rulerH + 3f,
+                    textMeasurer, s.type, x0 + 5f, sectionTop + 3f,
                     TextStyle(fontSize = 10.sp, color = Color.White),
                     maxWidth = x1 - x0 - 8f
                 )
@@ -448,7 +457,6 @@ fun TimelineView(
         }
 
         // ── 파형 ──────────────────────────────────────────────
-        val waveTop = rulerH + sectionH
         val waveMid = waveTop + waveH / 2f
         val wf = analysis?.waveform
         if (analysis != null && !wf.isNullOrEmpty()) {
@@ -482,7 +490,15 @@ fun TimelineView(
             )
         }
 
-        drawBeats(waveTop, waveTop + waveH, Color(0x26FFFFFF), Color(0x70FFFFFF), withNumbers = true)
+        // 파형 위 가이드선(아주 연하게) — 비트 위치를 파형과 대조하기 위함
+        drawBeats(waveTop, waveTop + waveH, Color(0x14FFFFFF), Color(0x30FFFFFF), withNumbers = false)
+
+        // ── 비트 행 ───────────────────────────────────────────
+        drawRect(RULER_BG, Offset(0f, beatTop), Size(w, beatH))
+        drawBeats(
+            beatTop, beatTop + beatH, Color(0xAAFFFFFF), Color(0xFFFFFFFF),
+            withNumbers = true, beatInset = beatH * 0.5f
+        )
 
         // ── 이펙트 레인 ───────────────────────────────────────
         drawRect(LANE_BG, Offset(0f, laneTop), Size(w, laneH))
@@ -523,9 +539,6 @@ fun TimelineView(
                 )
             }
         }
-
-        // 블록 위에서도 보이도록 레인 윗부분에 짧은 비트 눈금
-        drawBeats(laneTop, laneTop + 8f, Color(0xCCFFFFFF), Color(0xFFFFFFFF), withNumbers = false)
 
         // ── 드롭 위치 미리보기 ────────────────────────────────
         if (dropPreviewMs != null) {

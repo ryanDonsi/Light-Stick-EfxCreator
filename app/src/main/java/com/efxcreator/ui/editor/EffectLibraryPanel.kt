@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,6 +49,8 @@ class PresetDragState {
 fun EffectPreset.swatchColor(): Color =
     if (type == EffectType.OFF) Color(0xFF2A2A30) else Color(color.r, color.g, color.b)
 
+fun EffectPreset.swatchBgColor(): Color = Color(backgroundColor.r, backgroundColor.g, backgroundColor.b)
+
 /**
  * 이펙트 라이브러리.
  * - 카드 탭: 현재 재생 위치에 추가
@@ -59,7 +63,7 @@ fun EffectLibraryPanel(
     onDrop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var category by remember { mutableStateOf(EffectPreset.Category.BASIC) }
+    var category by remember { mutableStateOf(EffectPreset.Category.ON) }
     val presets = remember(category) { EffectPresets.byCategory(category) }
 
     Column(modifier = modifier.padding(12.dp)) {
@@ -145,12 +149,22 @@ private fun PresetCard(
     }
 }
 
+/** 1색 이펙트는 원 하나, 2색 이펙트(BLINK/BREATH/STROBE)는 왼쪽 FG · 오른쪽 BG 로 반씩 나눈 원 */
 @Composable
 fun PresetSwatch(preset: EffectPreset, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(26.dp)
-            .background(preset.swatchColor(), CircleShape)
+            .clip(CircleShape)
             .border(1.dp, Color(0x55FFFFFF), CircleShape)
-    )
+    ) {
+        if (preset.isTwoColor) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.weight(1f).fillMaxHeight().background(preset.swatchColor()))
+                Box(modifier = Modifier.weight(1f).fillMaxHeight().background(preset.swatchBgColor()))
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxSize().background(preset.swatchColor()))
+        }
+    }
 }

@@ -19,8 +19,12 @@ data class EffectPreset(
     val fade: Int = 100
 ) {
     enum class Category(val label: String) {
-        BASIC("기본"), ON("ON"), BLINK("Blink"), BREATH("Breath"), STROBE("Strobe")
+        ON("ON"), OFF("OFF"), BLINK("BLINK (2색)"), BREATH("BREATH (2색)"), STROBE("STROBE (2색)")
     }
+
+    /** 전경(FG)·배경(BG) 두 색을 쓰는 이펙트인가 */
+    val isTwoColor: Boolean
+        get() = type == EffectType.BLINK || type == EffectType.BREATH || type == EffectType.STROBE
 
     fun toEntry(timestampMs: Long): EfxEntry = EfxEntry(
         timestampMs,
@@ -41,10 +45,11 @@ data class EffectPreset(
 
 object EffectPresets {
 
-    private val WHITE = Color(255, 255, 255)
+    private val BLACK = Color(0, 0, 0)
 
-    /** (이름, 색) — Light-Stick-Music 팔레트 색 계열 */
+    /** (이름, 색) — Light-Stick-Music 팔레트 색 계열 + 흰색 */
     private val COLORS = listOf(
+        "White" to Color(255, 255, 255),
         "Red" to Color(255, 0, 0),
         "Orange" to Color(255, 117, 0),
         "Yellow" to Color(255, 249, 0),
@@ -55,28 +60,37 @@ object EffectPresets {
         "Pink" to Color(255, 0, 155)
     )
 
+    private fun color(name: String): Color = COLORS.first { it.first == name }.second
+
+    /** 2색 이펙트용 FG/BG 조합: 각 색 + 검정 배경, 그리고 대비가 큰 색 조합 */
+    private val PAIRS: List<Triple<String, Color, Color>> =
+        COLORS.map { (n, c) -> Triple("$n / Black", c, BLACK) } + listOf(
+            "Red" to "Blue", "Orange" to "Cyan", "Yellow" to "Purple", "Green" to "Pink",
+            "Cyan" to "Red", "Blue" to "White", "Purple" to "Green", "Pink" to "Cyan"
+        ).map { (fg, bg) -> Triple("$fg / $bg", color(fg), color(bg)) }
+
     private const val BLINK_PERIOD = 50    // 500ms
     private const val BREATH_PERIOD = 200  // 2s
     private const val STROBE_PERIOD = 8    // 80ms
+    private const val FADE_OFF_PERIOD = 100 // 1s 페이드 아웃
 
     val all: List<EffectPreset> = buildList {
-        add(EffectPreset("basic_on", "All ON", EffectPreset.Category.BASIC, EffectType.ON, WHITE))
-        add(EffectPreset("basic_off", "All OFF", EffectPreset.Category.BASIC, EffectType.OFF, Color(0, 0, 0)))
-        add(EffectPreset("basic_strobe", "Strobe", EffectPreset.Category.BASIC, EffectType.STROBE, WHITE, period = STROBE_PERIOD))
-        add(EffectPreset("basic_blink", "Blink", EffectPreset.Category.BASIC, EffectType.BLINK, WHITE, period = BLINK_PERIOD))
-        add(EffectPreset("basic_breath", "Breath", EffectPreset.Category.BASIC, EffectType.BREATH, WHITE, period = BREATH_PERIOD))
-
-        for ((name, color) in COLORS) {
-            add(EffectPreset("on_$name", "$name ON", EffectPreset.Category.ON, EffectType.ON, color))
+        // ON — 단색
+        for ((name, c) in COLORS) {
+            add(EffectPreset("on_$name", "$name ON", EffectPreset.Category.ON, EffectType.ON, c))
         }
-        for ((name, color) in COLORS) {
-            add(EffectPreset("blink_$name", "$name Blink", EffectPreset.Category.BLINK, EffectType.BLINK, color, period = BLINK_PERIOD))
+        // OFF
+        add(EffectPreset("off", "OFF", EffectPreset.Category.OFF, EffectType.OFF, BLACK))
+        add(EffectPreset("off_fade", "OFF (1초 페이드)", EffectPreset.Category.OFF, EffectType.OFF, BLACK, period = FADE_OFF_PERIOD))
+        // BLINK / BREATH / STROBE — FG + BG 2색
+        for ((label, fg, bg) in PAIRS) {
+            add(EffectPreset("blink_$label", "$label", EffectPreset.Category.BLINK, EffectType.BLINK, fg, bg, period = BLINK_PERIOD))
         }
-        for ((name, color) in COLORS) {
-            add(EffectPreset("breath_$name", "$name Breath", EffectPreset.Category.BREATH, EffectType.BREATH, color, period = BREATH_PERIOD))
+        for ((label, fg, bg) in PAIRS) {
+            add(EffectPreset("breath_$label", "$label", EffectPreset.Category.BREATH, EffectType.BREATH, fg, bg, period = BREATH_PERIOD))
         }
-        for ((name, color) in COLORS) {
-            add(EffectPreset("strobe_$name", "$name Strobe", EffectPreset.Category.STROBE, EffectType.STROBE, color, period = STROBE_PERIOD))
+        for ((label, fg, bg) in PAIRS) {
+            add(EffectPreset("strobe_$label", "$label", EffectPreset.Category.STROBE, EffectType.STROBE, fg, bg, period = STROBE_PERIOD))
         }
     }
 

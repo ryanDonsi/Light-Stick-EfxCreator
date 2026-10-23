@@ -318,7 +318,8 @@ fun EfxTabletEditorScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    // 타임라인(시간/파형/섹션/비트/이펙트 5행)이 커진 만큼 라이브러리는 그 아래에 여유를 두고 배치
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Column(
                         modifier = Modifier
