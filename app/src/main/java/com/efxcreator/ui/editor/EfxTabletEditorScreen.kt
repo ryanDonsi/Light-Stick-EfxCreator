@@ -391,6 +391,7 @@ fun EfxTabletEditorScreen(
                         onTapPreset = { addPreset(it, snapAt(player.positionMs)) },
                         onDrop = { handleDrop() },
                         onUserSlotClick = { libraryEditorSlot = it },
+                        onMoveSlot = { from, to -> libVm.move(from, to) },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()

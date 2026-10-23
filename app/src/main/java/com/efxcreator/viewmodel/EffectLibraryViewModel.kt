@@ -36,6 +36,22 @@ class EffectLibraryViewModel(application: Application) : AndroidViewModel(applic
         commit(list)
     }
 
+    /**
+     * [from] 칸의 이펙트를 [to] 칸으로 옮긴다. [to] 가 차 있으면 서로 자리를 바꾸고, 비어 있으면 이동한다.
+     * @return 실제로 순서가 바뀌었는지
+     */
+    fun move(from: Int, to: Int): Boolean {
+        val range = 0 until UserEffect.SLOT_COUNT
+        if (from !in range || to !in range || from == to) return false
+        val list = _slots.value.toMutableList()
+        val a = list[from] ?: return false
+        val b = list[to]
+        list[to] = a.copy(slot = to)
+        list[from] = b?.copy(slot = from)
+        commit(list)
+        return true
+    }
+
     fun delete(slot: Int) {
         if (slot !in 0 until UserEffect.SLOT_COUNT) return
         val list = _slots.value.toMutableList()

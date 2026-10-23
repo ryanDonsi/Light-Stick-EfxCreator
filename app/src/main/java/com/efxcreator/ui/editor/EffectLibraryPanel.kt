@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,13 +42,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.efxcreator.model.UserEffect
 import com.lightstick.types.EffectType
 
@@ -64,7 +71,7 @@ fun EffectPreset.swatchBgColor(): Color = Color(backgroundColor.r, backgroundCol
 /**
  * 이펙트 라이브러리.
  * - "내 라이브러리": 사용자가 등록한 이펙트 [UserEffect.SLOT_COUNT] 칸 (7칸 x 3줄). 빈 칸을 누르면 추가,
- *   "편집"을 켜고 칸을 누르면 수정/삭제.
+ *   "편집"을 켜고 칸을 누르면 수정/삭제, 편집 중 칸을 길게 눌러 끌면 순서 변경(서로 바꾸기/빈 칸으로 이동).
  * - 나머지 탭: 기본 제공 프리셋.
  * - 카드 탭: 현재 재생 위치에 추가 / 길게 눌러 끌기: 타임라인의 원하는 위치에 드롭
  */
@@ -75,6 +82,7 @@ fun EffectLibraryPanel(
     onTapPreset: (EffectPreset) -> Unit,
     onDrop: () -> Unit,
     onUserSlotClick: (slot: Int) -> Unit,
+    onMoveSlot: (from: Int, to: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var category by remember {
@@ -108,6 +116,14 @@ fun EffectLibraryPanel(
             }
             if (category == EffectPreset.Category.USER) {
                 Spacer(Modifier.weight(1f))
+                if (editMode) {
+                    Text(
+                        "탭 = 수정 · 길게 눌러 끌기 = 순서 바꾸기",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF9A9AA5)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
                 Text(
                     "${userSlots.count { it != null }} / ${UserEffect.SLOT_COUNT}",
                     style = MaterialTheme.typography.labelMedium,
@@ -131,7 +147,8 @@ fun EffectLibraryPanel(
                 editMode = editMode,
                 onTapPreset = onTapPreset,
                 onDrop = onDrop,
-                onSlotClick = onUserSlotClick
+                onSlotClick = onUserSlotClick,
+                onMoveSlot = onMoveSlot
             )
         } else {
             LazyVerticalGrid(
@@ -161,34 +178,115 @@ private fun UserLibraryGrid(
     editMode: Boolean,
     onTapPreset: (EffectPreset) -> Unit,
     onDrop: () -> Unit,
-    onSlotClick: (Int) -> Unit
+    onSlotClick: (Int) -> Unit,
+    onMoveSlot: (Int, Int) -> Unit
 ) {
-    Column(
+    val density = LocalDensity.current
+
+    // ── 순서 바꾸기(편집 모드에서 칸을 길게 눌러 끌기) 상태 ──
+    val slotBounds = remember { HashMap<Int, Rect>() }          // 칸별 윈도우 좌표 (레이아웃 때 갱신, 상태 아님)
+    var gridOrigin by remember { mutableStateOf(Offset.Zero) }
+    var reorderFrom by remember { mutableIntStateOf(-1) }
+    var reorderTarget by remember { mutableIntStateOf(-1) }
+    var reorderOffset by remember { mutableStateOf(Offset.Zero) } // 끌기 시작점 대비 누적 이동량
+    var pointerWindow by remember { mutableStateOf(Offset.Zero) }
+
+    fun targetAt(p: Offset): Int =
+        slotBounds.entries.firstOrNull { it.value.contains(p) }?.key ?: -1
+
+    fun resetReorder() {
+        reorderFrom = -1
+        reorderTarget = -1
+        reorderOffset = Offset.Zero
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .onGloballyPositioned { gridOrigin = it.positionInWindow() }
     ) {
-        for (row in 0 until UserEffect.ROWS) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (col in 0 until UserEffect.COLUMNS) {
-                    val slot = row * UserEffect.COLUMNS + col
-                    val effect = slots.getOrNull(slot)
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (effect == null) {
-                            EmptySlot(onClick = { onSlotClick(slot) })
-                        } else {
-                            val preset = remember(effect) { effect.toPreset() }
-                            SlotTile(
-                                preset = preset,
-                                drag = drag,
-                                editMode = editMode,
-                                onTap = { if (editMode) onSlotClick(slot) else onTapPreset(preset) },
-                                onDrop = onDrop
-                            )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            for (row in 0 until UserEffect.ROWS) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (col in 0 until UserEffect.COLUMNS) {
+                        val slot = row * UserEffect.COLUMNS + col
+                        val effect = slots.getOrNull(slot)
+                        val isSource = reorderFrom == slot
+                        val isTarget = reorderTarget == slot && reorderFrom >= 0 && reorderFrom != slot
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .onGloballyPositioned { slotBounds[slot] = it.boundsInWindow() }
+                                .then(
+                                    if (isTarget) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                    else Modifier
+                                )
+                        ) {
+                            if (effect == null) {
+                                EmptySlot(onClick = { onSlotClick(slot) })
+                            } else {
+                                val preset = remember(effect) { effect.toPreset() }
+                                SlotTile(
+                                    preset = preset,
+                                    drag = drag,
+                                    editMode = editMode,
+                                    dimmed = isSource,
+                                    onTap = { if (editMode) onSlotClick(slot) else onTapPreset(preset) },
+                                    onDrop = onDrop,
+                                    onReorderStart = { offset ->
+                                        reorderFrom = slot
+                                        reorderTarget = slot
+                                        reorderOffset = Offset.Zero
+                                        pointerWindow = (slotBounds[slot]?.topLeft ?: Offset.Zero) + offset
+                                    },
+                                    onReorderDrag = { amount ->
+                                        reorderOffset += amount
+                                        pointerWindow += amount
+                                        reorderTarget = targetAt(pointerWindow)
+                                    },
+                                    onReorderEnd = {
+                                        val from = reorderFrom
+                                        val to = reorderTarget
+                                        resetReorder()
+                                        if (from >= 0 && to >= 0 && from != to) onMoveSlot(from, to)
+                                    },
+                                    onReorderCancel = { resetReorder() }
+                                )
+                            }
                         }
                     }
                 }
+            }
+        }
+
+        // 끄는 동안 손가락을 따라다니는 칸 (원래 칸은 흐리게 남겨 둔다)
+        val sourceEffect = slots.getOrNull(reorderFrom)
+        val sourceBounds = slotBounds[reorderFrom]
+        if (sourceEffect != null && sourceBounds != null) {
+            val ghostPreset = remember(sourceEffect) { sourceEffect.toPreset() }
+            Box(
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            (sourceBounds.left - gridOrigin.x + reorderOffset.x).roundToInt(),
+                            (sourceBounds.top - gridOrigin.y + reorderOffset.y).roundToInt()
+                        )
+                    }
+                    .size(
+                        with(density) { sourceBounds.width.toDp() },
+                        with(density) { sourceBounds.height.toDp() }
+                    )
+                    .background(Color(0xE63A3A48), RoundedCornerShape(8.dp))
+                    .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                SlotContent(ghostPreset)
             }
         }
     }
@@ -211,14 +309,39 @@ private fun EmptySlot(onClick: () -> Unit) {
     }
 }
 
-/** 등록된 칸: 스와치 + 이름. 편집 모드에서는 탭하면 수정 창이 열린다 (끌기는 비활성). */
+@Composable
+private fun SlotContent(preset: EffectPreset) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        PresetSwatch(preset)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            preset.label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/**
+ * 등록된 칸: 스와치 + 이름.
+ * - 일반 모드: 탭 = 추가, 길게 눌러 끌기 = 타임라인에 드롭
+ * - 편집 모드: 탭 = 수정 창, 길게 눌러 끌기 = 칸 순서 바꾸기
+ */
 @Composable
 private fun SlotTile(
     preset: EffectPreset,
     drag: PresetDragState,
     editMode: Boolean,
+    dimmed: Boolean,
     onTap: () -> Unit,
-    onDrop: () -> Unit
+    onDrop: () -> Unit,
+    onReorderStart: (Offset) -> Unit,
+    onReorderDrag: (Offset) -> Unit,
+    onReorderEnd: () -> Unit,
+    onReorderCancel: () -> Unit
 ) {
     var originWindow by remember { mutableStateOf(Offset.Zero) }
 
@@ -227,7 +350,7 @@ private fun SlotTile(
         modifier = Modifier
             .fillMaxWidth()
             .height(SLOT_HEIGHT)
-            .background(Color(0xFF26262E), RoundedCornerShape(8.dp))
+            .background(Color(0xFF26262E).copy(alpha = if (dimmed) 0.35f else 1f), RoundedCornerShape(8.dp))
             .then(
                 if (editMode) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
                 else Modifier
@@ -235,34 +358,26 @@ private fun SlotTile(
             .onGloballyPositioned { originWindow = it.positionInWindow() }
             .pointerInput(preset.id) { detectTapGestures(onTap = { onTap() }) }
             .pointerInput(preset.id, editMode) {
-                if (editMode) return@pointerInput
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
-                        drag.preset = preset
-                        drag.pointerWindow = originWindow + offset
+                        if (editMode) {
+                            onReorderStart(offset)
+                        } else {
+                            drag.preset = preset
+                            drag.pointerWindow = originWindow + offset
+                        }
                     },
                     onDrag = { change, amount ->
                         change.consume()
-                        drag.pointerWindow += amount
+                        if (editMode) onReorderDrag(amount) else drag.pointerWindow += amount
                     },
-                    onDragEnd = { onDrop() },
-                    onDragCancel = { drag.preset = null }
+                    onDragEnd = { if (editMode) onReorderEnd() else onDrop() },
+                    onDragCancel = { if (editMode) onReorderCancel() else drag.preset = null }
                 )
             }
             .padding(horizontal = 4.dp, vertical = 6.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            PresetSwatch(preset)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                preset.label,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-        }
+        SlotContent(preset)
         if (editMode) {
             Icon(
                 Icons.Default.Edit, contentDescription = "수정",
