@@ -2,6 +2,7 @@ package com.efxcreator.ui.sets
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +41,7 @@ import com.efxcreator.music.sets.EffectRuleSet
 import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.music.sets.RgbColor
 import com.efxcreator.music.sets.SetCatalog
+import kotlin.math.roundToInt
 
 fun RgbColor.toComposeColor(): Color = Color(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
 
@@ -190,4 +193,55 @@ fun SetSelectionDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
     )
+}
+
+private val PICKER_QUICK_COLORS = listOf(
+    RgbColor(255, 255, 255), RgbColor(255, 0, 0), RgbColor(255, 117, 0), RgbColor(255, 249, 0),
+    RgbColor(0, 255, 36), RgbColor(0, 255, 255), RgbColor(0, 0, 255), RgbColor(164, 0, 255),
+    RgbColor(255, 0, 155), RgbColor(0, 0, 0)
+)
+
+/** RGB 슬라이더 3개 + 빠른 색 선택으로 색 하나를 고르는 공용 컴포넌트 */
+@Composable
+fun RgbPicker(label: String, color: RgbColor, onChange: (RgbColor) -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(color.toComposeColor(), RoundedCornerShape(6.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+            )
+            Spacer(Modifier.width(8.dp))
+            Text("$label  RGB(${color.r}, ${color.g}, ${color.b})", style = MaterialTheme.typography.labelMedium)
+        }
+        PickerChannel("R", color.r) { onChange(color.copy(r = it)) }
+        PickerChannel("G", color.g) { onChange(color.copy(g = it)) }
+        PickerChannel("B", color.b) { onChange(color.copy(b = it)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PICKER_QUICK_COLORS.forEach { q ->
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .background(q.toComposeColor(), RoundedCornerShape(5.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(5.dp))
+                        .clickable { onChange(q) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickerChannel(label: String, value: Int, onChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, modifier = Modifier.width(18.dp), style = MaterialTheme.typography.labelSmall)
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onChange(it.roundToInt().coerceIn(0, 255)) },
+            valueRange = 0f..255f,
+            modifier = Modifier.weight(1f).height(26.dp)
+        )
+        Text(value.toString(), modifier = Modifier.width(32.dp), style = MaterialTheme.typography.labelSmall)
+    }
 }

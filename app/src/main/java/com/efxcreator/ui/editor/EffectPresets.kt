@@ -1,5 +1,6 @@
 package com.efxcreator.ui.editor
 
+import com.efxcreator.model.UserEffect
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.Color
 import com.lightstick.types.EffectType
@@ -19,7 +20,7 @@ data class EffectPreset(
     val fade: Int = 100
 ) {
     enum class Category(val label: String) {
-        ON("ON"), OFF("OFF"), BLINK("BLINK (2색)"), BREATH("BREATH (2색)"), STROBE("STROBE (2색)")
+        USER("내 라이브러리"), ON("ON"), OFF("OFF"), BLINK("BLINK (2색)"), BREATH("BREATH (2색)"), STROBE("STROBE (2색)")
     }
 
     /** 전경(FG)·배경(BG) 두 색을 쓰는 이펙트인가 */
@@ -96,3 +97,16 @@ object EffectPresets {
 
     fun byCategory(category: EffectPreset.Category): List<EffectPreset> = all.filter { it.category == category }
 }
+
+/** 사용자 라이브러리 칸을 드래그&드롭/탭으로 쓸 수 있는 프리셋으로 변환 */
+fun UserEffect.toPreset(): EffectPreset = EffectPreset(
+    id = "user_$id",
+    label = label,
+    category = EffectPreset.Category.USER,
+    type = runCatching { EffectType.valueOf(effectType) }.getOrDefault(EffectType.ON),
+    color = fg.toLs(),
+    backgroundColor = bg.toLs(),
+    period = period,
+    spf = spf,
+    fade = fade
+)
