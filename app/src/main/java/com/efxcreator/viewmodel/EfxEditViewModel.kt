@@ -71,6 +71,10 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
 
             val loadedEfx = repository.loadEfx(projectId)
             _efx.value = loadedEfx
+            if (loadedEfx == null && loadedMetadata != null) {
+                _message.value = "EFX 파일을 읽을 수 없습니다. SDK 1.4.x로 만든 이전 파일은 2.0.0과 " +
+                    "형식이 달라 열 수 없습니다. 프로젝트를 삭제하고 새로 만들어 주세요."
+            }
 
             Log.d(TAG, "Loaded project: ${loadedMetadata?.name}")
 

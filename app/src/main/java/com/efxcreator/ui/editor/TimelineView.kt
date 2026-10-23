@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
@@ -29,6 +30,7 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -111,6 +113,31 @@ private val WAVE_H = 80.dp
 private val LANE_GAP = 6.dp
 private val LANE_H = 64.dp
 val TIMELINE_TOTAL_HEIGHT = RULER_H + SECTION_H + WAVE_H + LANE_GAP + LANE_H
+
+/**
+ * 캔버스 오른쪽 끝에 걸친 라벨도 안전하게 그린다.
+ * drawText 는 크기를 생략하면 (캔버스 폭 - x) 를 최대 폭으로 쓰는데, x 가 캔버스 밖이면 음수가 되어
+ * "maxWidth(-n) must be >= than minWidth(0)" 로 크래시한다. 남은 폭이 너무 좁으면 그리지 않는다.
+ */
+private fun DrawScope.drawLabel(
+    measurer: TextMeasurer,
+    text: String,
+    x: Float,
+    y: Float,
+    style: TextStyle,
+    maxWidth: Float = Float.MAX_VALUE
+) {
+    val avail = minOf(maxWidth, size.width - x)
+    val availH = size.height - y
+    if (avail < 12f || availH < 8f) return
+    drawText(
+        measurer, text,
+        topLeft = Offset(x, y),
+        style = style,
+        softWrap = false,
+        size = Size(avail, availH)
+    )
+}
 
 private enum class DragMode { NONE, SEEK, PAN, MOVE }
 
@@ -297,10 +324,9 @@ fun TimelineView(
         while (t <= endMs) {
             val x = xOf(t.toFloat())
             drawLine(GRID, Offset(x, rulerH * 0.5f), Offset(x, laneTop + laneH), strokeWidth = 1f)
-            drawText(
-                textMeasurer, TimelineMath.formatTime(t),
-                topLeft = Offset(x + 4f, 2f),
-                style = TextStyle(fontSize = 10.sp, color = TEXT_DIM)
+            drawLabel(
+                textMeasurer, TimelineMath.formatTime(t), x + 4f, 2f,
+                TextStyle(fontSize = 10.sp, color = TEXT_DIM)
             )
             t += stepMs
         }
@@ -317,12 +343,10 @@ fun TimelineView(
                 Offset(x0, rulerH + 1f), Size(x1 - x0 - 1f, sectionH - 2f)
             )
             if (x1 - x0 > 46f) {
-                drawText(
-                    textMeasurer, s.type,
-                    topLeft = Offset(x0 + 5f, rulerH + 3f),
-                    style = TextStyle(fontSize = 10.sp, color = Color.White),
-                    softWrap = false,
-                    size = Size(x1 - x0 - 8f, sectionH)
+                drawLabel(
+                    textMeasurer, s.type, x0 + 5f, rulerH + 3f,
+                    TextStyle(fontSize = 10.sp, color = Color.White),
+                    maxWidth = x1 - x0 - 8f
                 )
             }
         }
@@ -365,11 +389,9 @@ fun TimelineView(
                 }
             }
         } else {
-            drawText(
-                textMeasurer, emptyHint,
-                topLeft = Offset(16f, waveMid - 8f),
-                style = TextStyle(fontSize = 12.sp, color = TEXT_DIM),
-                softWrap = false
+            drawLabel(
+                textMeasurer, emptyHint, 16f, waveMid - 8f,
+                TextStyle(fontSize = 12.sp, color = TEXT_DIM)
             )
         }
 
@@ -402,12 +424,10 @@ fun TimelineView(
             }
             if (width > 44f) {
                 val luminance = (0.299f * base.red + 0.587f * base.green + 0.114f * base.blue)
-                drawText(
-                    textMeasurer, p.effectType.name,
-                    topLeft = Offset(left + 6f, laneTop + 8f),
-                    style = TextStyle(fontSize = 11.sp, color = if (luminance > 0.55f) Color.Black else Color.White),
-                    softWrap = false,
-                    size = Size(width - 8f, laneH)
+                drawLabel(
+                    textMeasurer, p.effectType.name, left + 6f, laneTop + 8f,
+                    TextStyle(fontSize = 11.sp, color = if (luminance > 0.55f) Color.Black else Color.White),
+                    maxWidth = width - 8f
                 )
             }
         }
@@ -419,10 +439,9 @@ fun TimelineView(
                 DROP_LINE, Offset(x, 0f), Offset(x, laneTop + laneH), strokeWidth = 3f,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
             )
-            drawText(
-                textMeasurer, TimelineMath.formatTime(dropPreviewMs, withTenths = true),
-                topLeft = Offset(x + 6f, laneTop - 16f),
-                style = TextStyle(fontSize = 11.sp, color = DROP_LINE)
+            drawLabel(
+                textMeasurer, TimelineMath.formatTime(dropPreviewMs, withTenths = true), x + 6f, laneTop - 16f,
+                TextStyle(fontSize = 11.sp, color = DROP_LINE)
             )
         }
 
