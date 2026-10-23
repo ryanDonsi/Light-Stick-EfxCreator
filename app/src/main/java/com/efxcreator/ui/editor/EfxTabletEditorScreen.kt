@@ -359,6 +359,7 @@ fun EfxTabletEditorScreen(
                             },
                             onBoundsChanged = { timelineBounds = it }
                         )
+                        TimelineScrollBar(timeline = timeline, durationMs = durationMs)
                     }
 
                     EffectLibraryPanel(
@@ -478,6 +479,21 @@ fun EfxTabletEditorScreen(
             }
         )
     }
+}
+
+/** 타임라인 좌우 스크롤바 — 위치 상태를 이 컴포저블 안에서만 읽어 화면 전체가 다시 그려지지 않게 한다. */
+@Composable
+private fun TimelineScrollBar(timeline: TimelineState, durationMs: Long) {
+    val viewMs = if (timeline.pxPerMs > 0f) timeline.viewWidthPx / timeline.pxPerMs else 0f
+    val maxStart = max(1f, durationMs - viewMs * 0.5f)
+    Slider(
+        value = timeline.viewStartMs.coerceIn(0f, maxStart),
+        onValueChange = { timeline.viewStartMs = it },
+        valueRange = 0f..maxStart,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(28.dp)
+    )
 }
 
 // ─────────────────────────────────────────────────────────────
