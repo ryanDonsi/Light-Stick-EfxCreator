@@ -217,6 +217,7 @@ fun TimelineView(
     selectedIndex: Int,
     dropPreviewMs: Long?,
     snapToBeats: Boolean,
+    showBeats: Boolean = true,
     followPlayhead: Boolean,
     isPlaying: Boolean,
     emptyHint: String,
@@ -235,6 +236,16 @@ fun TimelineView(
     val laneGap = with(density) { LANE_GAP.toPx() }
     val laneH = with(density) { LANE_H.toPx() }
     val laneTop = rulerH + sectionH + waveH + laneGap
+
+    // 마디(bar) 표시용: 박자 수와, 강박(downbeat)에 해당하는 비트 인덱스 (엔진 입력이 없으면 마디 구분 없이 비트만)
+    val beatList = analysis?.beatTimesMs.orEmpty()
+    val beatsPerBar = analysis?.engineInput?.beatsPerBar ?: 0
+    val globalBeatMs = analysis?.engineInput?.globalBeatMs ?: 500L
+    val downbeatIdx = remember(analysis) {
+        val inp = analysis?.engineInput
+        if (inp == null || inp.beatTimesMs.isEmpty()) 0
+        else inp.beatTimesMs.indexOf(TimelineMath.nearestBeat(inp.downbeatMs, inp.beatTimesMs) ?: 0L).coerceAtLeast(0)
+    }
 
     val currentEntries by rememberUpdatedState(entries)
     val currentAnalysis by rememberUpdatedState(analysis)
@@ -372,6 +383,34 @@ fun TimelineView(
 
         fun xOf(ms: Float) = (ms - startMs) * pxPerMs
 
+        /** 보이는 범위의 비트(가는 선)와 마디 시작(굵은 선)을 [yTop, yBottom] 에 그린다. */
+        fun drawBeats(yTop: Float, yBottom: Float, beatColor: Color, barColor: Color, withNumbers: Boolean) {
+            if (!showBeats || beatList.isEmpty()) return
+            val beatPx = pxPerMs * globalBeatMs
+            val barsOnly = beatPx < 5f && beatsPerBar > 0   // 너무 촘촘하면 마디 시작만
+            if (beatPx < 5f && beatsPerBar <= 0) return
+            var i = beatList.binarySearch(startMs.toLong()).let { if (it >= 0) it else -it - 1 }
+            i = i.coerceAtLeast(0)
+            while (i < beatList.size) {
+                val t = beatList[i]
+                if (t > endMs) break
+                val rel = i - downbeatIdx
+                val isBar = beatsPerBar > 0 && Math.floorMod(rel, beatsPerBar) == 0
+                if (!barsOnly || isBar) {
+                    val x = xOf(t.toFloat())
+                    drawLine(if (isBar) barColor else beatColor, Offset(x, yTop), Offset(x, yBottom),
+                        strokeWidth = if (isBar) 2f else 1f)
+                    if (withNumbers && isBar && rel >= 0 && beatPx * beatsPerBar > 36f) {
+                        drawLabel(
+                            textMeasurer, (Math.floorDiv(rel, beatsPerBar) + 1).toString(), x + 3f, yTop + 2f,
+                            TextStyle(fontSize = 9.sp, color = Color(0x99FFFFFF))
+                        )
+                    }
+                }
+                i++
+            }
+        }
+
         drawRect(BG)
 
         // ── 눈금 ─────────────────────────────────────────────
@@ -436,15 +475,6 @@ fun TimelineView(
                 }
                 px += 2f
             }
-
-            // 비트 눈금
-            if (pxPerMs * 400f > 5f) {
-                for (b in analysis.beatTimesMs) {
-                    if (b < startMs || b > endMs) continue
-                    val x = xOf(b.toFloat())
-                    drawLine(Color(0x66FFFFFF), Offset(x, waveTop + waveH - 8f), Offset(x, waveTop + waveH), strokeWidth = 1f)
-                }
-            }
         } else {
             drawLabel(
                 textMeasurer, emptyHint, 16f, waveMid - 8f,
@@ -452,8 +482,11 @@ fun TimelineView(
             )
         }
 
+        drawBeats(waveTop, waveTop + waveH, Color(0x26FFFFFF), Color(0x70FFFFFF), withNumbers = true)
+
         // ── 이펙트 레인 ───────────────────────────────────────
         drawRect(LANE_BG, Offset(0f, laneTop), Size(w, laneH))
+        drawBeats(laneTop, laneTop + laneH, Color(0x18FFFFFF), Color(0x40FFFFFF), withNumbers = false)
         val blocks = TimelineMath.blocks(entries, durationMs)
         for (b in blocks) {
             val shift = if (b.index == dragIndex) dragDeltaMs else 0f
@@ -490,6 +523,9 @@ fun TimelineView(
                 )
             }
         }
+
+        // 블록 위에서도 보이도록 레인 윗부분에 짧은 비트 눈금
+        drawBeats(laneTop, laneTop + 8f, Color(0xCCFFFFFF), Color(0xFFFFFFFF), withNumbers = false)
 
         // ── 드롭 위치 미리보기 ────────────────────────────────
         if (dropPreviewMs != null) {

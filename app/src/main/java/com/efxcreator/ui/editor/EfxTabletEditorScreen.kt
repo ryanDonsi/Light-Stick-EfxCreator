@@ -137,6 +137,7 @@ fun EfxTabletEditorScreen(
     var selectedIndex by remember { mutableIntStateOf(-1) }
     var pendingSelectTs by remember { mutableStateOf<Long?>(null) }
     var snapToBeats by remember { mutableStateOf(true) }
+    var showBeats by remember { mutableStateOf(true) }
     var followPlayhead by remember { mutableStateOf(true) }
     var timelineBounds by remember { mutableStateOf(Rect.Zero) }
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
@@ -327,7 +328,9 @@ fun EfxTabletEditorScreen(
                     ) {
                         TimelineToolbar(
                             snapToBeats = snapToBeats,
+                            showBeats = showBeats,
                             followPlayhead = followPlayhead,
+                            onShowBeatsChange = { showBeats = it },
                             onSnapChange = { snapToBeats = it },
                             onFollowChange = { followPlayhead = it },
                             onZoomIn = { timeline.zoom(1.5f) },
@@ -350,6 +353,7 @@ fun EfxTabletEditorScreen(
                             selectedIndex = selectedIndex,
                             dropPreviewMs = dropPreviewMs,
                             snapToBeats = snapToBeats,
+                            showBeats = showBeats,
                             followPlayhead = followPlayhead,
                             isPlaying = isPlaying,
                             emptyHint = when {
@@ -640,7 +644,9 @@ private fun EditorTopBar(
 @Composable
 private fun TimelineToolbar(
     snapToBeats: Boolean,
+    showBeats: Boolean,
     followPlayhead: Boolean,
+    onShowBeatsChange: (Boolean) -> Unit,
     onSnapChange: (Boolean) -> Unit,
     onFollowChange: (Boolean) -> Unit,
     onZoomIn: () -> Unit,
@@ -650,6 +656,8 @@ private fun TimelineToolbar(
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("타임라인", style = MaterialTheme.typography.titleSmall, color = Color.White)
         Spacer(Modifier.weight(1f))
+        FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text("비트 표시") })
+        Spacer(Modifier.width(8.dp))
         FilterChip(selected = snapToBeats, onClick = { onSnapChange(!snapToBeats) }, label = { Text("비트 스냅") })
         Spacer(Modifier.width(8.dp))
         FilterChip(selected = followPlayhead, onClick = { onFollowChange(!followPlayhead) }, label = { Text("따라가기") })
