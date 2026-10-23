@@ -5,6 +5,8 @@ import com.efxcreator.music.style.MusicStyleClassifier
 
 import com.efxcreator.core.AppConstants
 import com.efxcreator.core.Log
+import com.efxcreator.music.sets.EffectRuleSet
+import com.efxcreator.music.sets.PaletteSet
 import com.lightstick.types.Color as LSColor
 import com.lightstick.types.LSEffectPayload
 import kotlin.math.abs
@@ -88,11 +90,15 @@ private val BLUE_PURE_SHADE    = LSColor(0, 0, 122)     // 순수 파랑 셰이�
  * EffectMatchingEngineV1 - 섹션 타입 기반 이펙트 매칭 엔진
  * 섹션 타입별 이펙트 엔진 할당 (ON_PULSE / BREATH / ON_TRANSIT_ROTATE 등)
  */
-class EffectMatchingEngineV1 : EffectMatchingEngine {
+class EffectMatchingEngineV1(private val ruleSet: EffectRuleSet? = null) : EffectMatchingEngine {
 
     companion object {
         private const val TAG = AppConstants.Feature.AUTO_TIMELINE
         private const val ON_TRANSIT = 2
+
+        /** 내장 색 계열 (이름, cMain/cStep1~3 후보 4색) — 읽기 전용 팔레트 세트로 노출하기 위함 */
+        fun familyColors(): List<Pair<String, List<LSColor>>> =
+            PaletteFamily.values().map { it.name to it.rgb }
         private const val ON_PULSE_ACCENT_HOLD_MS = 200L
         private const val ON_ROTATE_BALLAD_TRANSIT = ON_TRANSIT
         // OUTRO 전체에 걸쳐 서서히 꺼지도록, outroStartMs~finalOffMs 구간을 여러 스텝으로
@@ -233,6 +239,19 @@ class EffectMatchingEngineV1 : EffectMatchingEngine {
         // 자주 눈에 띈다는 피드백으로 더 이상 쓰지 않는다. 대신 family.deep(명도만 48%로
         // 낮춘 톤)은 cDeep으로 그대로 사용.
         val cDeep  = family.deep[rolePerm[0]]
+        return paletteFromColors(cMain, cStep1, cStep2, cStep3, cDeep, family.name)
+    }
+
+    /** 사용자 팔레트 세트(대표색 + 단계색 3개)로 팔레트를 만든다. 어두운 톤(cDeep)은 대표색 명도 48%. */
+    override fun buildCustomPalette(set: PaletteSet): EffectMatchingEngine.Palette {
+        val cMain = set.main.toLs()
+        return paletteFromColors(cMain, set.step1.toLs(), set.step2.toLs(), set.step3.toLs(),
+            scaleColor(cMain, 0.48f), "CUSTOM")
+    }
+
+    private fun paletteFromColors(
+        cMain: LSColor, cStep1: LSColor, cStep2: LSColor, cStep3: LSColor, cDeep: LSColor, familyName: String
+    ): EffectMatchingEngine.Palette {
         val black  = LSColor(0, 0, 0)
         val white = LSColor(255, 255, 255)
         // colorGroup(VERSE 순환용, cStep 빈도 균등화): family.rgb 4개는 hue 기준 3등분
@@ -269,7 +288,7 @@ class EffectMatchingEngineV1 : EffectMatchingEngine {
             .filterNot { it == verseBlinkBg }
         return EffectMatchingEngine.Palette(
             black       = black, white = white,
-            colorFamily = family.name,
+            colorFamily = familyName,
             // 패턴B(onPulseBg[1])의 BG를 black에서 cDeep으로 바꾼다 — BRIDGE의 BREATH가
             // BG를 black으로 뒀을 때 "꺼진 것처럼 보임" 피드백이 있었는데, ON_PULSE도 같은
             // 문제를 겪을 수 있어서 같은 색 계열의 어두운 톤(cDeep)으로 바꿔 테스트해본다.
@@ -428,7 +447,8 @@ class EffectMatchingEngineV1 : EffectMatchingEngine {
             for ((beatIndex, t) in effectiveBeats.withIndex()) {
                 val barIdx = barIndexAt(t, downbeatMs, section.beatMs, beatsPerBar)
                 val beatEngine = when {
-                    section.type == SectionDetector.SectionType.BRIDGE ->
+                    section.type == SectionDetector.SectionType.BRIDGE &&
+                        ruleEngine(SectionDetector.SectionType.BRIDGE) == null ->
                         bridgePhaseEngine()
                     section.type == SectionDetector.SectionType.VERSE && verseBarEnergy.isNotEmpty() -> {
                         val energy = verseBarEnergy[barIdx] ?: 0f
@@ -547,9 +567,13 @@ class EffectMatchingEngineV1 : EffectMatchingEngine {
         return fullEnv.subList(startIdx, endIdx + 1).average().toFloat()
     }
 
+    /** 사용자 이펙트 세트가 이 섹션 종류에 지정한 패턴 (없으면 null = 기본 동작) */
+    private fun ruleEngine(type: SectionDetector.SectionType): EffectMatchingEngine.FgEngine? =
+        ruleSet?.patternFor(type.name)
+
     private fun assignFgEngine(
         type: SectionDetector.SectionType, isBalladMode: Boolean
-    ): EffectMatchingEngine.FgEngine = when (type) {
+    ): EffectMatchingEngine.FgEngine = ruleEngine(type) ?: when (type) {
         SectionDetector.SectionType.INTRO  -> EffectMatchingEngine.FgEngine.BREATH
         SectionDetector.SectionType.OUTRO  -> EffectMatchingEngine.FgEngine.OFF_TRANSIT
         // BREAK는 이제 "완전 무음" 구간만 가리키므로(SectionDetectorV2 참고), 숨쉬듯
@@ -572,7 +596,7 @@ class EffectMatchingEngineV1 : EffectMatchingEngine {
      */
     private fun sectionEnginePool(
         type: SectionDetector.SectionType, isBalladMode: Boolean
-    ): List<EffectMatchingEngine.FgEngine> = when (type) {
+    ): List<EffectMatchingEngine.FgEngine> = ruleEngine(type)?.let { listOf(it) } ?: when (type) {
         SectionDetector.SectionType.INTRO  -> listOf(EffectMatchingEngine.FgEngine.BREATH)
         SectionDetector.SectionType.OUTRO  -> listOf(EffectMatchingEngine.FgEngine.OFF_TRANSIT)
         SectionDetector.SectionType.BREAK  -> listOf(EffectMatchingEngine.FgEngine.FREEZE)

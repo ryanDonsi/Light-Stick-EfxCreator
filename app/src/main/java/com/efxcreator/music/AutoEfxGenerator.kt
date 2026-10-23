@@ -1,6 +1,7 @@
 package com.efxcreator.music
 
 import android.util.Log
+import com.efxcreator.music.sets.GenerationOptions
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
 import com.lightstick.efx.EfxEntry
@@ -32,9 +33,11 @@ class AutoEfxGenerator {
     }
 
     /** 이펙트 타임라인까지 자동 생성. CPU 집약적(수십 초 가능)이므로 Dispatchers.Default 에서 실행한다. */
-    suspend fun generate(musicFile: File): Result = withContext(Dispatchers.Default) {
+    suspend fun generate(
+        musicFile: File, options: GenerationOptions = GenerationOptions()
+    ): Result = withContext(Dispatchers.Default) {
         val musicId = computeMusicId(musicFile)
-        val r = runPipeline(musicFile, musicId)
+        val r = runPipeline(musicFile, musicId, options)
         coroutineContext.ensureActive()
 
         val entries = framesToEntries(r.frames)
@@ -58,13 +61,33 @@ class AutoEfxGenerator {
         throw GenerationException("음악 ID를 계산할 수 없습니다: ${e.message}", e)
     }
 
-    private suspend fun runPipeline(musicFile: File, musicId: Int): GenerationResult {
+    /**
+     * 저장된 분석 결과([MusicAnalysis.engineInput])에 이펙트/팔레트 세트를 적용해 엔트리를 다시 만든다.
+     * 느린 분석을 건너뛰므로 보통 1초 안팎으로 끝난다.
+     */
+    suspend fun render(
+        analysis: MusicAnalysis, musicId: Int, options: GenerationOptions
+    ): List<EfxEntry> = withContext(Dispatchers.Default) {
+        val input = analysis.engineInput
+            ?: throw GenerationException("이 프로젝트는 분석 데이터가 없어 세트를 적용할 수 없습니다.")
+        val r = try {
+            AutoTimelineGeneratorBeat().render(input, musicId, options)
+        } catch (e: Exception) {
+            throw GenerationException("이펙트 생성에 실패했습니다: ${e.message}", e)
+        }
+        framesToEntries(r.frames)
+    }
+
+    private suspend fun runPipeline(
+        musicFile: File, musicId: Int, options: GenerationOptions = GenerationOptions()
+    ): GenerationResult {
         coroutineContext.ensureActive()
         return try {
             AutoTimelineGeneratorBeat().generateAnalyzed(
                 musicPath = musicFile.absolutePath,
                 musicId = musicId,
-                paletteSize = AutoTimelineConfig.PALETTE_SIZE
+                paletteSize = AutoTimelineConfig.PALETTE_SIZE,
+                options = options
             )
         } catch (e: Exception) {
             throw GenerationException("음악 분석에 실패했습니다: ${e.message}", e)

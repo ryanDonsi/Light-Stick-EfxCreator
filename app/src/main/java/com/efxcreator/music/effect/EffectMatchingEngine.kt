@@ -1,6 +1,7 @@
 package com.efxcreator.music.effect
 
 import com.efxcreator.music.section.SectionDetector
+import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.music.style.MusicStyleClassifier
 
 import com.lightstick.types.Color as LSColor
@@ -76,6 +77,9 @@ interface EffectMatchingEngine {
      * @return 4색 팔레트 (흰색 포함)
      */
     fun buildPalette(seed: Int, musicStyle: MusicStyleClassifier.MusicStyle = MusicStyleClassifier.MusicStyle.POP): Palette
+
+    /** 사용자 팔레트 세트(대표색 + 단계색 3개)로 팔레트 생성 */
+    fun buildCustomPalette(set: PaletteSet): Palette
 
     /**
      * 섹션 그룹으로부터 이펙트 프레임 생성

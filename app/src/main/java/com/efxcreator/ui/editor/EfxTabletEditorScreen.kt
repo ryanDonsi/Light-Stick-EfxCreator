@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.Delete
@@ -76,8 +77,11 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.ui.TimelineEntryDialog
+import com.efxcreator.ui.sets.SetDropdown
+import com.efxcreator.ui.sets.SetSelectionDialog
 import com.efxcreator.viewmodel.BleViewModel
 import com.efxcreator.viewmodel.EfxEditViewModel
+import com.efxcreator.viewmodel.SetsViewModel
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.EffectType
 import kotlinx.coroutines.delay
@@ -101,8 +105,10 @@ private val PANEL_BG = Color(0xFF1B1B21)
 fun EfxTabletEditorScreen(
     projectId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToSets: () -> Unit = {},
     editVm: EfxEditViewModel = viewModel(),
-    bleVm: BleViewModel = viewModel()
+    bleVm: BleViewModel = viewModel(),
+    setsVm: SetsViewModel = viewModel()
 ) {
     val context = LocalContext.current
 
@@ -113,6 +119,9 @@ fun EfxTabletEditorScreen(
     val analyzing by editVm.analyzing.collectAsState()
     val musicFile by editVm.musicFile.collectAsState()
     val editMessage by editVm.message.collectAsState()
+    val applying by editVm.applying.collectAsState()
+    val effectSets by setsVm.effectSets.collectAsState()
+    val paletteSets by setsVm.paletteSets.collectAsState()
 
     val bleConnected by bleVm.connected.collectAsState()
     val bleMessage by bleVm.message.collectAsState()
@@ -134,6 +143,7 @@ fun EfxTabletEditorScreen(
 
     var showNameDialog by remember { mutableStateOf(false) }
     var showDeviceDialog by remember { mutableStateOf(false) }
+    var showApplyDialog by remember { mutableStateOf(false) }
     var deviceLoaded by remember { mutableStateOf(false) }
     var scanAfterPermission by remember { mutableStateOf(false) }
 
@@ -286,8 +296,10 @@ fun EfxTabletEditorScreen(
                 name = metadata?.name ?: "",
                 musicLabel = if (musicFile != null) "음악 변경" else "음악 선택",
                 analyzing = analyzing,
+                applying = applying,
                 entryCount = entries.size,
                 deviceConnected = bleConnected != null,
+                onApplySets = { showApplyDialog = true },
                 onBack = onNavigateBack,
                 onRename = { showNameDialog = true },
                 onPickMusic = { musicPicker.launch("audio/*") },
@@ -469,6 +481,60 @@ fun EfxTabletEditorScreen(
         )
     }
 
+    if (showApplyDialog) {
+        // -1 = 곡 전체, 그 외 = analysis.sections 의 인덱스
+        var scopeIndex by remember { mutableIntStateOf(-1) }
+        val sections = analysis?.sections.orEmpty()
+        val scopeRange: LongRange = if (scopeIndex < 0) 0L..Long.MAX_VALUE
+        else sections.getOrNull(scopeIndex)?.let { it.startMs until it.endMs } ?: LongRange.EMPTY
+        val replaceCount = entries.count { it.timestampMs in scopeRange }
+        val ready = analysis?.engineInput != null
+
+        SetSelectionDialog(
+            title = "이펙트 세트 적용",
+            confirmLabel = "적용",
+            effectSets = effectSets,
+            paletteSets = paletteSets,
+            initialEffectId = setsVm.lastEffectSetId,
+            initialPaletteId = setsVm.lastPaletteSetId,
+            confirmEnabled = ready && !analyzing,
+            onConfirm = { effectId, paletteId ->
+                val options = setsVm.rememberSelection(effectId, paletteId)
+                editVm.applySets(options, if (scopeIndex < 0) null else scopeIndex)
+                showApplyDialog = false
+            },
+            onManageSets = {
+                showApplyDialog = false
+                onNavigateToSets()
+            },
+            onDismiss = { showApplyDialog = false },
+            extraContent = {
+                SetDropdown(
+                    label = "적용 범위",
+                    autoLabel = "곡 전체",
+                    items = sections.withIndex().toList(),
+                    selectedId = if (scopeIndex < 0) "" else scopeIndex.toString(),
+                    idOf = { it.index.toString() },
+                    nameOf = { (i, sec) ->
+                        "${i + 1}. ${sec.type}  ${TimelineMath.formatTime(sec.startMs)}~${TimelineMath.formatTime(sec.endMs)}"
+                    },
+                    onSelect = { scopeIndex = it.toIntOrNull() ?: -1 }
+                )
+                Text(
+                    when {
+                        !ready && analyzing -> "음악 분석 중입니다. 끝나면 적용할 수 있습니다."
+                        !ready -> "음악을 선택해 분석한 뒤 적용할 수 있습니다."
+                        replaceCount > 0 -> "범위 안의 기존 엔트리 ${replaceCount}개가 새로 만든 이펙트로 교체됩니다."
+                        else -> "범위 안에 기존 엔트리가 없어 새로 추가됩니다."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (ready && replaceCount > 0) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        )
+    }
+
     if (showDeviceDialog) {
         DeviceDialog(
             bleVm = bleVm,
@@ -505,8 +571,10 @@ private fun EditorTopBar(
     name: String,
     musicLabel: String,
     analyzing: Boolean,
+    applying: Boolean,
     entryCount: Int,
     deviceConnected: Boolean,
+    onApplySets: () -> Unit,
     onBack: () -> Unit,
     onRename: () -> Unit,
     onPickMusic: () -> Unit,
@@ -541,6 +609,16 @@ private fun EditorTopBar(
             Text("분석 중…", style = MaterialTheme.typography.labelMedium, color = Color(0xFFB0B0BA))
             Spacer(Modifier.width(12.dp))
         }
+        FilledTonalButton(onClick = onApplySets, enabled = !applying) {
+            if (applying) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(6.dp))
+            Text(if (applying) "적용 중…" else "세트 적용")
+        }
+        Spacer(Modifier.width(8.dp))
         FilledTonalButton(onClick = onPickMusic) {
             Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))

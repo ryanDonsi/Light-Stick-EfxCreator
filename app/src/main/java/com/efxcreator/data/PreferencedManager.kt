@@ -28,4 +28,13 @@ class PreferencesManager(context: Context) {
     var musicLoadPath: String
         get() = prefs.getString(KEY_MUSIC_LOAD_PATH, DEFAULT_MUSIC_PATH) ?: DEFAULT_MUSIC_PATH
         set(value) = prefs.edit().putString(KEY_MUSIC_LOAD_PATH, value).apply()
+
+    // 마지막으로 선택한 이펙트/팔레트 세트 id (빈 문자열 = 자동)
+    var lastEffectSetId: String
+        get() = prefs.getString("last_effect_set_id", "") ?: ""
+        set(value) = prefs.edit().putString("last_effect_set_id", value).apply()
+
+    var lastPaletteSetId: String
+        get() = prefs.getString("last_palette_set_id", "") ?: ""
+        set(value) = prefs.edit().putString("last_palette_set_id", value).apply()
 }

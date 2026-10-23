@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.efxcreator.data.EfxRepository
 import com.efxcreator.model.EfxProjectMetadata
 import com.efxcreator.music.AutoEfxGenerator
+import com.efxcreator.music.sets.GenerationOptions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -92,7 +93,7 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
      * 완료되면 [autoGenState] 가 [AutoGenState.Done] 으로 바뀌며, 이후 편집 화면(EfxEditScreen)에서
      * 기존 수동 편집 기능으로 추가 수정할 수 있다.
      */
-    fun createProjectFromMusic(uri: Uri) {
+    fun createProjectFromMusic(uri: Uri, options: GenerationOptions = GenerationOptions()) {
         if (autoGenJob?.isActive == true) return
         val displayName = repository.getDisplayName(uri)
             ?: "New EFX ${_projects.value.size + 1}"
@@ -103,7 +104,7 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
             try {
                 // 재생/분석은 앱 내부 사본을 사용한다 (SAF 권한 만료 방지)
                 val musicFile = withContext(Dispatchers.IO) { repository.importMusic(metadata.id, uri) }
-                val result = autoEfxGenerator.generate(musicFile)
+                val result = autoEfxGenerator.generate(musicFile, options)
 
                 withContext(Dispatchers.IO) {
                     repository.saveEfx(metadata.id, result.efx)

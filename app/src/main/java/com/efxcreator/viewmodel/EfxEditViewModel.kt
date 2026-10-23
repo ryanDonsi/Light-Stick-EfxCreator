@@ -9,6 +9,7 @@ import com.efxcreator.data.EfxRepository
 import com.efxcreator.model.EfxProjectMetadata
 import com.efxcreator.music.AutoEfxGenerator
 import com.efxcreator.music.MusicAnalysis
+import com.efxcreator.music.sets.GenerationOptions
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
 import com.lightstick.efx.EfxEntry
@@ -48,6 +49,10 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
     /** 재생/분석에 사용하는 앱 내부 음악 사본 */
     private val _musicFile = MutableStateFlow<File?>(null)
     val musicFile: StateFlow<File?> = _musicFile.asStateFlow()
+
+    /** 이펙트/팔레트 세트 적용(재생성) 진행 중 */
+    private val _applying = MutableStateFlow(false)
+    val applying: StateFlow<Boolean> = _applying.asStateFlow()
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
@@ -107,7 +112,8 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         _musicFile.value = file
         _analysis.value = withContext(Dispatchers.IO) { repository.loadAnalysis(metadata.id) }
 
-        if (file != null && _analysis.value == null) runAnalysis(metadata.id, file)
+        // 분석 결과가 없거나, 세트 적용에 필요한 엔진 입력이 없는 예전 결과면 다시 분석한다
+        if (file != null && _analysis.value?.engineInput == null) runAnalysis(metadata.id, file)
     }
 
     private suspend fun runAnalysis(projectId: String, file: File) {
@@ -239,6 +245,74 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
             Log.e(TAG, "Error getting music file name", e)
             null
         }
+    }
+
+    /**
+     * 이펙트 세트/팔레트 세트를 적용해 타임라인을 다시 생성한다.
+     * 저장된 분석 결과를 쓰므로 느린 분석 없이 빠르게 끝난다.
+     *
+     * @param sectionIndex null 이면 곡 전체, 아니면 [MusicAnalysis.sections] 의 해당 섹션 구간만.
+     *   적용 범위 안의 기존 엔트리는 새로 만든 것으로 교체되고, 범위 밖은 그대로 둔다.
+     */
+    fun applySets(options: GenerationOptions, sectionIndex: Int?) {
+        if (_applying.value) return
+        viewModelScope.launch {
+            val meta = _metadata.value ?: return@launch
+            val currentEfx = _efx.value ?: run {
+                _message.value = "EFX 파일을 읽을 수 없어 적용할 수 없습니다."
+                return@launch
+            }
+            val analysis = _analysis.value
+            if (analysis == null || analysis.engineInput == null) {
+                _message.value = if (_analyzing.value) "음악 분석 중입니다. 완료 후 다시 시도해 주세요."
+                else "음악을 선택해 분석한 뒤 적용할 수 있습니다."
+                return@launch
+            }
+            val range: LongRange = if (sectionIndex == null) {
+                0L..Long.MAX_VALUE
+            } else {
+                val sec = analysis.sections.getOrNull(sectionIndex) ?: run {
+                    _message.value = "선택한 섹션을 찾을 수 없습니다."
+                    return@launch
+                }
+                sec.startMs until sec.endMs
+            }
+
+            _applying.value = true
+            try {
+                val generated = autoEfxGenerator.render(analysis, currentEfx.header.musicId, options)
+                val inRange = generated.filter { it.timestampMs in range }
+                replaceRange(meta, currentEfx, range, inRange)
+                Log.d(TAG, "Applied sets: range=$range new=${inRange.size}")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Apply sets failed", e)
+                _message.value = e.message ?: "세트 적용에 실패했습니다."
+            } finally {
+                _applying.value = false
+            }
+        }
+    }
+
+    /** [range] 안의 기존 엔트리를 [newEntries] 로 교체하고 Effect Index 를 다시 매긴다. */
+    private suspend fun replaceRange(
+        meta: EfxProjectMetadata, currentEfx: Efx, range: LongRange, newEntries: List<EfxEntry>
+    ) {
+        val kept = currentEfx.body.entries.filter { it.timestampMs !in range }
+        val merged = (kept + newEntries).sortedBy { it.timestampMs }.mapIndexed { idx, e ->
+            e.copy(payload = e.payload.copy(effectIndex = idx + 1))
+        }
+        val updatedEfx = Efx(
+            currentEfx.header.copy(entryCount = merged.size),
+            currentEfx.body.copy(entries = merged)
+        )
+        withContext(Dispatchers.IO) {
+            repository.saveEfx(meta.id, updatedEfx)
+            repository.saveProjectMetadata(meta.copy(updatedAt = System.currentTimeMillis()))
+        }
+        _efx.value = updatedEfx
+        _metadata.value = meta.copy(updatedAt = System.currentTimeMillis())
     }
 
     fun applySuggestedName() {

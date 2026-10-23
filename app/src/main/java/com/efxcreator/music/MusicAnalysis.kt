@@ -14,7 +14,12 @@ data class MusicAnalysis(
     val waveform: List<Float>,
     val beatTimesMs: List<Long>,
     val sections: List<AnalysisSection>,
-    val musicStyle: String? = null
+    val musicStyle: String? = null,
+    /**
+     * 이펙트 세트/팔레트 세트를 바꿔 다시 생성하기 위한 엔진 입력.
+     * 이 필드가 생기기 전에 저장된 분석 결과에는 없다(null) — 그 경우 다시 분석해야 한다.
+     */
+    val engineInput: EngineInput? = null
 ) {
     companion object {
         const val WAVEFORM_HOP_MS = 50

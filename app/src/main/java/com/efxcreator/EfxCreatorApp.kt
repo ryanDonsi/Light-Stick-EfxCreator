@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.efxcreator.ui.editor.EfxTabletEditorScreen
+import com.efxcreator.ui.sets.SetManagerScreen
 import com.efxcreator.ui.EfxListScreen
 import com.efxcreator.ui.SettingsScreen
 
@@ -18,6 +19,7 @@ sealed class Screen(val route: String) {
         fun createRoute(projectId: String) = "edit/$projectId"
     }
     object Settings : Screen("settings")  // ← 추가
+    object Sets : Screen("sets")          // 이펙트/팔레트 세트 관리
 }
 
 @Composable
@@ -35,7 +37,8 @@ fun EfxCreatorApp() {
                 },
                 onNavigateToSettings = {  // ← 추가
                     navController.navigate(Screen.Settings.route)
-                }
+                },
+                onNavigateToSets = { navController.navigate(Screen.Sets.route) }
             )
         }
 
@@ -50,9 +53,14 @@ fun EfxCreatorApp() {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 EfxTabletEditorScreen(
                     projectId = projectId,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToSets = { navController.navigate(Screen.Sets.route) }
                 )
             }
+        }
+
+        composable(Screen.Sets.route) {
+            SetManagerScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ← 설정 화면 추가

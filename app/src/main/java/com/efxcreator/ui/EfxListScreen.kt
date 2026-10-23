@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.model.EfxProjectMetadata
+import com.efxcreator.ui.sets.SetSelectionDialog
 import com.efxcreator.viewmodel.EfxListViewModel
+import com.efxcreator.viewmodel.SetsViewModel
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,17 +30,23 @@ import java.io.File
 fun EfxListScreen(
     onNavigateToEdit: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
-    viewModel: EfxListViewModel = viewModel()
+    onNavigateToSets: () -> Unit = {},
+    viewModel: EfxListViewModel = viewModel(),
+    setsViewModel: SetsViewModel = viewModel()
 ) {
     val projects by viewModel.projects.collectAsState()
     val autoGenState by viewModel.autoGenState.collectAsState()
     val context = LocalContext.current
     var showCreateDialog by remember { mutableStateOf(false) }
+    // 음악을 고른 뒤, 생성 전에 이펙트/팔레트 세트를 고르는 단계
+    var pendingMusicUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val effectSets by setsViewModel.effectSets.collectAsState()
+    val paletteSets by setsViewModel.paletteSets.collectAsState()
 
     val autoMusicPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
-        if (uri != null) viewModel.createProjectFromMusic(uri)
+        if (uri != null) pendingMusicUri = uri
     }
 
     // 자동 생성 완료 → 편집 화면 이동 / 실패 → 안내
@@ -81,6 +89,27 @@ fun EfxListScreen(
         )
     }
 
+    pendingMusicUri?.let { uri ->
+        SetSelectionDialog(
+            title = "생성할 이펙트 스타일",
+            confirmLabel = "생성",
+            effectSets = effectSets,
+            paletteSets = paletteSets,
+            initialEffectId = setsViewModel.lastEffectSetId,
+            initialPaletteId = setsViewModel.lastPaletteSetId,
+            onConfirm = { effectId, paletteId ->
+                val options = setsViewModel.rememberSelection(effectId, paletteId)
+                pendingMusicUri = null
+                viewModel.createProjectFromMusic(uri, options)
+            },
+            onManageSets = {
+                pendingMusicUri = null
+                onNavigateToSets()
+            },
+            onDismiss = { pendingMusicUri = null }
+        )
+    }
+
     (autoGenState as? EfxListViewModel.AutoGenState.Generating)?.let { generating ->
         AlertDialog(
             onDismissRequest = {},
@@ -109,6 +138,9 @@ fun EfxListScreen(
             TopAppBar(
                 title = { Text("EFX 목록") },
                 actions = {
+                    IconButton(onClick = onNavigateToSets) {
+                        Icon(Icons.Default.Tune, contentDescription = "이펙트·팔레트 세트")
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "설정")
                     }
