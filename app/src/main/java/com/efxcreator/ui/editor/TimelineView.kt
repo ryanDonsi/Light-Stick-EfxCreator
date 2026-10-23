@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
@@ -31,6 +33,7 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -140,7 +143,7 @@ private fun DrawScope.drawLabel(
     )
 }
 
-private enum class DragMode { NONE, SEEK, PAN, MOVE }
+private enum class DragMode { NONE, SEEK, PAN }
 
 private class DragHolder {
     var mode = DragMode.NONE
@@ -150,8 +153,9 @@ private class DragHolder {
 /**
  * 음악 파형 + 섹션 + 비트 + 이펙트 블록(다음 이펙트까지 구간)을 그리는 타임라인.
  *
- * 제스처: 위쪽(눈금/섹션/파형) 탭·드래그 = 재생 위치 이동, 이펙트 레인의 블록 탭 = 선택,
- * 블록 드래그 = 시간 이동(스냅), 레인의 빈 곳 드래그 = 좌우 스크롤, 두 손가락 핀치 = 줌.
+ * 제스처: 한 손가락 드래그 = 좌우 스크롤(어디서든), 맨 위 눈금 줄 드래그 = 재생 위치 스크럽,
+ * 탭 = 재생 위치 이동(위쪽) / 블록 선택(레인), 블록 길게 누른 채 끌기 = 시간 이동(스냅),
+ * 두 손가락 핀치 = 줌.
  */
 @Composable
 fun TimelineView(
@@ -173,6 +177,7 @@ fun TimelineView(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
     val textMeasurer = rememberTextMeasurer()
 
     val rulerH = with(density) { RULER_H.toPx() }
@@ -264,23 +269,15 @@ fun TimelineView(
                     }
                 }
             }
+            // 한 손가락 드래그 = 좌우 스크롤 (맨 위 눈금 줄만 재생 위치 스크럽)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { o ->
-                        if (o.y >= laneTop) {
-                            val idx = blockAt(o.x)
-                            if (idx >= 0) {
-                                drag.mode = DragMode.MOVE
-                                drag.originMs = currentEntries[idx].timestampMs
-                                dragIndex = idx
-                                dragDeltaMs = 0f
-                                onEntryClickState(idx)
-                            } else {
-                                drag.mode = DragMode.PAN
-                            }
-                        } else {
+                        if (o.y < rulerH) {
                             drag.mode = DragMode.SEEK
                             onSeekState(state.msAtX(o.x).toLong().coerceAtLeast(0L))
+                        } else {
+                            drag.mode = DragMode.PAN
                         }
                     },
                     onDrag = { change, amount ->
@@ -289,21 +286,41 @@ fun TimelineView(
                             DragMode.SEEK ->
                                 onSeekState(state.msAtX(change.position.x).toLong().coerceAtLeast(0L))
                             DragMode.PAN -> state.panByMs(-amount.x / state.pxPerMs, currentDuration)
-                            DragMode.MOVE -> dragDeltaMs += amount.x / state.pxPerMs
                             DragMode.NONE -> Unit
                         }
                     },
+                    onDragEnd = { drag.mode = DragMode.NONE },
+                    onDragCancel = { drag.mode = DragMode.NONE }
+                )
+            }
+            // 이펙트 블록을 길게 누른 채 끌기 = 시간 이동 (스크롤과 구분하기 위해 롱프레스 필요)
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { o ->
+                        val idx = if (o.y >= laneTop) blockAt(o.x) else -1
+                        if (idx >= 0) {
+                            drag.originMs = currentEntries[idx].timestampMs
+                            dragIndex = idx
+                            dragDeltaMs = 0f
+                            onEntryClickState(idx)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    },
+                    onDrag = { change, amount ->
+                        if (dragIndex >= 0) {
+                            change.consume()
+                            dragDeltaMs += amount.x / state.pxPerMs
+                        }
+                    },
                     onDragEnd = {
-                        if (drag.mode == DragMode.MOVE && dragIndex >= 0) {
+                        if (dragIndex >= 0) {
                             val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
                             if (newMs != drag.originMs) onEntryMoveState(dragIndex, newMs)
                         }
-                        drag.mode = DragMode.NONE
                         dragIndex = -1
                         dragDeltaMs = 0f
                     },
                     onDragCancel = {
-                        drag.mode = DragMode.NONE
                         dragIndex = -1
                         dragDeltaMs = 0f
                     }

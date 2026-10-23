@@ -699,7 +699,7 @@ private fun SelectedEntryPanel(
         Spacer(Modifier.height(8.dp))
         if (entry == null) {
             Text(
-                "타임라인의 블록을 탭하면 속성을 볼 수 있습니다.\n블록을 끌면 시간을 옮길 수 있습니다.",
+                "타임라인의 블록을 탭하면 속성을 볼 수 있습니다.\n블록을 길게 누른 채 끌면 시간을 옮길 수 있습니다.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF8A8A95)
             )
