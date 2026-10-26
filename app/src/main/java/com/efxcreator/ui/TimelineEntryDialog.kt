@@ -67,7 +67,7 @@ fun TimelineEntryDialog(
     var fade by remember { mutableIntStateOf(entry?.payload?.fade ?: 100) }
     var randomColor by remember { mutableIntStateOf(entry?.payload?.randomColor ?: 0) }
     var randomDelay by remember { mutableIntStateOf(entry?.payload?.randomDelay ?: 0) }
-    // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 단일, bit(n-1) = 그룹 n)
+    // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 마스터 키/모든 그룹, bit(n-1) = 그룹 n)
     var groupMask by remember { mutableLongStateOf(entry?.payload?.groupMask ?: 0L) }
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
