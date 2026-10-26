@@ -93,6 +93,7 @@ import kotlin.math.roundToInt
 
 private val EDITOR_BG = Color(0xFF101014)
 private val PANEL_BG = Color(0xFF1B1B21)
+private val PREVIEW_PANEL_WIDTH = 208.dp
 
 /**
  * 태블릿(가로) 전용 에디터.
@@ -725,33 +726,36 @@ private fun PreviewPanel(
     val current = entries.getOrNull(LedSimulator.indexAt(entries, position))
     val section = analysis?.sections?.firstOrNull { position >= it.startMs && position < it.endMs }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PANEL_BG, RoundedCornerShape(10.dp))
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Preview", style = MaterialTheme.typography.titleSmall, color = Color.White)
-            Spacer(Modifier.weight(1f))
-            if (deviceConnected) {
-                Text("● 실기기 동기화", style = MaterialTheme.typography.labelSmall, color = Color(0xFF66BB6A))
+    // 패널 전체를 이전(폭 320dp, 높이 약 290dp)의 약 65% 로 줄여 가운데 정렬한다
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier = Modifier
+                .width(PREVIEW_PANEL_WIDTH)
+                .background(PANEL_BG, RoundedCornerShape(10.dp))
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Preview", style = MaterialTheme.typography.labelLarge, color = Color.White)
+                Spacer(Modifier.weight(1f))
+                if (deviceConnected) {
+                    Text("● 실기기 동기화", style = MaterialTheme.typography.labelSmall, color = Color(0xFF66BB6A))
+                }
             }
+            Spacer(Modifier.height(4.dp))
+            LedPreview(color = led, modifier = Modifier.width(120.dp))
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = current?.payload?.effectType?.name ?: "—",
+                style = MaterialTheme.typography.titleSmall,
+                color = Color.White
+            )
+            Text(
+                text = listOfNotNull(section?.type, analysis?.musicStyle).joinToString(" · ").ifEmpty { " " },
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF9A9AA5)
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        LedPreview(color = led, modifier = Modifier.width(125.dp))
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = current?.payload?.effectType?.name ?: "—",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White
-        )
-        Text(
-            text = listOfNotNull(section?.type, analysis?.musicStyle).joinToString(" · ").ifEmpty { " " },
-            style = MaterialTheme.typography.labelMedium,
-            color = Color(0xFF9A9AA5)
-        )
     }
 }
 
