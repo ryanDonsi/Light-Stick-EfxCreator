@@ -302,7 +302,7 @@ private fun UserLibraryGrid(
     }
 }
 
-private val SLOT_HEIGHT = 72.dp
+private val SLOT_HEIGHT = 48.dp
 
 @Composable
 private fun EmptySlot(onClick: () -> Unit) {
@@ -321,21 +321,22 @@ private fun EmptySlot(onClick: () -> Unit) {
 
 @Composable
 private fun SlotContent(preset: EffectPreset) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         PresetSwatch(preset)
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.width(6.dp))
         // "Red / Black" 처럼 FG / BG 로 이루어진 이름은 두 줄(위 FG, 아래 BG)로 나눠 표시
         val lines = if (preset.isTwoColor && " / " in preset.label) preset.label.split(" / ", limit = 2)
         else listOf(preset.label)
-        lines.forEach { line ->
-            Text(
-                line,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
+        Column(modifier = Modifier.weight(1f, fill = false)) {
+            lines.forEach { line ->
+                Text(
+                    line,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -390,7 +391,7 @@ private fun SlotTile(
                     onDragCancel = { if (editMode) onReorderCancel() else drag.preset = null }
                 )
             }
-            .padding(horizontal = 4.dp, vertical = 6.dp)
+            .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
         SlotContent(preset)
         if (editMode) {
@@ -437,7 +438,7 @@ private fun PresetCard(
                     onDragCancel = { drag.preset = null }
                 )
             }
-            .padding(horizontal = 4.dp, vertical = 6.dp)
+            .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
         SlotContent(preset)
     }
