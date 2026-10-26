@@ -84,7 +84,7 @@ fun TimelineEntryDialog(
 
     // Advanced
     var spf by remember { mutableIntStateOf(entry?.payload?.spf ?: 100) }
-    var fade by remember { mutableIntStateOf(entry?.payload?.fade ?: 100) }
+    var fade by remember { mutableIntStateOf((entry?.payload?.fade ?: 100).coerceIn(0, 100)) }
     var randomColor by remember { mutableIntStateOf(entry?.payload?.randomColor ?: 0) }
     var randomDelay by remember { mutableIntStateOf(entry?.payload?.randomDelay ?: 0) }
     // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 마스터 키/모든 그룹, bit(n-1) = 그룹 n)
@@ -279,11 +279,10 @@ fun TimelineEntryDialog(
                 NumberTextField(
                     value = fade,
                     onValueChange = { fade = it },
-                    label = "Fade (밝기, 0-255)",
-                    range = 0..255,
+                    label = "Fade (밝기 %, 0-100)",
+                    range = 0..100,
                     modifier = Modifier.fillMaxWidth()
                 )
-                UnitHint("= 밝기 ${TimelineMath.fadePercent(fade)}%  (255 = 100%)")
 
                 if (showTargetOptions) {
                 // Random Color Switch
