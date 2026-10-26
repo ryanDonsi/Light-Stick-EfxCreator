@@ -336,7 +336,7 @@ fun EfxListScreen(
                                     inUnassigned -> "미분류"
                                     else -> "곡 목록"
                                 },
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
