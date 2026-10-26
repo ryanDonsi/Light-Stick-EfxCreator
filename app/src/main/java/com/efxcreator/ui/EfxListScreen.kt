@@ -128,12 +128,12 @@ fun EfxListScreen(
     }
 
     if (newShowDialog) {
-        NameDialog(
+        ShowEditDialog(
             title = "새 공연",
-            initial = "",
+            initial = null,
             confirmLabel = "만들기",
-            onConfirm = { name ->
-                selectedShowId = showViewModel.createShow(name)
+            onConfirm = { name, at, image, _ ->
+                selectedShowId = showViewModel.createShow(name, at, image)
                 newShowDialog = false
             },
             onDismiss = { newShowDialog = false }
@@ -141,12 +141,12 @@ fun EfxListScreen(
     }
 
     showNameDialog?.let { target ->
-        NameDialog(
-            title = "공연 이름 변경",
-            initial = target.name,
-            confirmLabel = "변경",
-            onConfirm = { name ->
-                showViewModel.renameShow(target.id, name)
+        ShowEditDialog(
+            title = "공연 정보 수정",
+            initial = target,
+            confirmLabel = "저장",
+            onConfirm = { name, at, image, remove ->
+                showViewModel.updateShow(target.id, name, at, image, remove)
                 showNameDialog = null
             },
             onDismiss = { showNameDialog = null }
@@ -286,7 +286,11 @@ fun EfxListScreen(
                             items(shows, key = { it.id }) { show ->
                                 ShowRow(
                                     name = show.name,
-                                    count = show.songIds.count { id -> projects.any { it.id == id } },
+                                    image = { ShowImage(show.imagePath, size = 48.dp) },
+                                    subtitle = listOfNotNull(
+                                        show.performanceAt?.let { formatShowDate(it) },
+                                        "${show.songIds.count { id -> projects.any { it.id == id } }}곡"
+                                    ).joinToString(" · "),
                                     selected = show.id == selectedShowId,
                                     onClick = { selectedShowId = show.id },
                                     onRename = { showNameDialog = show },
@@ -298,7 +302,8 @@ fun EfxListScreen(
                                 item(key = UNASSIGNED_ID) {
                                     ShowRow(
                                         name = "미분류",
-                                        count = unassigned.size,
+                                        image = null,
+                                        subtitle = "${unassigned.size}곡",
                                         selected = inUnassigned,
                                         onClick = { selectedShowId = UNASSIGNED_ID },
                                         onRename = null,
@@ -320,17 +325,29 @@ fun EfxListScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = when {
-                                selectedShow != null -> selectedShow.name
-                                inUnassigned -> "미분류"
-                                else -> "곡 목록"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
+                        if (selectedShow != null) {
+                            ShowImage(selectedShow.imagePath, size = 64.dp)
+                            Spacer(Modifier.width(12.dp))
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = when {
+                                    selectedShow != null -> selectedShow.name
+                                    inUnassigned -> "미분류"
+                                    else -> "곡 목록"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (selectedShow != null) {
+                                Text(
+                                    selectedShow.performanceAt?.let { formatShowDate(it) } ?: "공연 일시 미정",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                         // 공연을 선택해야 곡을 추가할 수 있다
                         Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -393,7 +410,8 @@ private fun EmptyHint(text: String) {
 @Composable
 private fun ShowRow(
     name: String,
-    count: Int,
+    image: (@Composable () -> Unit)?,
+    subtitle: String,
     selected: Boolean,
     onClick: () -> Unit,
     onRename: (() -> Unit)?,
@@ -409,9 +427,13 @@ private fun ShowRow(
         else MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (image != null) {
+                image()
+                Spacer(Modifier.width(12.dp))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     name,
@@ -422,8 +444,10 @@ private fun ShowRow(
                     else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "${count}곡",
+                    subtitle,
                     style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -435,7 +459,7 @@ private fun ShowRow(
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(
-                            text = { Text("이름 변경") },
+                            text = { Text("정보 수정") },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                             onClick = { menu = false; onRename() }
                         )
@@ -451,31 +475,6 @@ private fun ShowRow(
             }
         }
     }
-}
-
-@Composable
-private fun NameDialog(
-    title: String,
-    initial: String,
-    confirmLabel: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var name by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("공연 이름") },
-                singleLine = true
-            )
-        },
-        confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
-    )
 }
 
 @Composable

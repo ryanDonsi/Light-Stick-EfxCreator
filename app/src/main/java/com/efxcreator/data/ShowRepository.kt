@@ -1,6 +1,7 @@
 package com.efxcreator.data
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.efxcreator.model.Show
 import com.google.gson.Gson
@@ -32,6 +33,28 @@ class ShowRepository(context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error saving shows", e)
         }
+    }
+
+    private val imageDir = File(context.filesDir, "show_images").apply { mkdirs() }
+    private val resolver = context.contentResolver
+
+    /**
+     * 선택한 이미지를 앱 내부에 복사한다 (SAF 권한이 만료돼도 보이도록).
+     * 같은 공연의 이미지를 바꿀 때 캐시가 남지 않게 파일 이름에 시각을 붙인다.
+     * @return 복사한 파일 경로, 실패하면 null
+     */
+    fun importImage(showId: String, uri: Uri): String? = try {
+        deleteImages(showId)
+        val dest = File(imageDir, "${showId}_${System.currentTimeMillis()}.img")
+        resolver.openInputStream(uri)?.use { input -> dest.outputStream().use { input.copyTo(it) } }
+        if (dest.length() > 0) dest.absolutePath else null
+    } catch (e: Exception) {
+        Log.e(TAG, "Error importing show image", e)
+        null
+    }
+
+    fun deleteImages(showId: String) {
+        imageDir.listFiles { f -> f.name.startsWith("${showId}_") }?.forEach { it.delete() }
     }
 
     companion object {

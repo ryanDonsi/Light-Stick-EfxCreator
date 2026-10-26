@@ -1,0 +1,274 @@
+package com.efxcreator.ui
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.efxcreator.R
+import com.efxcreator.model.Show
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.InputStream
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+
+/** "2025.03.14 (금) 19:30" */
+fun formatShowDate(ms: Long): String =
+    SimpleDateFormat("yyyy.MM.dd (E) HH:mm", Locale.KOREA).format(Date(ms))
+
+/** [maxPx] 정도 크기로 줄여서 읽는다 (목록용 썸네일이라 원본 해상도가 필요 없다) */
+private fun decodeSampled(open: () -> InputStream?, maxPx: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    open()?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= maxPx && bounds.outHeight / (sample * 2) >= maxPx) sample *= 2
+    val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+    return open()?.use { BitmapFactory.decodeStream(it, null, opts) }
+}
+
+private fun loadBitmap(context: Context, path: String?, uri: Uri?, maxPx: Int): ImageBitmap? = try {
+    when {
+        uri != null -> decodeSampled({ context.contentResolver.openInputStream(uri) }, maxPx)
+        path != null -> decodeSampled({ java.io.File(path).takeIf { it.exists() }?.inputStream() }, maxPx)
+        else -> null
+    }?.asImageBitmap()
+} catch (e: Exception) {
+    null
+}
+
+/**
+ * 공연 이미지. 지정한 이미지가 없으면(또는 읽을 수 없으면) GLOWSYNC 기본 이미지를 보여 준다.
+ * [pickedUri] 는 편집 중에 막 고른 이미지를 미리 보여 줄 때 쓴다.
+ */
+@Composable
+fun ShowImage(
+    imagePath: String?,
+    modifier: Modifier = Modifier,
+    size: Dp = 48.dp,
+    pickedUri: Uri? = null
+) {
+    val context = LocalContext.current
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, imagePath, pickedUri) {
+        value = withContext(Dispatchers.IO) { loadBitmap(context, imagePath, pickedUri, 512) }
+    }
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(MaterialTheme.shapes.small)
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        val bmp = bitmap
+        if (bmp != null) {
+            Image(bmp, contentDescription = "공연 이미지", contentScale = ContentScale.Crop, modifier = Modifier.size(size))
+        } else {
+            // 기본 이미지: 검은 바탕에 GLOWSYNC 로고
+            Image(
+                painterResource(R.drawable.logo_glowsync),
+                contentDescription = "GLOWSYNC",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(size).padding(size / 8)
+            )
+        }
+    }
+}
+
+/**
+ * 공연 추가/수정 다이얼로그: 이름, 공연 일시, 공연 이미지.
+ * 이미지를 지정하지 않으면 GLOWSYNC 기본 이미지를 쓴다.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShowEditDialog(
+    title: String,
+    initial: Show?,
+    confirmLabel: String,
+    onConfirm: (name: String, performanceAt: Long?, newImage: Uri?, removeImage: Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initial?.name ?: "") }
+    var performanceAt by remember { mutableStateOf(initial?.performanceAt) }
+    var pickedImage by remember { mutableStateOf<Uri?>(null) }
+    var removeImage by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    // 날짜를 고른 뒤 시간 선택 단계에서 쓰는 임시 값 (년/월/일)
+    var pendingDate by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            pickedImage = uri
+            removeImage = false
+        }
+    }
+
+    val hasCustomImage = pickedImage != null || (initial?.imagePath != null && !removeImage)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("공연 이름") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // 공연 일시
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("공연 일시", style = MaterialTheme.typography.labelMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { showDatePicker = true }) {
+                            Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(performanceAt?.let { formatShowDate(it) } ?: "일시 선택")
+                        }
+                        if (performanceAt != null) {
+                            TextButton(onClick = { performanceAt = null }) { Text("지우기") }
+                        }
+                    }
+                }
+
+                // 공연 이미지
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("공연 이미지", style = MaterialTheme.typography.labelMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ShowImage(
+                            imagePath = if (removeImage) null else initial?.imagePath,
+                            pickedUri = pickedImage,
+                            size = 88.dp
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            OutlinedButton(onClick = { imagePicker.launch("image/*") }) {
+                                Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(if (hasCustomImage) "이미지 변경" else "이미지 선택")
+                            }
+                            if (hasCustomImage) {
+                                TextButton(onClick = { pickedImage = null; removeImage = true }) { Text("기본 이미지로") }
+                            }
+                            Text(
+                                "지정하지 않으면 GLOWSYNC 이미지가 쓰입니다.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(name, performanceAt, pickedImage, removeImage && pickedImage == null) }) {
+                Text(confirmLabel)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+    )
+
+    if (showDatePicker) {
+        // DatePicker 는 UTC 자정 기준 ms 를 돌려준다
+        val base = performanceAt ?: System.currentTimeMillis()
+        val utcInitial = Calendar.getInstance().apply { timeInMillis = base }.let {
+            Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                clear(); set(it.get(Calendar.YEAR), it.get(Calendar.MONTH), it.get(Calendar.DAY_OF_MONTH))
+            }.timeInMillis
+        }
+        val dateState = rememberDatePickerState(initialSelectedDateMillis = utcInitial)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    enabled = dateState.selectedDateMillis != null,
+                    onClick = {
+                        dateState.selectedDateMillis?.let { ms ->
+                            val c = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = ms }
+                            pendingDate = Triple(c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH))
+                        }
+                        showDatePicker = false
+                        showTimePicker = true
+                    }
+                ) { Text("다음") }
+            },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("취소") } }
+        ) { DatePicker(state = dateState) }
+    }
+
+    if (showTimePicker) {
+        val cur = Calendar.getInstance().apply { timeInMillis = performanceAt ?: System.currentTimeMillis() }
+        val timeState = rememberTimePickerState(
+            initialHour = if (performanceAt != null) cur.get(Calendar.HOUR_OF_DAY) else 19,
+            initialMinute = if (performanceAt != null) cur.get(Calendar.MINUTE) else 0,
+            is24Hour = true
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("공연 시간") },
+            text = { TimePicker(state = timeState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDate?.let { (y, m, d) ->
+                        performanceAt = Calendar.getInstance().apply {
+                            clear(); set(y, m, d, timeState.hour, timeState.minute)
+                        }.timeInMillis
+                    }
+                    showTimePicker = false
+                }) { Text("확인") }
+            },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("취소") } }
+        )
+    }
+}
