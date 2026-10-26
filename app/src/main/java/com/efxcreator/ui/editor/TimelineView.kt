@@ -11,7 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -56,17 +58,34 @@ class TimelineState {
     /** 1ms 당 픽셀 수 (0.06 = 60px/초) */
     var pxPerMs by mutableFloatStateOf(0.06f)
     var viewWidthPx by mutableFloatStateOf(0f)
+    /** 곡 길이(ms). 최대 축소 한계(전체 보기)를 정하는 데 쓴다. */
+    var durationMs by mutableLongStateOf(0L)
 
     companion object {
         const val MIN_PX_PER_MS = 0.008f
         const val MAX_PX_PER_MS = 0.6f
     }
 
+    /** 가장 많이 축소한 상태 = 곡 전체가 화면 너비에 딱 맞는 "전체 보기" */
+    val minPxPerMs: Float
+        get() = if (viewWidthPx > 0f && durationMs > 0L) {
+            (viewWidthPx / durationMs).coerceAtMost(MAX_PX_PER_MS)
+        } else MIN_PX_PER_MS
+
+    /** 줌 범위 밖이면 범위 안으로 되돌린다 (곡이나 화면 크기가 바뀐 경우) */
+    fun clampZoom() {
+        val clamped = pxPerMs.coerceIn(minPxPerMs, MAX_PX_PER_MS)
+        if (clamped != pxPerMs) {
+            pxPerMs = clamped
+            viewStartMs = viewStartMs.coerceAtLeast(0f)
+        }
+    }
+
     fun msAtX(x: Float): Float = viewStartMs + x / pxPerMs
 
     fun zoom(factor: Float, anchorX: Float = viewWidthPx / 2f) {
         val anchorMs = msAtX(anchorX)
-        pxPerMs = (pxPerMs * factor).coerceIn(MIN_PX_PER_MS, MAX_PX_PER_MS)
+        pxPerMs = (pxPerMs * factor).coerceIn(minPxPerMs, MAX_PX_PER_MS)
         viewStartMs = (anchorMs - anchorX / pxPerMs).coerceAtLeast(0f)
     }
 
@@ -76,7 +95,7 @@ class TimelineState {
      */
     fun pinch(scale: Float, prevCentroidX: Float, centroidX: Float) {
         val anchorMs = msAtX(prevCentroidX)
-        pxPerMs = (pxPerMs * scale).coerceIn(MIN_PX_PER_MS, MAX_PX_PER_MS)
+        pxPerMs = (pxPerMs * scale).coerceIn(minPxPerMs, MAX_PX_PER_MS)
         viewStartMs = (anchorMs - centroidX / pxPerMs).coerceAtLeast(0f)
     }
 
@@ -219,6 +238,10 @@ fun TimelineView(
     onBoundsChanged: (Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    SideEffect {
+        state.durationMs = durationMs
+        state.clampZoom()
+    }
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
 
@@ -305,6 +328,7 @@ fun TimelineView(
             .clipToBounds()
             .onGloballyPositioned {
                 state.viewWidthPx = it.size.width.toFloat()
+                state.clampZoom()
                 onBoundsChanged(it.boundsInWindow())
             }
             // 두 손가락 핀치 줌 — Initial 패스에서 먼저 보고, 두 손가락이 닿으면 변화를 소비해

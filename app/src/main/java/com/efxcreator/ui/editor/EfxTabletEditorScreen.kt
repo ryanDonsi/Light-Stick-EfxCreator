@@ -381,8 +381,7 @@ fun EfxTabletEditorScreen(
                             onZoomOut = { timeline.zoom(1f / 1.5f) },
                             onFit = {
                                 if (timeline.viewWidthPx > 0f) {
-                                    timeline.pxPerMs = (timeline.viewWidthPx / durationMs.toFloat())
-                                        .coerceIn(TimelineState.MIN_PX_PER_MS, TimelineState.MAX_PX_PER_MS)
+                                    timeline.pxPerMs = timeline.minPxPerMs
                                     timeline.viewStartMs = 0f
                                 }
                             }
