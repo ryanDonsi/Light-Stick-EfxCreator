@@ -12,19 +12,29 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.model.EfxProjectMetadata
+import com.efxcreator.model.Show
 import com.efxcreator.ui.sets.SetSelectionDialog
 import com.efxcreator.viewmodel.EfxListViewModel
 import com.efxcreator.viewmodel.SetsViewModel
+import com.efxcreator.viewmodel.ShowViewModel
 import java.io.File
 
+/** 어느 공연에도 속하지 않은 곡을 모아 보여 주는 가상 공연의 id */
+private const val UNASSIGNED_ID = "__unassigned__"
+
+/**
+ * 초기 화면: 왼쪽에 공연 목록, 오른쪽에 선택한 공연의 곡 목록.
+ * 공연을 선택해야 곡을 추가할 수 있고, 새 곡은 선택한 공연에 들어간다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EfxListScreen(
@@ -32,16 +42,39 @@ fun EfxListScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToSets: () -> Unit = {},
     viewModel: EfxListViewModel = viewModel(),
-    setsViewModel: SetsViewModel = viewModel()
+    setsViewModel: SetsViewModel = viewModel(),
+    showViewModel: ShowViewModel = viewModel()
 ) {
     val projects by viewModel.projects.collectAsState()
+    val shows by showViewModel.shows.collectAsState()
     val autoGenState by viewModel.autoGenState.collectAsState()
     val context = LocalContext.current
+
+    var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showNameDialog by remember { mutableStateOf<Show?>(null) }       // 이름 변경 대상
+    var newShowDialog by remember { mutableStateOf(false) }
+    var deleteShowTarget by remember { mutableStateOf<Show?>(null) }
+    var moveSongTarget by remember { mutableStateOf<EfxProjectMetadata?>(null) }
+    // 곡을 추가하는 동안 새 곡이 들어갈 공연 (자동 생성은 시간이 걸려 화면이 바뀔 수 있으므로 따로 기억)
+    var addTargetShowId by remember { mutableStateOf<String?>(null) }
     // 음악을 고른 뒤, 생성 전에 이펙트/팔레트 세트를 고르는 단계
     var pendingMusicUri by remember { mutableStateOf<android.net.Uri?>(null) }
     val effectSets by setsViewModel.effectSets.collectAsState()
     val paletteSets by setsViewModel.paletteSets.collectAsState()
+
+    // 지워졌거나 아직 고르지 않은 공연 선택은 해제
+    val selectedShow = shows.firstOrNull { it.id == selectedShowId }
+    val unassigned = remember(projects, shows) {
+        val assigned = shows.flatMap { it.songIds }.toSet()
+        projects.filter { it.id !in assigned }
+    }
+    val inUnassigned = selectedShowId == UNASSIGNED_ID
+    val songs: List<EfxProjectMetadata> = when {
+        selectedShow != null -> selectedShow.songIds.mapNotNull { id -> projects.firstOrNull { it.id == id } }
+        inUnassigned -> unassigned
+        else -> emptyList()
+    }
 
     val autoMusicPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -49,11 +82,12 @@ fun EfxListScreen(
         if (uri != null) pendingMusicUri = uri
     }
 
-    // 자동 생성 완료 → 편집 화면 이동 / 실패 → 안내
+    // 자동 생성 완료 → 공연에 곡 추가 + 편집 화면 이동 / 실패 → 안내
     LaunchedEffect(autoGenState) {
         when (val state = autoGenState) {
             is EfxListViewModel.AutoGenState.Done -> {
                 viewModel.consumeAutoGenState()
+                addTargetShowId?.let { showViewModel.addSong(it, state.projectId) }
                 onNavigateToEdit(state.projectId)
             }
             is EfxListViewModel.AutoGenState.Error -> {
@@ -67,11 +101,14 @@ fun EfxListScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("새 EFX 만들기") },
-            text = { Text("빈 프로젝트에서 직접 편집하거나, 음악을 분석해 이펙트를 자동으로 생성할 수 있습니다.") },
+            title = { Text("곡 추가") },
+            text = {
+                Text("\"${selectedShow?.name ?: ""}\" 공연에 곡을 추가합니다. 빈 곡에서 직접 편집하거나, 음악을 분석해 이펙트를 자동으로 생성할 수 있습니다.")
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showCreateDialog = false
+                    addTargetShowId = selectedShow?.id
                     autoMusicPicker.launch("audio/*")
                 }) {
                     Text("음악으로 자동 생성")
@@ -81,11 +118,82 @@ fun EfxListScreen(
                 TextButton(onClick = {
                     showCreateDialog = false
                     val newProjectId = viewModel.createNewProject()
+                    selectedShow?.let { showViewModel.addSong(it.id, newProjectId) }
                     onNavigateToEdit(newProjectId)
                 }) {
-                    Text("빈 프로젝트")
+                    Text("빈 곡")
                 }
             }
+        )
+    }
+
+    if (newShowDialog) {
+        NameDialog(
+            title = "새 공연",
+            initial = "",
+            confirmLabel = "만들기",
+            onConfirm = { name ->
+                selectedShowId = showViewModel.createShow(name)
+                newShowDialog = false
+            },
+            onDismiss = { newShowDialog = false }
+        )
+    }
+
+    showNameDialog?.let { target ->
+        NameDialog(
+            title = "공연 이름 변경",
+            initial = target.name,
+            confirmLabel = "변경",
+            onConfirm = { name ->
+                showViewModel.renameShow(target.id, name)
+                showNameDialog = null
+            },
+            onDismiss = { showNameDialog = null }
+        )
+    }
+
+    deleteShowTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteShowTarget = null },
+            title = { Text("공연 삭제") },
+            text = { Text("\"${target.name}\" 공연을 삭제합니다. 포함된 곡 ${target.songIds.size}개는 지워지지 않고 \"미분류\" 로 이동합니다.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showViewModel.deleteShow(target.id)
+                    if (selectedShowId == target.id) selectedShowId = null
+                    deleteShowTarget = null
+                }) { Text("삭제", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleteShowTarget = null }) { Text("취소") } }
+        )
+    }
+
+    moveSongTarget?.let { song ->
+        AlertDialog(
+            onDismissRequest = { moveSongTarget = null },
+            title = { Text("\"${song.name}\" 이동") },
+            text = {
+                if (shows.isEmpty()) {
+                    Text("이동할 공연이 없습니다. 먼저 공연을 만들어 주세요.")
+                } else {
+                    Column {
+                        shows.forEach { show ->
+                            ListItem(
+                                headlineContent = { Text(show.name) },
+                                supportingContent = { Text("${show.songIds.size}곡") },
+                                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                                modifier = Modifier.clickable {
+                                    showViewModel.moveSong(song.id, show.id)
+                                    moveSongTarget = null
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { moveSongTarget = null }) { Text("취소") } }
         )
     }
 
@@ -136,7 +244,7 @@ fun EfxListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("EFX 목록") },
+                title = { Text("GLOWSYNC Editor") },
                 actions = {
                     IconButton(onClick = onNavigateToSets) {
                         Icon(Icons.Default.Tune, contentDescription = "이펙트·팔레트 세트")
@@ -146,58 +254,228 @@ fun EfxListScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "새로 만들기")
-            }
         }
     ) { padding ->
-        if (projects.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // ── 좌측: 공연 목록 ─────────────────────────────
+            Surface(
+                modifier = Modifier.weight(0.36f).fillMaxHeight(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
-                Text(
-                    text = "EFX 프로젝트가 없습니다.\n+ 버튼을 눌러 생성하세요!",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("공연 목록", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        FilledTonalButton(onClick = { newShowDialog = true }) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("공연 추가")
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    if (shows.isEmpty() && unassigned.isEmpty()) {
+                        EmptyHint("공연이 없습니다.\n\"공연 추가\" 로 만들어 주세요.")
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(shows, key = { it.id }) { show ->
+                                ShowRow(
+                                    name = show.name,
+                                    count = show.songIds.count { id -> projects.any { it.id == id } },
+                                    selected = show.id == selectedShowId,
+                                    onClick = { selectedShowId = show.id },
+                                    onRename = { showNameDialog = show },
+                                    onDelete = { deleteShowTarget = show },
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
+                            if (unassigned.isNotEmpty()) {
+                                item(key = UNASSIGNED_ID) {
+                                    ShowRow(
+                                        name = "미분류",
+                                        count = unassigned.size,
+                                        selected = inUnassigned,
+                                        onClick = { selectedShowId = UNASSIGNED_ID },
+                                        onRename = null,
+                                        onDelete = null,
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+
+            // ── 우측: 선택한 공연의 곡 ───────────────────────
+            Surface(
+                modifier = Modifier.weight(0.64f).fillMaxHeight(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
-                items(projects, key = { it.id }) { project ->
-                    EfxProjectCard(
-                        modifier = Modifier.animateItem(),
-                        project = project,
-                        entryCount = viewModel.getEntryCount(project.id),
-                        musicId = viewModel.getMusicId(project.id),
-                        onEdit = { onNavigateToEdit(project.id) },
-                        onSave = { projectId, projectName ->
-                            viewModel.prepareExportFile(projectId, projectName)
-                        },
-                        onShare = { projectId, projectName ->
-                            viewModel.prepareExportFile(projectId, projectName)
-                        },
-                        onFileSaved = { sourceFile, destinationUri ->
-                            viewModel.saveExportedFile(sourceFile, destinationUri)
-                        },
-                        onDelete = { viewModel.deleteProject(project.id) }
-                    )
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = when {
+                                selectedShow != null -> selectedShow.name
+                                inUnassigned -> "미분류"
+                                else -> "곡 목록"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // 공연을 선택해야 곡을 추가할 수 있다
+                        Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("곡 추가")
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    when {
+                        selectedShowId == null || (selectedShow == null && !inUnassigned) ->
+                            EmptyHint("왼쪽에서 공연을 선택하면\n곡을 추가할 수 있습니다.")
+                        songs.isEmpty() ->
+                            EmptyHint("이 공연에는 아직 곡이 없습니다.\n\"곡 추가\" 로 첫 곡을 만들어 보세요.")
+                        else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(songs, key = { it.id }) { project ->
+                                EfxProjectCard(
+                                    modifier = Modifier.animateItem(),
+                                    project = project,
+                                    entryCount = viewModel.getEntryCount(project.id),
+                                    musicId = viewModel.getMusicId(project.id),
+                                    onEdit = { onNavigateToEdit(project.id) },
+                                    onSave = { projectId, projectName ->
+                                        viewModel.prepareExportFile(projectId, projectName)
+                                    },
+                                    onShare = { projectId, projectName ->
+                                        viewModel.prepareExportFile(projectId, projectName)
+                                    },
+                                    onFileSaved = { sourceFile, destinationUri ->
+                                        viewModel.saveExportedFile(sourceFile, destinationUri)
+                                    },
+                                    onDelete = {
+                                        viewModel.deleteProject(project.id)
+                                        showViewModel.removeSongEverywhere(project.id)
+                                    },
+                                    onMove = { moveSongTarget = project }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun EmptyHint(text: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+/** 공연 목록의 한 줄. 선택되면 secondaryContainer 색으로 강조된다. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShowRow(
+    name: String,
+    count: Int,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onRename: (() -> Unit)?,
+    onDelete: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    var menu by remember { mutableStateOf(false) }
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "${count}곡",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (onRename != null && onDelete != null) {
+                Box {
+                    IconButton(onClick = { menu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "공연 메뉴")
+                    }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("이름 변경") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            onClick = { menu = false; onRename() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("삭제", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            },
+                            onClick = { menu = false; onDelete() }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NameDialog(
+    title: String,
+    initial: String,
+    confirmLabel: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("공연 이름") },
+                singleLine = true
+            )
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text(confirmLabel) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+    )
 }
 
 @Composable
@@ -210,7 +488,8 @@ fun EfxProjectCard(
     onSave: (String, String) -> File,
     onShare: (String, String) -> File,
     onFileSaved: (File, android.net.Uri) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onMove: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
@@ -340,6 +619,20 @@ fun EfxProjectCard(
                             )
                         }
                     )
+
+                    // 다른 공연으로 이동
+                    if (onMove != null) {
+                        DropdownMenuItem(
+                            text = { Text("다른 공연으로 이동") },
+                            onClick = {
+                                showMenu = false
+                                onMove()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Folder, contentDescription = null)
+                            }
+                        )
+                    }
 
                     // 공유
                     DropdownMenuItem(
