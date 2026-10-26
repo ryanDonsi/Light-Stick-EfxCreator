@@ -740,7 +740,7 @@ private fun PreviewPanel(
             }
         }
         Spacer(Modifier.height(8.dp))
-        LedPreview(color = led, modifier = Modifier.width(190.dp))
+        LedPreview(color = led, modifier = Modifier.width(125.dp))
         Spacer(Modifier.height(8.dp))
         Text(
             text = current?.payload?.effectType?.name ?: "—",
