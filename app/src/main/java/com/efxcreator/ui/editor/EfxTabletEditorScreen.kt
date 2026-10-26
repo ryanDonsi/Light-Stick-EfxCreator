@@ -1,6 +1,7 @@
 package com.efxcreator.ui.editor
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -28,6 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
@@ -36,6 +39,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
@@ -124,6 +128,10 @@ fun EfxTabletEditorScreen(
     val musicFile by editVm.musicFile.collectAsState()
     val editMessage by editVm.message.collectAsState()
     val applying by editVm.applying.collectAsState()
+    val canUndo by editVm.canUndo.collectAsState()
+    val canRedo by editVm.canRedo.collectAsState()
+    val dirty by editVm.dirty.collectAsState()
+    val saving by editVm.saving.collectAsState()
     val userSlots by libVm.slots.collectAsState()
     val effectSets by setsVm.effectSets.collectAsState()
     val paletteSets by setsVm.paletteSets.collectAsState()
@@ -150,6 +158,7 @@ fun EfxTabletEditorScreen(
     var showNameDialog by remember { mutableStateOf(false) }
     var showDeviceDialog by remember { mutableStateOf(false) }
     var showApplyDialog by remember { mutableStateOf(false) }
+    var showLeaveDialog by remember { mutableStateOf(false) }
     // 내 라이브러리에서 추가/수정 중인 칸 번호 (null = 닫힘)
     var libraryEditorSlot by remember { mutableStateOf<Int?>(null) }
     var deviceLoaded by remember { mutableStateOf(false) }
@@ -170,6 +179,12 @@ fun EfxTabletEditorScreen(
         }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { player.pause() }
+
+    // 저장하지 않은 편집이 있으면 나가기 전에 확인한다 (시스템 뒤로가기 포함)
+    BackHandler(enabled = dirty) { showLeaveDialog = true }
+    fun requestLeave() {
+        if (dirty) showLeaveDialog = true else onNavigateBack()
+    }
 
     LaunchedEffect(editMessage) {
         editMessage?.let {
@@ -307,8 +322,15 @@ fun EfxTabletEditorScreen(
                 applying = applying,
                 entryCount = entries.size,
                 deviceConnected = bleConnected != null,
+                canUndo = canUndo,
+                canRedo = canRedo,
+                dirty = dirty,
+                saving = saving,
+                onUndo = { editVm.undo() },
+                onRedo = { editVm.redo() },
+                onSave = { editVm.save() },
                 onApplySets = { showApplyDialog = true },
-                onBack = onNavigateBack,
+                onBack = { requestLeave() },
                 onRename = { showNameDialog = true },
                 onPickMusic = { musicPicker.launch("audio/*") },
                 onDevice = { showDeviceDialog = true }
@@ -489,6 +511,29 @@ fun EfxTabletEditorScreen(
         )
     }
 
+    if (showLeaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showLeaveDialog = false },
+            title = { Text("저장하지 않은 변경") },
+            text = { Text("타임라인에 저장하지 않은 편집이 있습니다. 저장하고 나갈까요?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLeaveDialog = false
+                    editVm.save(onSaved = onNavigateBack)
+                }) { Text("저장하고 나가기") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        showLeaveDialog = false
+                        onNavigateBack()
+                    }) { Text("저장 안 함", color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { showLeaveDialog = false }) { Text("취소") }
+                }
+            }
+        )
+    }
+
     if (showNameDialog) {
         var text by remember { mutableStateOf(metadata?.name ?: "") }
         AlertDialog(
@@ -623,6 +668,13 @@ private fun EditorTopBar(
     applying: Boolean,
     entryCount: Int,
     deviceConnected: Boolean,
+    canUndo: Boolean,
+    canRedo: Boolean,
+    dirty: Boolean,
+    saving: Boolean,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onSave: () -> Unit,
     onApplySets: () -> Unit,
     onBack: () -> Unit,
     onRename: () -> Unit,
@@ -640,7 +692,7 @@ private fun EditorTopBar(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Color.White)
         }
         Text(
-            text = name.ifBlank { "EFX" },
+            text = name.ifBlank { "EFX" } + if (dirty) "  ●" else "",
             style = MaterialTheme.typography.titleMedium,
             color = Color.White,
             maxLines = 1,
@@ -649,6 +701,23 @@ private fun EditorTopBar(
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         )
         Text("· $entryCount entries", style = MaterialTheme.typography.labelMedium, color = Color(0xFF9A9AA5))
+        if (dirty) {
+            Spacer(Modifier.width(8.dp))
+            Text("저장 안 됨", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB74D))
+        }
+        Spacer(Modifier.width(8.dp))
+        IconButton(onClick = onUndo, enabled = canUndo) {
+            Icon(
+                Icons.AutoMirrored.Filled.Undo, contentDescription = "실행 취소",
+                tint = if (canUndo) Color.White else Color(0xFF555560)
+            )
+        }
+        IconButton(onClick = onRedo, enabled = canRedo) {
+            Icon(
+                Icons.AutoMirrored.Filled.Redo, contentDescription = "다시 실행",
+                tint = if (canRedo) Color.White else Color(0xFF555560)
+            )
+        }
 
         Spacer(Modifier.weight(1f))
 
@@ -658,6 +727,16 @@ private fun EditorTopBar(
             Text("분석 중…", style = MaterialTheme.typography.labelMedium, color = Color(0xFFB0B0BA))
             Spacer(Modifier.width(12.dp))
         }
+        Button(onClick = onSave, enabled = dirty && !saving) {
+            if (saving) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            Spacer(Modifier.width(6.dp))
+            Text("저장")
+        }
+        Spacer(Modifier.width(8.dp))
         FilledTonalButton(onClick = onApplySets, enabled = !applying) {
             if (applying) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
