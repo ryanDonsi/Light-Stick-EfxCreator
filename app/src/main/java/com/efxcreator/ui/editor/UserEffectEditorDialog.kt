@@ -66,7 +66,7 @@ fun UserEffectEditorDialog(
     var pickedPreset by remember { mutableStateOf("") }
 
     val twoColor = type == EffectType.BLINK || type == EffectType.BREATH || type == EffectType.STROBE
-    val periodLabel = if (type == EffectType.ON || type == EffectType.OFF) "전환 시간" else "주기"
+    val periodLabel = TimelineMath.periodLabel(type)   // ON/OFF = Transit, 그 외 = Period
 
     AlertDialog(
         onDismissRequest = onDismiss,

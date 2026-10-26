@@ -904,19 +904,35 @@ private fun SelectedEntryPanel(
         val rows = listOf(
             "시각" to TimelineMath.formatTime(entry.timestampMs, withTenths = true),
             "종류" to p.effectType.name,
-            "색상" to "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})",
-            "배경" to "RGB(${p.backgroundColor.r}, ${p.backgroundColor.g}, ${p.backgroundColor.b})",
-            "Period" to p.period.toString(),
+            "색상 (FG)" to "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})",
+            "배경 (BG)" to "RGB(${p.backgroundColor.r}, ${p.backgroundColor.g}, ${p.backgroundColor.b})",
+            // 같은 패킷 필드: ON/OFF 는 Transit, BLINK/STROBE/BREATH 는 Period (단위 10ms)
+            TimelineMath.periodLabel(p.effectType) to "${p.period}  (${p.period * 10}ms)",
             "SPF / Fade" to "${p.spf} / ${p.fade}",
+            "그룹 마스크" to TimelineMath.formatGroupMask(p.groupMask),
+            "Random Delay" to if (p.randomDelay == 0) "0  (없음)" else "${p.randomDelay}  (최대 ${p.randomDelay * 10}ms)",
+            "Random Color" to if (p.randomColor != 0) "ON" else "OFF",
             "Index" to p.effectIndex.toString()
         )
-        rows.forEach { (k, v) ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text(k, style = MaterialTheme.typography.labelMedium, color = Color(0xFF8A8A95), modifier = Modifier.width(84.dp))
-                Text(v, style = MaterialTheme.typography.labelMedium, color = Color.White)
+        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            rows.forEach { (k, v) ->
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                    Text(
+                        k,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFF8A8A95),
+                        modifier = Modifier.width(96.dp)
+                    )
+                    Text(
+                        v,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (k == "Random Color" && p.randomColor != 0) Color(0xFF66BB6A) else Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))

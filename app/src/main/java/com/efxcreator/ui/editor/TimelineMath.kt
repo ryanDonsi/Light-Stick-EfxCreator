@@ -1,6 +1,7 @@
 package com.efxcreator.ui.editor
 
 import com.lightstick.efx.EfxEntry
+import com.lightstick.types.EffectType
 import kotlin.math.abs
 
 /** 타임라인의 "다음 이펙트까지" 구간 블록 */
@@ -50,6 +51,23 @@ object TimelineMath {
     fun rulerStepSec(pxPerMs: Float, minPx: Float = 90f): Float {
         val candidates = floatArrayOf(0.5f, 1f, 2f, 5f, 10f, 15f, 30f, 60f, 120f, 300f)
         return candidates.firstOrNull { it * 1000f * pxPerMs >= minPx } ?: candidates.last()
+    }
+
+    /**
+     * 같은 패킷 필드(period)를 이벤트에 따라 다르게 부른다:
+     * ON/OFF 는 색 전환 시간(Transit), BLINK/STROBE/BREATH 는 이펙트 주기(Period). 단위는 모두 10ms.
+     */
+    fun periodLabel(type: EffectType): String =
+        if (type == EffectType.ON || type == EffectType.OFF) "Transit" else "Period"
+
+    /** 그룹 마스크 표시: 0 = 단일, 0xFFFFFFFF = 모든 그룹, 그 외 = 켜진 비트의 GRPn 목록 (bit(n-1) = 그룹 n) */
+    fun formatGroupMask(mask: Long): String = when (mask) {
+        0L -> "단일 (0)"
+        0xFFFFFFFFL -> "모든 그룹 (0xFFFFFFFF)"
+        else -> {
+            val groups = (0 until 32).filter { ((mask shr it) and 1L) == 1L }.map { "GRP${it + 1}" }
+            "${groups.joinToString(", ")} (0x%08X)".format(mask)
+        }
     }
 
     fun formatTime(ms: Long, withTenths: Boolean = false): String {
