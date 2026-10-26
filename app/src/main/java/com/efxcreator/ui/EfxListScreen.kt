@@ -67,7 +67,7 @@ fun EfxListScreen(
     // 곡을 추가하는 동안 새 곡이 들어갈 공연 (자동 생성은 시간이 걸려 화면이 바뀔 수 있으므로 따로 기억)
     var addTargetShowId by remember { mutableStateOf<String?>(null) }
     // 음악을 고른 뒤, 생성 전에 이펙트/팔레트 세트를 고르는 단계
-    var pendingMusicUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingMusicUris by remember { mutableStateOf<List<android.net.Uri>>(emptyList()) }
     val effectSets by setsViewModel.effectSets.collectAsState()
     val paletteSets by setsViewModel.paletteSets.collectAsState()
 
@@ -84,10 +84,9 @@ fun EfxListScreen(
         else -> emptyList()
     }
 
-    val autoMusicPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) pendingMusicUri = uri
+    // 내장 저장공간의 Music 폴더에서 시작하고, 여러 곡을 한 번에 고를 수 있는 음악 선택기
+    val autoMusicPicker = rememberLauncherForActivityResult(OpenMusicDocuments()) { uris ->
+        if (uris.isNotEmpty()) pendingMusicUris = uris
     }
 
     // 자동 생성 완료 → 공연에 곡 추가 + 편집 화면 이동 / 실패 → 안내
@@ -95,8 +94,13 @@ fun EfxListScreen(
         when (val state = autoGenState) {
             is EfxListViewModel.AutoGenState.Done -> {
                 viewModel.consumeAutoGenState()
-                addTargetShowId?.let { showViewModel.addSong(it, state.projectId) }
                 onNavigateToEdit(state.projectId)
+            }
+            is EfxListViewModel.AutoGenState.DoneBatch -> {
+                viewModel.consumeAutoGenState()
+                val msg = "${state.projectIds.size}곡을 추가했습니다." +
+                    if (state.failed > 0) " (${state.failed}곡은 실패했습니다.)" else ""
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
             is EfxListViewModel.AutoGenState.Error -> {
                 Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
@@ -117,9 +121,9 @@ fun EfxListScreen(
                 TextButton(onClick = {
                     showCreateDialog = false
                     addTargetShowId = selectedShow?.id
-                    autoMusicPicker.launch("audio/*")
+                    autoMusicPicker.launch(Unit)
                 }) {
-                    Text("음악으로 자동 생성")
+                    Text("음악으로 자동 생성 (여러 곡 선택 가능)")
                 }
             },
             dismissButton = {
@@ -205,7 +209,8 @@ fun EfxListScreen(
         )
     }
 
-    pendingMusicUri?.let { uri ->
+    if (pendingMusicUris.isNotEmpty()) {
+        val uris = pendingMusicUris
         SetSelectionDialog(
             title = "생성할 이펙트 스타일",
             confirmLabel = "생성",
@@ -215,14 +220,18 @@ fun EfxListScreen(
             initialPaletteId = setsViewModel.lastPaletteSetId,
             onConfirm = { effectId, paletteId ->
                 val options = setsViewModel.rememberSelection(effectId, paletteId)
-                pendingMusicUri = null
-                viewModel.createProjectFromMusic(uri, options)
+                pendingMusicUris = emptyList()
+                // 곡이 하나 만들어질 때마다 선택해 둔 공연에 바로 추가한다
+                val targetShow = addTargetShowId
+                viewModel.createProjectsFromMusic(uris, options) { projectId ->
+                    targetShow?.let { showViewModel.addSong(it, projectId) }
+                }
             },
             onManageSets = {
-                pendingMusicUri = null
+                pendingMusicUris = emptyList()
                 onNavigateToSets()
             },
-            onDismiss = { pendingMusicUri = null }
+            onDismiss = { pendingMusicUris = emptyList() }
         )
     }
 
@@ -232,6 +241,9 @@ fun EfxListScreen(
             title = { Text("이펙트 자동 생성 중") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    if (generating.total > 1) {
+                        Text("${generating.index} / ${generating.total}", style = MaterialTheme.typography.labelLarge)
+                    }
                     Text(generating.musicName, style = MaterialTheme.typography.bodyMedium)
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Text(

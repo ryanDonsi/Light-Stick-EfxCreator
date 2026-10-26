@@ -31,8 +31,12 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
     /** 음악 기반 자동 생성 진행 상태 */
     sealed class AutoGenState {
         object Idle : AutoGenState()
-        data class Generating(val musicName: String) : AutoGenState()
+        /** [index]/[total]: 여러 곡을 한 번에 만들 때 현재 몇 번째인지 */
+        data class Generating(val musicName: String, val index: Int = 1, val total: Int = 1) : AutoGenState()
+        /** 한 곡만 만든 경우 (편집 화면으로 이동) */
         data class Done(val projectId: String) : AutoGenState()
+        /** 여러 곡을 만든 경우: 성공한 프로젝트 id 와 실패 개수 */
+        data class DoneBatch(val projectIds: List<String>, val failed: Int) : AutoGenState()
         data class Error(val message: String) : AutoGenState()
     }
 
@@ -90,41 +94,68 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * 음악 파일을 분석해 이펙트 타임라인을 자동 생성하고 새 프로젝트로 저장한다.
-     * 완료되면 [autoGenState] 가 [AutoGenState.Done] 으로 바뀌며, 이후 편집 화면(EfxEditScreen)에서
+     * 완료되면 [autoGenState] 가 [AutoGenState.Done] 으로 바뀌며, 이후 편집 화면에서
      * 기존 수동 편집 기능으로 추가 수정할 수 있다.
      */
-    fun createProjectFromMusic(uri: Uri, options: GenerationOptions = GenerationOptions()) {
-        if (autoGenJob?.isActive == true) return
-        val displayName = repository.getDisplayName(uri)
-            ?: "New EFX ${_projects.value.size + 1}"
-        _autoGenState.value = AutoGenState.Generating(displayName)
+    fun createProjectFromMusic(uri: Uri, options: GenerationOptions = GenerationOptions()) =
+        createProjectsFromMusic(listOf(uri), options)
+
+    /**
+     * 여러 음악 파일을 차례로 분석해 곡마다 프로젝트를 만든다.
+     * 곡 하나가 끝날 때마다 [onEach] 가 호출되므로, 도중에 취소해도 이미 만든 곡은 유지된다.
+     * 한 곡만 고른 경우 [AutoGenState.Done], 여러 곡이면 [AutoGenState.DoneBatch] 로 끝난다.
+     */
+    fun createProjectsFromMusic(
+        uris: List<Uri>,
+        options: GenerationOptions = GenerationOptions(),
+        onEach: (projectId: String) -> Unit = {}
+    ) {
+        if (autoGenJob?.isActive == true || uris.isEmpty()) return
 
         autoGenJob = viewModelScope.launch {
-            val metadata = EfxProjectMetadata(name = displayName)
-            try {
-                // 재생/분석은 앱 내부 사본을 사용한다 (SAF 권한 만료 방지)
-                val musicFile = withContext(Dispatchers.IO) { repository.importMusic(metadata.id, uri) }
-                val result = autoEfxGenerator.generate(musicFile, options)
+            val created = mutableListOf<String>()
+            var failed = 0
+            var lastError: String? = null
 
-                withContext(Dispatchers.IO) {
-                    repository.saveEfx(metadata.id, result.efx)
-                    result.analysis?.let { repository.saveAnalysis(metadata.id, it) }
-                    repository.saveProjectMetadata(
-                        metadata.copy(musicUriString = Uri.fromFile(musicFile).toString())
-                    )
+            for ((i, uri) in uris.withIndex()) {
+                val displayName = repository.getDisplayName(uri)
+                    ?: "New EFX ${_projects.value.size + 1}"
+                _autoGenState.value = AutoGenState.Generating(displayName, i + 1, uris.size)
+
+                val metadata = EfxProjectMetadata(name = displayName)
+                try {
+                    // 재생/분석은 앱 내부 사본을 사용한다 (SAF 권한 만료 방지)
+                    val musicFile = withContext(Dispatchers.IO) { repository.importMusic(metadata.id, uri) }
+                    val result = autoEfxGenerator.generate(musicFile, options)
+
+                    withContext(Dispatchers.IO) {
+                        repository.saveEfx(metadata.id, result.efx)
+                        result.analysis?.let { repository.saveAnalysis(metadata.id, it) }
+                        repository.saveProjectMetadata(
+                            metadata.copy(musicUriString = Uri.fromFile(musicFile).toString())
+                        )
+                    }
+                    loadProjects()
+                    created += metadata.id
+                    onEach(metadata.id)
+
+                    Log.d(TAG, "Auto-generated project: ${metadata.name} (${result.efx.body.entries.size} entries)")
+                } catch (e: CancellationException) {
+                    // cancelAutoGeneration() 이 이미 상태를 Idle 로 되돌렸다
+                    withContext(NonCancellable + Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
+                    throw e
+                } catch (e: Exception) {
+                    withContext(Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
+                    Log.e(TAG, "Auto generation failed: $displayName", e)
+                    failed++
+                    lastError = e.message
                 }
-                loadProjects()
+            }
 
-                Log.d(TAG, "Auto-generated project: ${metadata.name} (${result.efx.body.entries.size} entries)")
-                _autoGenState.value = AutoGenState.Done(metadata.id)
-            } catch (e: CancellationException) {
-                // cancelAutoGeneration() 이 이미 상태를 Idle 로 되돌렸다
-                withContext(NonCancellable + Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
-                throw e
-            } catch (e: Exception) {
-                withContext(Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
-                Log.e(TAG, "Auto generation failed", e)
-                _autoGenState.value = AutoGenState.Error(e.message ?: "자동 생성에 실패했습니다.")
+            _autoGenState.value = when {
+                created.isEmpty() -> AutoGenState.Error(lastError ?: "자동 생성에 실패했습니다.")
+                uris.size == 1 -> AutoGenState.Done(created[0])
+                else -> AutoGenState.DoneBatch(created, failed)
             }
         }
     }
