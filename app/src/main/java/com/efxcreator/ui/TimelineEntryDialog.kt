@@ -67,10 +67,8 @@ fun TimelineEntryDialog(
     var fade by remember { mutableIntStateOf(entry?.payload?.fade ?: 100) }
     var randomColor by remember { mutableIntStateOf(entry?.payload?.randomColor ?: 0) }
     var randomDelay by remember { mutableIntStateOf(entry?.payload?.randomDelay ?: 0) }
-    // 그룹 마스크: 8자리 16진수 (0 = 단일, FFFFFFFF = 모든 그룹, bit(n-1) = 그룹 n)
-    var groupMaskText by remember { mutableStateOf("%08X".format(entry?.payload?.groupMask ?: 0L)) }
-    val parsedGroupMask: Long? = groupMaskText.trim().removePrefix("0x").removePrefix("0X")
-        .toLongOrNull(16)?.takeIf { it in 0L..0xFFFFFFFFL }
+    // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 단일, bit(n-1) = 그룹 n)
+    var groupMask by remember { mutableLongStateOf(entry?.payload?.groupMask ?: 0L) }
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showFgColorPicker by remember { mutableStateOf(false) }
@@ -282,20 +280,7 @@ fun TimelineEntryDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                OutlinedTextField(
-                    value = groupMaskText,
-                    onValueChange = { groupMaskText = it.uppercase().take(10) },
-                    label = { Text("그룹 마스크 (16진수)") },
-                    isError = parsedGroupMask == null,
-                    supportingText = {
-                        Text(
-                            if (parsedGroupMask == null) "0 ~ FFFFFFFF 사이의 16진수를 입력하세요."
-                            else com.efxcreator.ui.editor.TimelineMath.formatGroupMask(parsedGroupMask)
-                        )
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
             }
         },
         confirmButton = {
@@ -313,8 +298,7 @@ fun TimelineEntryDialog(
                 TextButton(onClick = {
                     val timestampMs = (minutes * 60000L) + (seconds * 1000L) + millis
                     val payload = LSEffectPayload(
-                        // 잘못 입력했으면 기존 값을 유지한다 (편집으로 그룹 설정이 사라지지 않도록)
-                        groupMask = parsedGroupMask ?: (entry?.payload?.groupMask ?: 0L),
+                        groupMask = groupMask,
                         effectType = effectType,
                         color = Color(colorR, colorG, colorB),
                         backgroundColor = Color(bgColorR, bgColorG, bgColorB),
