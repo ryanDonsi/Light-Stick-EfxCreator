@@ -36,6 +36,9 @@ private const val UNASSIGNED_ID = "__unassigned__"
 /** 왼쪽 공연 목록의 한 줄과 오른쪽 곡 카드가 같은 높이를 갖도록 하는 기준 높이 */
 private val LIST_ITEM_HEIGHT = 96.dp
 
+/** 좌우 패널 상단 제목 줄의 높이 (오른쪽의 공연 이미지 64dp 에 맞춤) */
+private val PANEL_HEADER_HEIGHT = 64.dp
+
 /**
  * 초기 화면: 왼쪽에 공연 목록, 오른쪽에 선택한 공연의 곡 목록.
  * 공연을 선택해야 곡을 추가할 수 있고, 새 곡은 선택한 공연에 들어간다.
@@ -275,7 +278,10 @@ fun EfxListScreen(
                 color = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(PANEL_HEADER_HEIGHT),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text("공연 목록", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         FilledTonalButton(onClick = { newShowDialog = true }) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -337,7 +343,10 @@ fun EfxListScreen(
                 color = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(PANEL_HEADER_HEIGHT),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         if (selectedShow != null) {
                             ShowImage(selectedShow.imagePath, size = 64.dp)
                             Spacer(Modifier.width(12.dp))
