@@ -20,7 +20,7 @@ data class EffectPreset(
     val fade: Int = 100
 ) {
     enum class Category(val label: String) {
-        USER("내 라이브러리"), ON("ON"), OFF("OFF"), BLINK("BLINK (2색)"), BREATH("BREATH (2색)"), STROBE("STROBE (2색)")
+        USER("내 라이브러리"), ON("ON"), OFF("OFF"), BLINK("BLINK"), BREATH("BREATH"), STROBE("STROBE")
     }
 
     /** 전경(FG)·배경(BG) 두 색을 쓰는 이펙트인가 */

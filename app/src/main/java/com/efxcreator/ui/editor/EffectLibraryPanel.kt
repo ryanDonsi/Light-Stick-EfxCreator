@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
@@ -160,7 +161,7 @@ fun EffectLibraryPanel(
                 )
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(112.dp),
+                    columns = GridCells.Fixed(UserEffect.COLUMNS),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize()
@@ -301,7 +302,7 @@ private fun UserLibraryGrid(
     }
 }
 
-private val SLOT_HEIGHT = 64.dp
+private val SLOT_HEIGHT = 72.dp
 
 @Composable
 private fun EmptySlot(onClick: () -> Unit) {
@@ -322,15 +323,20 @@ private fun EmptySlot(onClick: () -> Unit) {
 private fun SlotContent(preset: EffectPreset) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         PresetSwatch(preset)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            preset.label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
+        Spacer(Modifier.height(2.dp))
+        // "Red / Black" 처럼 FG / BG 로 이루어진 이름은 두 줄(위 FG, 아래 BG)로 나눠 표시
+        val lines = if (preset.isTwoColor && " / " in preset.label) preset.label.split(" / ", limit = 2)
+        else listOf(preset.label)
+        lines.forEach { line ->
+            Text(
+                line,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
@@ -399,6 +405,7 @@ private fun SlotTile(
     }
 }
 
+/** 기본 프리셋 칸: "내 라이브러리" 칸과 같은 크기/모양 */
 @Composable
 private fun PresetCard(
     preset: EffectPreset,
@@ -408,11 +415,11 @@ private fun PresetCard(
 ) {
     var originWindow by remember { mutableStateOf(Offset.Zero) }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(SLOT_HEIGHT)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
             .onGloballyPositioned { originWindow = it.positionInWindow() }
             .pointerInput(preset.id) { detectTapGestures(onTap = { onTap() }) }
@@ -430,20 +437,16 @@ private fun PresetCard(
                     onDragCancel = { drag.preset = null }
                 )
             }
-            .padding(horizontal = 10.dp)
+            .padding(horizontal = 4.dp, vertical = 6.dp)
     ) {
-        PresetSwatch(preset)
-        Spacer(Modifier.width(8.dp))
-        Text(
-            preset.label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
-        )
+        SlotContent(preset)
     }
 }
 
-/** 1색 이펙트는 원 하나, 2색 이펙트(BLINK/BREATH/STROBE)는 왼쪽 FG · 오른쪽 BG 로 반씩 나눈 원 */
+/**
+ * 스와치 원: 1색 이펙트는 단색, BLINK/STROBE 는 왼쪽 FG · 오른쪽 BG 로 반씩,
+ * BREATH 는 BG → FG → BG 로 이어지는 그라데이션 (타임라인 블록의 숨쉬는 모양과 같다)
+ */
 @Composable
 fun PresetSwatch(preset: EffectPreset, modifier: Modifier = Modifier) {
     Box(
@@ -452,13 +455,21 @@ fun PresetSwatch(preset: EffectPreset, modifier: Modifier = Modifier) {
             .clip(CircleShape)
             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
     ) {
-        if (preset.isTwoColor) {
-            Row(modifier = Modifier.fillMaxSize()) {
+        when {
+            preset.type == EffectType.BREATH -> {
+                val fg = preset.swatchColor()
+                val bg = preset.swatchBgColor()
+                Box(
+                    modifier = Modifier.fillMaxSize().background(
+                        Brush.horizontalGradient(0f to bg, 0.35f to fg, 0.65f to fg, 1f to bg)
+                    )
+                )
+            }
+            preset.isTwoColor -> Row(modifier = Modifier.fillMaxSize()) {
                 Box(modifier = Modifier.weight(1f).fillMaxHeight().background(preset.swatchColor()))
                 Box(modifier = Modifier.weight(1f).fillMaxHeight().background(preset.swatchBgColor()))
             }
-        } else {
-            Box(modifier = Modifier.fillMaxSize().background(preset.swatchColor()))
+            else -> Box(modifier = Modifier.fillMaxSize().background(preset.swatchColor()))
         }
     }
 }
