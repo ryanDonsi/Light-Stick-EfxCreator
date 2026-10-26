@@ -66,7 +66,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -316,6 +315,8 @@ fun EfxTabletEditorScreen(
         if (uri != null) editVm.setMusicFile(uri)
     }
 
+    val rightScroll = rememberScrollState()
+
     // ── 화면 ─────────────────────────────────────────────────
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -440,7 +441,8 @@ fun EfxTabletEditorScreen(
                     modifier = Modifier
                         .width(320.dp)
                         .fillMaxHeight()
-                        .verticalScroll(rememberScrollState()),
+                        .slimVerticalScrollBar(rightScroll)
+                        .verticalScroll(rightScroll),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PreviewPanel(
@@ -661,14 +663,11 @@ fun EfxTabletEditorScreen(
 @Composable
 private fun TimelineScrollBar(timeline: TimelineState, durationMs: Long) {
     val viewMs = if (timeline.pxPerMs > 0f) timeline.viewWidthPx / timeline.pxPerMs else 0f
-    val maxStart = max(1f, durationMs - viewMs * 0.5f)
-    Slider(
-        value = timeline.viewStartMs.coerceIn(0f, maxStart),
-        onValueChange = { timeline.viewStartMs = it },
-        valueRange = 0f..maxStart,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(28.dp)
+    SlimHorizontalScrollBar(
+        viewStartMs = timeline.viewStartMs,
+        viewMs = viewMs,
+        durationMs = durationMs,
+        onScrollTo = { timeline.viewStartMs = it }
     )
 }
 
@@ -898,6 +897,7 @@ private fun PreviewPanel(
                 onPrev = onPrev,
                 onPlayPause = onToggle,
                 onNext = onNext,
+                scale = 0.75f
             )
             if (!canPlay) {
                 Text(
