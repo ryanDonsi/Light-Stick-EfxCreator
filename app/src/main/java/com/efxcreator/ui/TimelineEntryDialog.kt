@@ -200,9 +200,9 @@ fun TimelineEntryDialog(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .background(ComposeColor(colorR, colorG, colorB))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
                             )
                             Text("RGB($colorR, $colorG, $colorB)")
                         }
@@ -227,9 +227,9 @@ fun TimelineEntryDialog(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .background(ComposeColor(bgColorR, bgColorG, bgColorB))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
                             )
                             Text("RGB($bgColorR, $bgColorG, $bgColorB)")
                         }
@@ -412,12 +412,12 @@ fun ColorPickerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(ComposeColor(red, green, blue))
                         .border(
                             1.dp,
                             MaterialTheme.colorScheme.outline,
-                            RoundedCornerShape(8.dp)
+                            MaterialTheme.shapes.small
                         )
                 )
 
@@ -618,7 +618,7 @@ private fun RowScope.PresetColorButton(
         modifier = Modifier
             .weight(1f)
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(ComposeColor(color.r, color.g, color.b))
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
@@ -626,14 +626,14 @@ private fun RowScope.PresetColorButton(
                     MaterialTheme.colorScheme.primary
                 else
                     MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(6.dp)
+                shape = MaterialTheme.shapes.extraSmall
             )
             .then(
                 if (!isSelected) {
                     Modifier.border(
                         width = 1.dp,
                         color = ComposeColor.White.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(6.dp)
+                        shape = MaterialTheme.shapes.extraSmall
                     )
                 } else Modifier
             )

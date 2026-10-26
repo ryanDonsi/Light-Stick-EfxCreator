@@ -176,8 +176,9 @@ fun EfxListScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(projects) { project ->
+                items(projects, key = { it.id }) { project ->
                     EfxProjectCard(
+                        modifier = Modifier.animateItem(),
                         project = project,
                         entryCount = viewModel.getEntryCount(project.id),
                         musicId = viewModel.getMusicId(project.id),
@@ -201,6 +202,7 @@ fun EfxListScreen(
 
 @Composable
 fun EfxProjectCard(
+    modifier: Modifier = Modifier,
     project: EfxProjectMetadata,
     entryCount: Int,
     musicId: Int,
@@ -233,7 +235,8 @@ fun EfxProjectCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),

@@ -66,12 +66,12 @@ fun GroupMaskPicker(
                             .size(34.dp)
                             .background(
                                 if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                RoundedCornerShape(8.dp)
+                                MaterialTheme.shapes.small
                             )
                             .border(
                                 1.dp,
                                 if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                RoundedCornerShape(8.dp)
+                                MaterialTheme.shapes.small
                             )
                             .clickable { onChange(GroupMasks.toggle(mask, group)) }
                     ) {

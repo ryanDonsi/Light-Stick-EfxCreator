@@ -92,12 +92,12 @@ fun PaletteSetEditorDialog(
                             Box(
                                 modifier = Modifier
                                     .size(52.dp)
-                                    .background(c.toComposeColor(), RoundedCornerShape(10.dp))
+                                    .background(c.toComposeColor(), MaterialTheme.shapes.large)
                                     .border(
                                         if (i == selectedSlot) 3.dp else 1.dp,
                                         if (i == selectedSlot) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.outline,
-                                        RoundedCornerShape(10.dp)
+                                        MaterialTheme.shapes.large
                                     )
                                     .clickable { selectedSlot = i }
                             )
@@ -120,8 +120,8 @@ fun PaletteSetEditorDialog(
                         Box(
                             modifier = Modifier
                                 .size(30.dp)
-                                .background(q.toComposeColor(), RoundedCornerShape(6.dp))
-                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                .background(q.toComposeColor(), MaterialTheme.shapes.extraSmall)
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.extraSmall)
                                 .clickable { colors[selectedSlot] = q }
                         )
                     }

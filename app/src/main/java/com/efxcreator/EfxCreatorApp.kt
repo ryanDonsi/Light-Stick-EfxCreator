@@ -1,6 +1,12 @@
 package com.efxcreator
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import com.efxcreator.ui.theme.EfxMotion
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,9 +30,27 @@ sealed class Screen(val route: String) {
 fun EfxCreatorApp() {
     val navController = rememberNavController()
 
+    // Material 3 모션 — Shared axis (X): 화면이 가로로 조금 밀리며 fade through 로 교체된다
+    val slide = EfxMotion.SLIDE_FRACTION
     NavHost(
         navController = navController,
-        startDestination = Screen.List.route
+        startDestination = Screen.List.route,
+        enterTransition = {
+            slideInHorizontally(tween(EfxMotion.LONG, easing = EfxMotion.EmphasizedDecelerate)) { it / slide } +
+                fadeIn(tween(210, delayMillis = 90, easing = EfxMotion.StandardDecelerate))
+        },
+        exitTransition = {
+            slideOutHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.EmphasizedAccelerate)) { -it / slide } +
+                fadeOut(tween(90, easing = EfxMotion.StandardAccelerate))
+        },
+        popEnterTransition = {
+            slideInHorizontally(tween(EfxMotion.LONG, easing = EfxMotion.EmphasizedDecelerate)) { -it / slide } +
+                fadeIn(tween(210, delayMillis = 90, easing = EfxMotion.StandardDecelerate))
+        },
+        popExitTransition = {
+            slideOutHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.EmphasizedAccelerate)) { it / slide } +
+                fadeOut(tween(90, easing = EfxMotion.StandardAccelerate))
+        }
     ) {
         composable(Screen.List.route) {
             EfxListScreen(

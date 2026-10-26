@@ -53,8 +53,8 @@ fun PaletteStrip(colors: List<RgbColor>, modifier: Modifier = Modifier, swatchSi
             Box(
                 modifier = Modifier
                     .size(swatchSize.dp)
-                    .background(c.toComposeColor(), RoundedCornerShape(6.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                    .background(c.toComposeColor(), MaterialTheme.shapes.extraSmall)
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.extraSmall)
             )
         }
     }
@@ -209,8 +209,8 @@ fun RgbPicker(label: String, color: RgbColor, onChange: (RgbColor) -> Unit, modi
             Box(
                 modifier = Modifier
                     .size(24.dp)
-                    .background(color.toComposeColor(), RoundedCornerShape(6.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                    .background(color.toComposeColor(), MaterialTheme.shapes.extraSmall)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
             )
             Spacer(Modifier.width(8.dp))
             Text("$label  RGB(${color.r}, ${color.g}, ${color.b})", style = MaterialTheme.typography.labelMedium)
@@ -223,8 +223,8 @@ fun RgbPicker(label: String, color: RgbColor, onChange: (RgbColor) -> Unit, modi
                 Box(
                     modifier = Modifier
                         .size(24.dp)
-                        .background(q.toComposeColor(), RoundedCornerShape(5.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(5.dp))
+                        .background(q.toComposeColor(), MaterialTheme.shapes.extraSmall)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.extraSmall)
                         .clickable { onChange(q) }
                 )
             }

@@ -4,6 +4,13 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,7 +76,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -83,6 +92,7 @@ import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.model.UserEffect
 import com.efxcreator.ui.TimelineEntryDialog
 import com.efxcreator.ui.sets.SetDropdown
+import com.efxcreator.ui.theme.EfxMotion
 import com.efxcreator.ui.sets.SetSelectionDialog
 import com.efxcreator.viewmodel.BleViewModel
 import com.efxcreator.viewmodel.EffectLibraryViewModel
@@ -353,7 +363,7 @@ fun EfxTabletEditorScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(PANEL_BG, RoundedCornerShape(10.dp))
+                            .background(PANEL_BG, MaterialTheme.shapes.large)
                             .padding(8.dp)
                     ) {
                         TimelineToolbar(
@@ -418,7 +428,7 @@ fun EfxTabletEditorScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .background(PANEL_BG, RoundedCornerShape(10.dp))
+                            .background(PANEL_BG, MaterialTheme.shapes.large)
                     )
                 }
 
@@ -484,7 +494,10 @@ fun EfxTabletEditorScreen(
                             (drag.pointerWindow.y - rootOrigin.y).roundToInt() - 70
                         )
                     }
-                    .background(Color(0xE6303040), RoundedCornerShape(8.dp))
+                    // 들어 올린 느낌: 그림자 + 살짝 확대
+                    .graphicsLayer { scaleX = 1.06f; scaleY = 1.06f }
+                    .shadow(10.dp, MaterialTheme.shapes.small)
+                    .background(Color(0xE6303040), MaterialTheme.shapes.small)
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 PresetSwatch(preset)
@@ -701,9 +714,18 @@ private fun EditorTopBar(
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         )
         Text("· $entryCount entries", style = MaterialTheme.typography.labelMedium, color = Color(0xFF9A9AA5))
-        if (dirty) {
-            Spacer(Modifier.width(8.dp))
-            Text("저장 안 됨", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB74D))
+        AnimatedVisibility(
+            visible = dirty,
+            enter = fadeIn(tween(EfxMotion.MEDIUM, easing = EfxMotion.StandardDecelerate)) +
+                expandHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized)),
+            exit = fadeOut(tween(EfxMotion.SHORT)) + shrinkHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
+        ) {
+            Text(
+                "저장 안 됨",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFFFFB74D),
+                modifier = Modifier.padding(start = 8.dp)
+            )
         }
         Spacer(Modifier.width(8.dp))
         // 실행 취소 / 다시 실행: Material Symbols 의 Undo / Redo 를 하나의 둥근 캡슐로 묶어 표시
@@ -838,7 +860,7 @@ private fun PreviewPanel(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PANEL_BG, RoundedCornerShape(10.dp))
+            .background(PANEL_BG, MaterialTheme.shapes.large)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -903,7 +925,9 @@ private fun SelectedEntryPanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PANEL_BG, RoundedCornerShape(10.dp))
+            // 선택/해제로 행이 늘고 줄 때 패널 높이가 부드럽게 바뀐다
+            .animateContentSize(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
+            .background(PANEL_BG, MaterialTheme.shapes.large)
             .padding(12.dp)
     ) {
         Text("선택한 이펙트", style = MaterialTheme.typography.titleSmall, color = Color.White)
@@ -953,8 +977,8 @@ private fun SelectedEntryPanel(
                         Box(
                             modifier = Modifier
                                 .size(18.dp)
-                                .background(swatch, RoundedCornerShape(4.dp))
-                                .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(4.dp))
+                                .background(swatch, MaterialTheme.shapes.extraSmall)
+                                .border(1.dp, Color(0x66FFFFFF), MaterialTheme.shapes.extraSmall)
                         )
                         Spacer(Modifier.width(8.dp))
                     }

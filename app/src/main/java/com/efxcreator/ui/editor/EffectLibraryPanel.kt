@@ -1,5 +1,6 @@
 package com.efxcreator.ui.editor
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import com.efxcreator.model.UserEffect
+import com.efxcreator.ui.theme.EfxMotion
 import com.lightstick.types.EffectType
 
 /** 라이브러리 카드를 타임라인으로 끌고 가는 동안의 드래그 상태 (윈도우 좌표) */
@@ -91,7 +93,6 @@ fun EffectLibraryPanel(
         )
     }
     var editMode by remember { mutableStateOf(false) }
-    val presets = remember(category) { EffectPresets.byCategory(category) }
 
     Column(modifier = modifier.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,30 +141,38 @@ fun EffectLibraryPanel(
         }
         Spacer(Modifier.height(8.dp))
 
-        if (category == EffectPreset.Category.USER) {
-            UserLibraryGrid(
-                slots = userSlots,
-                drag = drag,
-                editMode = editMode,
-                onTapPreset = onTapPreset,
-                onDrop = onDrop,
-                onSlotClick = onUserSlotClick,
-                onMoveSlot = onMoveSlot
-            )
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(112.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(presets, key = { it.id }) { preset ->
-                    PresetCard(
-                        preset = preset,
-                        drag = drag,
-                        onTap = { onTapPreset(preset) },
-                        onDrop = onDrop
-                    )
+        // 탭을 바꿀 때 Material 3 fade through 로 내용을 교체한다
+        AnimatedContent(
+            targetState = category,
+            transitionSpec = { EfxMotion.fadeThrough() },
+            modifier = Modifier.fillMaxSize(),
+            label = "libraryTab"
+        ) { cat ->
+            if (cat == EffectPreset.Category.USER) {
+                UserLibraryGrid(
+                    slots = userSlots,
+                    drag = drag,
+                    editMode = editMode,
+                    onTapPreset = onTapPreset,
+                    onDrop = onDrop,
+                    onSlotClick = onUserSlotClick,
+                    onMoveSlot = onMoveSlot
+                )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(112.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(EffectPresets.byCategory(cat), key = { it.id }) { preset ->
+                        PresetCard(
+                            preset = preset,
+                            drag = drag,
+                            onTap = { onTapPreset(preset) },
+                            onDrop = onDrop
+                        )
+                    }
                 }
             }
         }
@@ -224,7 +233,7 @@ private fun UserLibraryGrid(
                                 .weight(1f)
                                 .onGloballyPositioned { slotBounds[slot] = it.boundsInWindow() }
                                 .then(
-                                    if (isTarget) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                    if (isTarget) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
                                     else Modifier
                                 )
                         ) {
@@ -282,8 +291,8 @@ private fun UserLibraryGrid(
                         with(density) { sourceBounds.width.toDp() },
                         with(density) { sourceBounds.height.toDp() }
                     )
-                    .background(Color(0xE63A3A48), RoundedCornerShape(8.dp))
-                    .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+                    .background(Color(0xE63A3A48), MaterialTheme.shapes.small)
+                    .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small),
                 contentAlignment = Alignment.Center
             ) {
                 SlotContent(ghostPreset)
@@ -301,8 +310,8 @@ private fun EmptySlot(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(SLOT_HEIGHT)
-            .border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, Color(0x44FFFFFF), MaterialTheme.shapes.small)
+            .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick)
     ) {
         Icon(Icons.Default.Add, contentDescription = "이펙트 추가", tint = Color(0x88FFFFFF))
@@ -350,9 +359,9 @@ private fun SlotTile(
         modifier = Modifier
             .fillMaxWidth()
             .height(SLOT_HEIGHT)
-            .background(Color(0xFF26262E).copy(alpha = if (dimmed) 0.35f else 1f), RoundedCornerShape(8.dp))
+            .background(Color(0xFF26262E).copy(alpha = if (dimmed) 0.35f else 1f), MaterialTheme.shapes.small)
             .then(
-                if (editMode) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                if (editMode) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
                 else Modifier
             )
             .onGloballyPositioned { originWindow = it.positionInWindow() }
@@ -404,7 +413,7 @@ private fun PresetCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(Color(0xFF26262E), RoundedCornerShape(8.dp))
+            .background(Color(0xFF26262E), MaterialTheme.shapes.small)
             .onGloballyPositioned { originWindow = it.positionInWindow() }
             .pointerInput(preset.id) { detectTapGestures(onTap = { onTap() }) }
             .pointerInput(preset.id) {
