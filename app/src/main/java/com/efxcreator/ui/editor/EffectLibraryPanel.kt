@@ -446,7 +446,7 @@ private fun PresetCard(
 
 /**
  * 스와치 원: 1색 이펙트는 단색, BLINK/STROBE 는 왼쪽 FG · 오른쪽 BG 로 반씩,
- * BREATH 는 BG → FG → BG 로 이어지는 그라데이션 (타임라인 블록의 숨쉬는 모양과 같다)
+ * BREATH 도 반씩 나누되 경계 부분만 FG → BG 그라데이션으로 부드럽게 이어 준다
  */
 @Composable
 fun PresetSwatch(preset: EffectPreset, modifier: Modifier = Modifier) {
@@ -462,7 +462,7 @@ fun PresetSwatch(preset: EffectPreset, modifier: Modifier = Modifier) {
                 val bg = preset.swatchBgColor()
                 Box(
                     modifier = Modifier.fillMaxSize().background(
-                        Brush.horizontalGradient(0f to bg, 0.35f to fg, 0.65f to fg, 1f to bg)
+                        Brush.horizontalGradient(0f to fg, 0.3f to fg, 0.7f to bg, 1f to bg)
                     )
                 )
             }
