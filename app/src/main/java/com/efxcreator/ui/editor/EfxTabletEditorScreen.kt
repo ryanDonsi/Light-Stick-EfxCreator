@@ -436,11 +436,10 @@ fun EfxTabletEditorScreen(
                 }
 
                 // 우측: Preview + 재생 + 선택 이펙트
+                Box(modifier = Modifier.width(320.dp).fillMaxHeight()) {
                 Column(
                     modifier = Modifier
-                        .width(320.dp)
-                        .fillMaxHeight()
-                        .slimVerticalScrollBar(rightScroll)
+                        .fillMaxSize()
                         .verticalScroll(rightScroll),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -483,6 +482,8 @@ fun EfxTabletEditorScreen(
                             }
                         }
                     )
+                }
+                SlimVerticalScrollBar(rightScroll, Modifier.align(Alignment.CenterEnd))
                 }
             }
 

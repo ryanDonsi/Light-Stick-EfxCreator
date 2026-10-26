@@ -1,18 +1,19 @@
 package com.efxcreator.ui.editor
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -72,29 +73,48 @@ fun SlimHorizontalScrollBar(
     }
 }
 
-/** 세로 스크롤 중에만 나타나는 얇은 막대 (콘텐츠 위 오른쪽 가장자리에 겹쳐 그린다). */
+/**
+ * 세로 스크롤 막대: 가로 막대와 같은 모양(얇은 둥근 막대)이고, 스크롤할 내용이 있을 때만 표시된다.
+ * 막대를 끌거나 빈 곳을 탭하면 [state] 가 따라 움직인다. 스크롤 영역과 같은 크기의 Box 안에서
+ * `Modifier.align(Alignment.CenterEnd)` 로 겹쳐 놓는다.
+ */
 @Composable
-fun Modifier.slimVerticalScrollBar(state: ScrollState): Modifier {
+fun SlimVerticalScrollBar(state: ScrollState, modifier: Modifier = Modifier) {
+    if (state.maxValue <= 0) return
     val color = MaterialTheme.colorScheme.onSurfaceVariant
-    val alpha by animateFloatAsState(
-        targetValue = if (state.isScrollInProgress) 0.55f else 0f,
-        animationSpec = tween(if (state.isScrollInProgress) 100 else 600),
-        label = "scrollbarAlpha"
-    )
-    return drawWithContent {
-        drawContent()
-        if (alpha > 0f && state.maxValue > 0) {
-            val thickness = THUMB_THICKNESS.toPx()
-            val viewH = size.height
-            val total = viewH + state.maxValue
-            val len = (viewH / total * viewH).coerceAtLeast(THUMB_MIN.toPx())
-            val y = state.value.toFloat() / state.maxValue * (viewH - len)
-            drawRoundRect(
-                color = color.copy(alpha = alpha),
-                topLeft = Offset(size.width - thickness - 2.dp.toPx(), y),
-                size = Size(thickness, len),
-                cornerRadius = CornerRadius(thickness / 2f)
-            )
-        }
+    val scope = rememberCoroutineScope()
+    val currentState by rememberUpdatedState(state)
+
+    Canvas(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(16.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { p ->
+                    val st = currentState
+                    val target = (p.y / size.height * (st.maxValue + size.height) - size.height / 2f)
+                        .coerceIn(0f, st.maxValue.toFloat())
+                    scope.launch { st.animateScrollTo(target.toInt()) }
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures { change, drag ->
+                    change.consume()
+                    val st = currentState
+                    st.dispatchRawDelta(drag.y * (st.maxValue + size.height) / size.height)
+                }
+            }
+    ) {
+        val thickness = THUMB_THICKNESS.toPx()
+        val viewH = size.height
+        val total = viewH + state.maxValue
+        val len = (viewH / total * viewH).coerceIn(THUMB_MIN.toPx(), viewH)
+        val y = state.value.toFloat() / state.maxValue * (viewH - len)
+        drawRoundRect(
+            color = color.copy(alpha = 0.55f),
+            topLeft = Offset((size.width - thickness) / 2f, y),
+            size = Size(thickness, len),
+            cornerRadius = CornerRadius(thickness / 2f)
+        )
     }
 }
