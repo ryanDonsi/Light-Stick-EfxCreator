@@ -60,10 +60,15 @@ object TimelineMath {
     fun periodLabel(type: EffectType): String =
         if (type == EffectType.ON || type == EffectType.OFF) "Transit" else "Period"
 
-    /** 그룹 마스크 표시: 0 = 단일, 0xFFFFFFFF = 모든 그룹, 그 외 = 켜진 비트의 GRPn 목록 (bit(n-1) = 그룹 n) */
+    /**
+     * 그룹 마스크 표시:
+     * - 0           = 마스터 키 (모든 그룹, 그룹 소속과 무관하게 적용)
+     * - 0xFFFFFFFF = 32개 그룹을 전부 지정 (결과는 모든 그룹이지만 마스터(0)와는 약간 다름)
+     * - 그 외       = 켜진 비트의 GRPn 목록 (bit(n-1) = 그룹 n)
+     */
     fun formatGroupMask(mask: Long): String = when (mask) {
-        0L -> "단일 (0)"
-        0xFFFFFFFFL -> "모든 그룹 (0xFFFFFFFF)"
+        0L -> "마스터 · 모든 그룹 (0)"
+        0xFFFFFFFFL -> "전체 그룹 지정 (0xFFFFFFFF)"
         else -> {
             val groups = (0 until 32).filter { ((mask shr it) and 1L) == 1L }.map { "GRP${it + 1}" }
             "${groups.joinToString(", ")} (0x%08X)".format(mask)

@@ -24,8 +24,8 @@ import com.efxcreator.ui.editor.TimelineMath
 /** 그룹 마스크 상수 (SDK Group 과 같은 값) */
 object GroupMasks {
     const val GROUP_COUNT = 32
-    const val NONE = 0L                 // 단일: 그룹과 무관
-    const val ALL_GROUPS = 0xFFFFFFFFL  // 모든 그룹
+    const val MASTER = 0L               // 마스터 키: 모든 그룹 (그룹 소속과 무관하게 적용)
+    const val ALL_GROUPS = 0xFFFFFFFFL  // 32개 그룹을 전부 지정 (마스터와 결과는 같지만 약간 다름)
 
     /** 그룹 번호(1..32) 의 비트가 켜져 있는가 */
     fun isOn(mask: Long, group: Int): Boolean = ((mask shr (group - 1)) and 1L) == 1L
@@ -36,7 +36,8 @@ object GroupMasks {
 
 /**
  * 그룹 마스크를 32개의 그룹 번호 토글로 편집한다.
- * 번호 N 을 켜면 bit(N-1) 이 1 이 되고, 아무것도 켜지 않으면 0 = 단일(그룹과 무관)이다.
+ * 번호 N 을 켜면 bit(N-1) 이 1 이 된다. 아무것도 켜지 않은 0 은 "마스터 키"(모든 그룹)이고,
+ * 32개를 전부 켠 0xFFFFFFFF 는 모든 그룹을 명시한 것으로 결과는 같지만 약간 다르다.
  * 아래에 현재 값(16진수와 GRPn 목록)을 보여 준다.
  */
 @Composable
@@ -50,8 +51,8 @@ fun GroupMaskPicker(
         Text("그룹 마스크", style = MaterialTheme.typography.labelLarge)
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onChange(GroupMasks.NONE) }) { Text("단일") }
-            OutlinedButton(onClick = { onChange(GroupMasks.ALL_GROUPS) }) { Text("모든 그룹") }
+            OutlinedButton(onClick = { onChange(GroupMasks.MASTER) }) { Text("마스터 (0)") }
+            OutlinedButton(onClick = { onChange(GroupMasks.ALL_GROUPS) }) { Text("전체 선택") }
         }
 
         for (row in 0 until GroupMasks.GROUP_COUNT / columns) {
@@ -88,6 +89,11 @@ fun GroupMaskPicker(
         Text(
             TimelineMath.formatGroupMask(mask),
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "아무것도 선택하지 않으면 마스터(0) — 모든 그룹에 적용됩니다.",
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
