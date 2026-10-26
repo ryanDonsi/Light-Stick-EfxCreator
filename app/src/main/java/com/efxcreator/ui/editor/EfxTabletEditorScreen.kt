@@ -30,8 +30,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
@@ -45,6 +43,8 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material.icons.rounded.RotateLeft
+import androidx.compose.material.icons.rounded.RotateRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,6 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
@@ -707,17 +708,21 @@ private fun EditorTopBar(
             Text("저장 안 됨", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB74D))
         }
         Spacer(Modifier.width(8.dp))
-        IconButton(onClick = onUndo, enabled = canUndo) {
-            Icon(
-                Icons.AutoMirrored.Filled.Undo, contentDescription = "실행 취소",
-                tint = if (canUndo) Color.White else Color(0xFF555560)
+        // 실행 취소 / 다시 실행: 정사각형에 가까운 원형 화살표를 하나의 둥근 캡슐로 묶어 표시
+        Row(
+            modifier = Modifier
+                .height(36.dp)
+                .background(Color(0xFF26262E), RoundedCornerShape(18.dp)),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HistoryButton(Icons.Rounded.RotateLeft, "실행 취소", canUndo, onUndo)
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(16.dp)
+                    .background(Color(0x33FFFFFF))
             )
-        }
-        IconButton(onClick = onRedo, enabled = canRedo) {
-            Icon(
-                Icons.AutoMirrored.Filled.Redo, contentDescription = "다시 실행",
-                tint = if (canRedo) Color.White else Color(0xFF555560)
-            )
+            HistoryButton(Icons.Rounded.RotateRight, "다시 실행", canRedo, onRedo)
         }
 
         Spacer(Modifier.weight(1f))
@@ -763,6 +768,18 @@ private fun EditorTopBar(
             Spacer(Modifier.width(6.dp))
             Text(if (deviceConnected) "기기 연결됨" else "기기 연결")
         }
+    }
+}
+
+/** 캡슐 안의 36dp 원형 아이콘 버튼 (비활성은 흐리게) */
+@Composable
+private fun HistoryButton(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp)) {
+        Icon(
+            icon, contentDescription = description,
+            tint = if (enabled) Color.White else Color(0xFF555560),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
