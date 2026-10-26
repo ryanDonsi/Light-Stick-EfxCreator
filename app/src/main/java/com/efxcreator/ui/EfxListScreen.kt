@@ -31,6 +31,9 @@ import java.io.File
 /** 어느 공연에도 속하지 않은 곡을 모아 보여 주는 가상 공연의 id */
 private const val UNASSIGNED_ID = "__unassigned__"
 
+/** 왼쪽 공연 목록의 한 줄과 오른쪽 곡 카드가 같은 높이를 갖도록 하는 기준 높이 */
+private val LIST_ITEM_HEIGHT = 96.dp
+
 /**
  * 초기 화면: 왼쪽에 공연 목록, 오른쪽에 선택한 공연의 곡 목록.
  * 공연을 선택해야 곡을 추가할 수 있고, 새 곡은 선택한 공연에 들어간다.
@@ -286,7 +289,7 @@ fun EfxListScreen(
                             items(shows, key = { it.id }) { show ->
                                 ShowRow(
                                     name = show.name,
-                                    image = { ShowImage(show.imagePath, size = 48.dp) },
+                                    image = { ShowImage(show.imagePath, size = 64.dp) },
                                     subtitle = listOfNotNull(
                                         show.performanceAt?.let { formatShowDate(it) },
                                         "${show.songIds.count { id -> projects.any { it.id == id } }}곡"
@@ -427,7 +430,7 @@ private fun ShowRow(
         else MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            modifier = Modifier.height(LIST_ITEM_HEIGHT).padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (image != null) {
@@ -527,9 +530,10 @@ fun EfxProjectCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = LIST_ITEM_HEIGHT)
                     .clickable(onClick = onEdit)
-                    .padding(16.dp)
-                    .padding(top = 8.dp, bottom = 8.dp)  // 위아래 여유 공간
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.Center
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
