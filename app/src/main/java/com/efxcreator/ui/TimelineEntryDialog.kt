@@ -39,7 +39,16 @@ fun TimelineEntryDialog(
     lastEntryTimestamp: Long = 0L,
     onDismiss: () -> Unit,
     onSave: (EfxEntry) -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    title: String = "Effect 편집",
+    deleteTitle: String = "Effect 삭제",
+    deleteMessage: String = "이 타임라인 엔트리를 삭제하시겠습니까?",
+    /** false 면 Timestamp 입력을 숨긴다 (시간이 없는 내 라이브러리 편집용) */
+    showTimestamp: Boolean = true,
+    /** false 면 Random Color / Random Delay / 그룹 마스크를 숨긴다 (라이브러리에는 저장되지 않는 값) */
+    showTargetOptions: Boolean = true,
+    /** 맨 위에 끼워 넣을 내용 (예: 라이브러리 이름 입력) */
+    topContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val initialTimestamp = entry?.timestampMs ?: lastEntryTimestamp
     val initialMinutes = (initialTimestamp / 60000).toInt()
@@ -88,7 +97,7 @@ fun TimelineEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Effect 편집") },
+        title = { Text(title) },
         text = {
             Column(
                 modifier = Modifier
@@ -96,9 +105,11 @@ fun TimelineEntryDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                topContent?.invoke(this)
+
                 // ========== Timestamp ==========
-                Text("Timestamp", style = MaterialTheme.typography.labelMedium)
-                Row(
+                if (showTimestamp) Text("Timestamp", style = MaterialTheme.typography.labelMedium)
+                if (showTimestamp) Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -260,6 +271,7 @@ fun TimelineEntryDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                if (showTargetOptions) {
                 // Random Color Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -281,6 +293,7 @@ fun TimelineEntryDialog(
                 )
 
                 GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
+                }
             }
         },
         confirmButton = {
@@ -356,8 +369,8 @@ fun TimelineEntryDialog(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Effect 삭제") },
-            text = { Text("이 타임라인 엔트리를 삭제하시겠습니까?") },
+            title = { Text(deleteTitle) },
+            text = { Text(deleteMessage) },
             confirmButton = {
                 TextButton(
                     onClick = {
