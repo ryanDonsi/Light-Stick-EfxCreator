@@ -55,8 +55,28 @@ object TimelineMath {
 
     /**
      * 같은 패킷 필드(period)를 이벤트에 따라 다르게 부른다:
-     * ON/OFF 는 색 전환 시간(Transit), BLINK/STROBE/BREATH 는 이펙트 주기(Period). 단위는 모두 10ms.
+     * ON/OFF 는 색 전환 시간(Transit), BLINK/STROBE/BREATH 는 이펙트 주기(Period).
+     * Period / Transit / Random Delay 의 숫자는 **프레임 수**이고, 1프레임의 길이는 SPF 로 정해진다 (아래 [frameMs]).
      */
+    /** 1프레임의 길이(ms). SPF 100 이면 10ms, SPF 50 이면 20ms (= 1000 / SPF) */
+    fun frameMs(spf: Int): Float = 1000f / spf.coerceAtLeast(1)
+
+    /** [frames] 프레임이 실제로 몇 ms 인가 */
+    fun framesToMs(frames: Int, spf: Int): Long = Math.round(frames * frameMs(spf).toDouble())
+
+    private fun formatMsShort(ms: Long): String =
+        if (ms >= 1000L) "%.2fs".format(ms / 1000.0).replace(Regex("\\.?0+s$"), "s") else "${ms}ms"
+
+    /** "50f (500ms)" 처럼 프레임 수와 실제 시간을 함께 */
+    fun formatFrames(frames: Int, spf: Int): String = "${frames}f (${formatMsShort(framesToMs(frames, spf))})"
+
+    /** "1프레임 = 10ms (SPF 100)" */
+    fun frameUnitLabel(spf: Int): String {
+        val ms = frameMs(spf)
+        val text = if (ms == ms.toLong().toFloat()) "${ms.toLong()}ms" else "%.1fms".format(ms)
+        return "1프레임 = $text (SPF $spf)"
+    }
+
     fun periodLabel(type: EffectType): String =
         if (type == EffectType.ON || type == EffectType.OFF) "Transit" else "Period"
 

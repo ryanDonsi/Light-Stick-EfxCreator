@@ -20,10 +20,10 @@ data class LedColor(val r: Float, val g: Float, val b: Float) {
 /**
  * Efx 엔트리 목록으로부터 임의 시각의 LED 색을 근사 계산한다 (실제 펌웨어 동작의 근사치).
  *
- * - ON/OFF : period 를 전환(transit, 10ms 단위)으로 보고 이전 색에서 보간
- * - BLINK  : period*10ms 주기, 앞 절반은 color, 뒤 절반은 backgroundColor
- * - STROBE : period*10ms 주기, 앞 20% 만 color, 나머지는 backgroundColor
- * - BREATH : period*10ms 주기의 코사인 곡선으로 backgroundColor ↔ color 보간
+ * - ON/OFF : period 를 전환(transit, 프레임 단위 → [TimelineMath.framesToMs])으로 보고 이전 색에서 보간
+ * - BLINK  : period 프레임 주기, 앞 절반은 color, 뒤 절반은 backgroundColor
+ * - STROBE : period 프레임 주기, 앞 20% 만 color, 나머지는 backgroundColor
+ * - BREATH : period 프레임 주기의 코사인 곡선으로 backgroundColor ↔ color 보간
  */
 object LedSimulator {
 
@@ -59,12 +59,12 @@ object LedSimulator {
         val t = (positionMs - entry.timestampMs).coerceAtLeast(0L)
         val fg = LedColor(p.color.r.toFloat(), p.color.g.toFloat(), p.color.b.toFloat())
         val bg = LedColor(p.backgroundColor.r.toFloat(), p.backgroundColor.g.toFloat(), p.backgroundColor.b.toFloat())
-        val cycle = if (p.period == 0) DEFAULT_CYCLE_MS else (p.period * 10L).coerceAtLeast(MIN_CYCLE_MS)
+        val cycle = if (p.period == 0) DEFAULT_CYCLE_MS else TimelineMath.framesToMs(p.period, p.spf).coerceAtLeast(MIN_CYCLE_MS)
 
         return when (p.effectType) {
             EffectType.ON, EffectType.OFF -> {
                 val target = if (p.effectType == EffectType.ON) fg else LedColor.OFF
-                val transitMs = p.period * 10L
+                val transitMs = TimelineMath.framesToMs(p.period, p.spf)
                 if (transitMs > 0 && t < transitMs && depth < MAX_CHAIN_DEPTH) {
                     val prev = stateAt(entries, index - 1, entry.timestampMs, depth + 1)
                     prev.lerp(target, t.toFloat() / transitMs)

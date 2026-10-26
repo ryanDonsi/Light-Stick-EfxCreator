@@ -946,13 +946,14 @@ private fun SelectedEntryPanel(
                 "RGB(${p.backgroundColor.r}, ${p.backgroundColor.g}, ${p.backgroundColor.b})",
                 Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b)
             ),
-            // 같은 패킷 필드: ON/OFF 는 Transit, BLINK/STROBE/BREATH 는 Period (단위 10ms)
-            Triple(TimelineMath.periodLabel(p.effectType), "${p.period}  (${p.period * 10}ms)", null),
-            Triple("SPF / Fade", "${p.spf} / ${p.fade}", null),
+            // 같은 패킷 필드: ON/OFF 는 Transit, BLINK/STROBE/BREATH 는 Period. 숫자는 프레임 수이고 1프레임 길이는 SPF 가 정한다
+            Triple(TimelineMath.periodLabel(p.effectType), TimelineMath.formatFrames(p.period, p.spf), null),
+            Triple("SPF", "${p.spf}  (${TimelineMath.frameUnitLabel(p.spf).substringBefore(" (")})", null),
+            Triple("Fade", p.fade.toString(), null),
             Triple("그룹 마스크", TimelineMath.formatGroupMask(p.groupMask), null),
             Triple(
                 "Random Delay",
-                if (p.randomDelay == 0) "0  (없음)" else "${p.randomDelay}  (최대 ${p.randomDelay * 10}ms)",
+                if (p.randomDelay == 0) "0f  (없음)" else "최대 " + TimelineMath.formatFrames(p.randomDelay, p.spf),
                 null
             ),
             Triple("Random Color", if (p.randomColor != 0) "ON" else "OFF", null),

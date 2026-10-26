@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.efxcreator.ui.components.NumberTextField
+import com.efxcreator.ui.editor.TimelineMath
 import com.lightstick.types.Color
 import com.lightstick.types.Colors
 import com.lightstick.types.EffectType
@@ -33,6 +34,16 @@ import com.lightstick.efx.EfxEntry
  * - 포커스 시 "0" 자동 지우기
  * - 숫자 키보드 자동 표시
  */
+/** 입력칸 아래에 단위 환산 결과를 보여 주는 작은 안내 글 */
+@Composable
+private fun UnitHint(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
 @Composable
 fun TimelineEntryDialog(
     entry: EfxEntry?,
@@ -189,12 +200,13 @@ fun TimelineEntryDialog(
                     value = period,
                     onValueChange = { period = it },
                     label = if (effectType in listOf(EffectType.ON, EffectType.OFF))
-                        "Transit (0-255)"
+                        "Transit (프레임, 0-255)"
                     else
-                        "Period (0-255)",
+                        "Period (프레임, 0-255)",
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
+                UnitHint("= ${TimelineMath.formatFrames(period, spf)}")
 
                 // ========== Foreground Color ==========
                 if (effectType != EffectType.OFF) {
@@ -258,10 +270,11 @@ fun TimelineEntryDialog(
                 NumberTextField(
                     value = spf,
                     onValueChange = { spf = it },
-                    label = "SPF (0-255)",
+                    label = "SPF (프레임/초, 0-255)",
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
+                UnitHint(TimelineMath.frameUnitLabel(spf) + " — Period/Transit/Random Delay 의 시간 기준")
 
                 NumberTextField(
                     value = fade,
@@ -287,10 +300,11 @@ fun TimelineEntryDialog(
                 NumberTextField(
                     value = randomDelay,
                     onValueChange = { randomDelay = it },
-                    label = "Random Delay (0-255, x10ms)",
+                    label = "Random Delay (프레임, 0-255)",
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
+                UnitHint(if (randomDelay == 0) "= 없음" else "= 최대 ${TimelineMath.formatFrames(randomDelay, spf)}")
 
                 GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
                 }
