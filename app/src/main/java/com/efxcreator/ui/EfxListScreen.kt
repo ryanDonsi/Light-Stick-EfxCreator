@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -22,6 +23,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.model.EfxProjectMetadata
 import com.efxcreator.model.Show
+import com.efxcreator.ui.editor.SlimVerticalScrollBar
 import com.efxcreator.ui.sets.SetSelectionDialog
 import com.efxcreator.viewmodel.EfxListViewModel
 import com.efxcreator.viewmodel.SetsViewModel
@@ -285,7 +287,13 @@ fun EfxListScreen(
                     if (shows.isEmpty() && unassigned.isEmpty()) {
                         EmptyHint("공연이 없습니다.\n\"공연 추가\" 로 만들어 주세요.")
                     } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val showListState = rememberLazyListState()
+                        Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = showListState,
+                            contentPadding = PaddingValues(end = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             items(shows, key = { it.id }) { show ->
                                 ShowRow(
                                     name = show.name,
@@ -315,6 +323,8 @@ fun EfxListScreen(
                                     )
                                 }
                             }
+                        }
+                        SlimVerticalScrollBar(showListState, Modifier.align(Alignment.CenterEnd))
                         }
                     }
                 }
@@ -364,7 +374,14 @@ fun EfxListScreen(
                             EmptyHint("왼쪽에서 공연을 선택하면\n곡을 추가할 수 있습니다.")
                         songs.isEmpty() ->
                             EmptyHint("이 공연에는 아직 곡이 없습니다.\n\"곡 추가\" 로 첫 곡을 만들어 보세요.")
-                        else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        else -> {
+                        val songListState = rememberLazyListState()
+                        Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = songListState,
+                            contentPadding = PaddingValues(end = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             items(songs, key = { it.id }) { project ->
                                 EfxProjectCard(
                                     modifier = Modifier.animateItem(),
@@ -388,6 +405,9 @@ fun EfxListScreen(
                                     onMove = { moveSongTarget = project }
                                 )
                             }
+                        }
+                        SlimVerticalScrollBar(songListState, Modifier.align(Alignment.CenterEnd))
+                        }
                         }
                     }
                 }

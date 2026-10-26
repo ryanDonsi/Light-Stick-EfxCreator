@@ -1,6 +1,7 @@
 package com.efxcreator.ui.editor
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +9,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -110,6 +112,62 @@ fun SlimVerticalScrollBar(state: ScrollState, modifier: Modifier = Modifier) {
         val total = viewH + state.maxValue
         val len = (viewH / total * viewH).coerceIn(THUMB_MIN.toPx(), viewH)
         val y = state.value.toFloat() / state.maxValue * (viewH - len)
+        drawRoundRect(
+            color = color.copy(alpha = 0.55f),
+            topLeft = Offset((size.width - thickness) / 2f, y),
+            size = Size(thickness, len),
+            cornerRadius = CornerRadius(thickness / 2f)
+        )
+    }
+}
+
+/** [SlimVerticalScrollBar] 의 LazyColumn 용. 항목 높이가 거의 같다고 보고 전체 길이를 추정한다. */
+@Composable
+fun SlimVerticalScrollBar(state: LazyListState, modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    val scope = rememberCoroutineScope()
+    val currentState by rememberUpdatedState(state)
+
+    // 화면에 보이는 항목으로 (평균 항목 높이, 전체 길이, 보이는 길이, 현재 위치) 를 계산한다
+    fun metrics(st: LazyListState): FloatArray? {
+        val info = st.layoutInfo
+        val visible = info.visibleItemsInfo
+        if (visible.isEmpty() || info.totalItemsCount == 0) return null
+        val spacing = info.mainAxisItemSpacing.toFloat()
+        val avg = visible.sumOf { it.size }.toFloat() / visible.size + spacing
+        val total = avg * info.totalItemsCount - spacing
+        val view = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
+        if (total <= view + 1f) return null
+        val pos = st.firstVisibleItemIndex * avg + st.firstVisibleItemScrollOffset
+        return floatArrayOf(avg, total, view, pos)
+    }
+
+    Canvas(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(16.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { p ->
+                    val st = currentState
+                    val m = metrics(st) ?: return@detectTapGestures
+                    val target = (p.y / size.height * m[1] - m[2] / 2f).coerceIn(0f, m[1] - m[2])
+                    scope.launch { st.animateScrollBy(target - m[3]) }
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures { change, drag ->
+                    change.consume()
+                    val st = currentState
+                    val m = metrics(st) ?: return@detectDragGestures
+                    st.dispatchRawDelta(drag.y * m[1] / size.height)
+                }
+            }
+    ) {
+        val m = metrics(state) ?: return@Canvas
+        val thickness = THUMB_THICKNESS.toPx()
+        val viewH = size.height
+        val len = (m[2] / m[1] * viewH).coerceIn(THUMB_MIN.toPx(), viewH)
+        val y = (m[3] / (m[1] - m[2])).coerceIn(0f, 1f) * (viewH - len)
         drawRoundRect(
             color = color.copy(alpha = 0.55f),
             topLeft = Offset((size.width - thickness) / 2f, y),
