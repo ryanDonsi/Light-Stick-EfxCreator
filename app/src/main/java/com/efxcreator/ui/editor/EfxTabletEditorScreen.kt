@@ -43,8 +43,6 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
-import androidx.compose.material.icons.rounded.RotateLeft
-import androidx.compose.material.icons.rounded.RotateRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -708,21 +706,21 @@ private fun EditorTopBar(
             Text("저장 안 됨", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB74D))
         }
         Spacer(Modifier.width(8.dp))
-        // 실행 취소 / 다시 실행: 정사각형에 가까운 원형 화살표를 하나의 둥근 캡슐로 묶어 표시
+        // 실행 취소 / 다시 실행: Material Symbols 의 Undo / Redo 를 하나의 둥근 캡슐로 묶어 표시
         Row(
             modifier = Modifier
                 .height(36.dp)
                 .background(Color(0xFF26262E), RoundedCornerShape(18.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HistoryButton(Icons.Rounded.RotateLeft, "실행 취소", canUndo, onUndo)
+            HistoryButton(HistoryIcons.Undo, "실행 취소", canUndo, onUndo)
             Box(
                 modifier = Modifier
                     .width(1.dp)
                     .height(16.dp)
                     .background(Color(0x33FFFFFF))
             )
-            HistoryButton(Icons.Rounded.RotateRight, "다시 실행", canRedo, onRedo)
+            HistoryButton(HistoryIcons.Redo, "다시 실행", canRedo, onRedo)
         }
 
         Spacer(Modifier.weight(1f))
@@ -778,7 +776,7 @@ private fun HistoryButton(icon: ImageVector, description: String, enabled: Boole
         Icon(
             icon, contentDescription = description,
             tint = if (enabled) Color.White else Color(0xFF555560),
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(22.dp)
         )
     }
 }
