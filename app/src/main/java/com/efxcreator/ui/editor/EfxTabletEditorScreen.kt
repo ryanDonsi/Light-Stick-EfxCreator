@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -901,28 +902,47 @@ private fun SelectedEntryPanel(
             return@Column
         }
         val p = entry.payload
-        val rows = listOf(
-            "시각" to TimelineMath.formatTime(entry.timestampMs, withTenths = true),
-            "종류" to p.effectType.name,
-            "색상 (FG)" to "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})",
-            "배경 (BG)" to "RGB(${p.backgroundColor.r}, ${p.backgroundColor.g}, ${p.backgroundColor.b})",
+        // (라벨, 값, 값 옆에 보여줄 색 견본)
+        val rows: List<Triple<String, String, Color?>> = listOf(
+            Triple("시각", TimelineMath.formatTime(entry.timestampMs, withTenths = true), null),
+            Triple("종류", p.effectType.name, null),
+            Triple("색상 (FG)", "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})", Color(p.color.r, p.color.g, p.color.b)),
+            Triple(
+                "배경 (BG)",
+                "RGB(${p.backgroundColor.r}, ${p.backgroundColor.g}, ${p.backgroundColor.b})",
+                Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b)
+            ),
             // 같은 패킷 필드: ON/OFF 는 Transit, BLINK/STROBE/BREATH 는 Period (단위 10ms)
-            TimelineMath.periodLabel(p.effectType) to "${p.period}  (${p.period * 10}ms)",
-            "SPF / Fade" to "${p.spf} / ${p.fade}",
-            "그룹 마스크" to TimelineMath.formatGroupMask(p.groupMask),
-            "Random Delay" to if (p.randomDelay == 0) "0  (없음)" else "${p.randomDelay}  (최대 ${p.randomDelay * 10}ms)",
-            "Random Color" to if (p.randomColor != 0) "ON" else "OFF",
-            "Index" to p.effectIndex.toString()
+            Triple(TimelineMath.periodLabel(p.effectType), "${p.period}  (${p.period * 10}ms)", null),
+            Triple("SPF / Fade", "${p.spf} / ${p.fade}", null),
+            Triple("그룹 마스크", TimelineMath.formatGroupMask(p.groupMask), null),
+            Triple(
+                "Random Delay",
+                if (p.randomDelay == 0) "0  (없음)" else "${p.randomDelay}  (최대 ${p.randomDelay * 10}ms)",
+                null
+            ),
+            Triple("Random Color", if (p.randomColor != 0) "ON" else "OFF", null),
+            Triple("Index", p.effectIndex.toString(), null)
         )
         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            rows.forEach { (k, v) ->
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            rows.forEach { (k, v, swatch) ->
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         k,
                         style = MaterialTheme.typography.labelMedium,
                         color = Color(0xFF8A8A95),
                         modifier = Modifier.width(96.dp)
                     )
+                    if (swatch != null) {
+                        // 색상 수치값 옆의 색 견본 (어두운 색도 배경과 구분되도록 테두리)
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .background(swatch, RoundedCornerShape(4.dp))
+                                .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(4.dp))
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text(
                         v,
                         style = MaterialTheme.typography.labelMedium,
