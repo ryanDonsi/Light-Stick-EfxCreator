@@ -96,12 +96,12 @@ fun EffectLibraryPanel(
 
     Column(modifier = modifier.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("이펙트 라이브러리", style = MaterialTheme.typography.titleSmall, color = Color.White)
+            Text("이펙트 라이브러리", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.width(12.dp))
             Text(
                 "탭 = 재생 위치에 추가 · 길게 눌러 끌기 = 원하는 위치에 놓기",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF9A9AA5)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -121,14 +121,14 @@ fun EffectLibraryPanel(
                     Text(
                         "탭 = 수정 · 길게 눌러 끌기 = 순서 바꾸기",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF9A9AA5)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.width(12.dp))
                 }
                 Text(
                     "${userSlots.count { it != null }} / ${UserEffect.SLOT_COUNT}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFFB0B0BA)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.width(8.dp))
                 FilterChip(
@@ -291,7 +291,7 @@ private fun UserLibraryGrid(
                         with(density) { sourceBounds.width.toDp() },
                         with(density) { sourceBounds.height.toDp() }
                     )
-                    .background(Color(0xE63A3A48), MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.shapes.small)
                     .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small),
                 contentAlignment = Alignment.Center
             ) {
@@ -310,11 +310,11 @@ private fun EmptySlot(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(SLOT_HEIGHT)
-            .border(1.dp, Color(0x44FFFFFF), MaterialTheme.shapes.small)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
             .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick)
     ) {
-        Icon(Icons.Default.Add, contentDescription = "이펙트 추가", tint = Color(0x88FFFFFF))
+        Icon(Icons.Default.Add, contentDescription = "이펙트 추가", tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -326,7 +326,7 @@ private fun SlotContent(preset: EffectPreset) {
         Text(
             preset.label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
@@ -359,7 +359,7 @@ private fun SlotTile(
         modifier = Modifier
             .fillMaxWidth()
             .height(SLOT_HEIGHT)
-            .background(Color(0xFF26262E).copy(alpha = if (dimmed) 0.35f else 1f), MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (dimmed) 0.35f else 1f), MaterialTheme.shapes.small)
             .then(
                 if (editMode) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
                 else Modifier
@@ -413,7 +413,7 @@ private fun PresetCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(Color(0xFF26262E), MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
             .onGloballyPositioned { originWindow = it.positionInWindow() }
             .pointerInput(preset.id) { detectTapGestures(onTap = { onTap() }) }
             .pointerInput(preset.id) {
@@ -437,7 +437,7 @@ private fun PresetCard(
         Text(
             preset.label,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1
         )
     }
@@ -450,7 +450,7 @@ fun PresetSwatch(preset: EffectPreset, modifier: Modifier = Modifier) {
         modifier = modifier
             .size(26.dp)
             .clip(CircleShape)
-            .border(1.dp, Color(0x55FFFFFF), CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
     ) {
         if (preset.isTwoColor) {
             Row(modifier = Modifier.fillMaxSize()) {

@@ -1,22 +1,17 @@
 package com.efxcreator.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.efxcreator.ui.editor.TimelineMath
@@ -60,26 +55,12 @@ fun GroupMaskPicker(
                 for (col in 0 until columns) {
                     val group = row * columns + col + 1
                     val on = GroupMasks.isOn(mask, group)
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(34.dp)
-                            .background(
-                                if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                MaterialTheme.shapes.small
-                            )
-                            .border(
-                                1.dp,
-                                if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                MaterialTheme.shapes.small
-                            )
-                            .clickable { onChange(GroupMasks.toggle(mask, group)) }
+                    FilledIconToggleButton(
+                        checked = on,
+                        onCheckedChange = { onChange(GroupMasks.toggle(mask, group)) },
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Text(
-                            group.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text(group.toString(), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }

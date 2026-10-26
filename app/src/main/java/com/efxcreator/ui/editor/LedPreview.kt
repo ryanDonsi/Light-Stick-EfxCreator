@@ -2,6 +2,7 @@ package com.efxcreator.ui.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -26,6 +27,11 @@ private const val INNER_RATIO = 0.4f
  */
 @Composable
 fun LedPreview(color: LedColor, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    val bodyColor = cs.surfaceContainerHighest
+    val offRing = cs.outlineVariant
+    val innerColor = cs.surfaceContainerLowest
+    val innerEdge = cs.surfaceBright
     val led = color.toComposeColor()
     val brightness = maxOf(color.r, color.g, color.b) / 255f
 
@@ -39,7 +45,7 @@ fun LedPreview(color: LedColor, modifier: Modifier = Modifier) {
         val ringMid = innerRadius + ringWidth / 2f
 
         // 몸체
-        drawCircle(Color(0xFF1E1E24), radius = body, center = center)
+        drawCircle(bodyColor, radius = body, center = center)
 
         // 링 둘레로 번지는 빛
         if (brightness > 0.02f) {
@@ -59,7 +65,7 @@ fun LedPreview(color: LedColor, modifier: Modifier = Modifier) {
         }
 
         // 링: 꺼져 있으면 어두운 회색, 켜지면 LED 색
-        val ringColor = if (brightness > 0.02f) led else Color(0xFF34343C)
+        val ringColor = if (brightness > 0.02f) led else offRing
         drawCircle(ringColor, radius = ringMid, center = center, style = Stroke(width = ringWidth))
         if (brightness > 0.02f) {
             drawCircle(
@@ -70,9 +76,9 @@ fun LedPreview(color: LedColor, modifier: Modifier = Modifier) {
         }
 
         // 안쪽 원: 점등되지 않는 면
-        drawCircle(Color(0xFF15151A), radius = innerRadius, center = center)
+        drawCircle(innerColor, radius = innerRadius, center = center)
         drawCircle(
-            Color(0xFF2A2A32), radius = innerRadius, center = center,
+            innerEdge, radius = innerRadius, center = center,
             style = Stroke(width = radius * 0.02f)
         )
     }

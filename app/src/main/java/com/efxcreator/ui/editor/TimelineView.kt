@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,17 +100,6 @@ object SectionColors {
     }
 }
 
-private val BG = Color(0xFF16161A)
-private val RULER_BG = Color(0xFF202027)
-private val LANE_BG = Color(0xFF1D1D23)
-private val GRID = Color(0xFF3A3A44)
-private val TEXT_DIM = Color(0xFFB0B0BA)
-private val WAVE_PLAYED = Color(0xFF64B5F6)
-private val WAVE_UNPLAYED = Color(0xFF2F6FA8)
-private val PLAYHEAD = Color(0xFFFFEB3B)
-private val DROP_LINE = Color(0xFF26C6DA)
-private val OFF_BLOCK = Color(0xFF2A2A30)
-
 // 위 → 아래: 시간 / 파형 / 섹션 / 비트 / 이펙트 블록
 private val RULER_H = 22.dp
 private val WAVE_H = 96.dp
@@ -153,7 +143,7 @@ private fun DrawScope.drawLabel(
  * - BREATH  : 그라데이션(BG→FG) 2.5 / FG 2.5 / 그라데이션(FG→BG) 2.5 / BG 2.5
  */
 private fun DrawScope.drawEffectBlock(
-    type: EffectType, fg: Color, bg: Color,
+    offBlock: Color, type: EffectType, fg: Color, bg: Color,
     left: Float, top: Float, width: Float, height: Float, alpha: Float
 ) {
     val f = fg.copy(alpha = alpha)
@@ -161,7 +151,7 @@ private fun DrawScope.drawEffectBlock(
     val size = { h: Float -> Size(width, h) }
 
     when (type) {
-        EffectType.OFF -> drawRect(OFF_BLOCK.copy(alpha = alpha), Offset(left, top), size(height))
+        EffectType.OFF -> drawRect(offBlock.copy(alpha = alpha), Offset(left, top), size(height))
         EffectType.ON -> drawRect(f, Offset(left, top), size(height))
         EffectType.STROBE -> {
             val h1 = height * 0.3f
@@ -231,6 +221,20 @@ fun TimelineView(
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
+
+    // 색은 Material 컬러 롤에서 가져온다 (구간 색은 데이터 구분용이라 SectionColors 유지)
+    val cs = MaterialTheme.colorScheme
+    val bgColor = cs.surfaceContainerLowest
+    val rulerBg = cs.surfaceContainerHigh
+    val laneBg = cs.surfaceContainerLow
+    val gridColor = cs.outlineVariant
+    val textDim = cs.onSurfaceVariant
+    val wavePlayed = cs.primary
+    val waveUnplayed = cs.primaryContainer
+    val playheadColor = cs.tertiary
+    val dropLine = cs.secondary
+    val offBlock = cs.surfaceContainerHighest
+    val beatLight = cs.onSurface
 
     val rulerH = with(density) { RULER_H.toPx() }
     val sectionH = with(density) { SECTION_H.toPx() }
@@ -412,7 +416,7 @@ fun TimelineView(
                     if (withNumbers && isBar && rel >= 0 && beatPx * beatsPerBar > 36f) {
                         drawLabel(
                             textMeasurer, (Math.floorDiv(rel, beatsPerBar) + 1).toString(), x + 3f, yTop + 2f,
-                            TextStyle(fontSize = 9.sp, color = Color(0x99FFFFFF))
+                            TextStyle(fontSize = 9.sp, color = beatLight.copy(alpha = 0.6f))
                         )
                     }
                 }
@@ -420,18 +424,18 @@ fun TimelineView(
             }
         }
 
-        drawRect(BG)
+        drawRect(bgColor)
 
         // ── 눈금 ─────────────────────────────────────────────
-        drawRect(RULER_BG, Offset.Zero, Size(w, rulerH))
+        drawRect(rulerBg, Offset.Zero, Size(w, rulerH))
         val stepMs = (TimelineMath.rulerStepSec(pxPerMs) * 1000f).toLong()
         var t = (startMs.toLong().coerceAtLeast(0L) / stepMs) * stepMs
         while (t <= endMs) {
             val x = xOf(t.toFloat())
-            drawLine(GRID, Offset(x, rulerH * 0.5f), Offset(x, laneTop + laneH), strokeWidth = 1f)
+            drawLine(gridColor, Offset(x, rulerH * 0.5f), Offset(x, laneTop + laneH), strokeWidth = 1f)
             drawLabel(
                 textMeasurer, TimelineMath.formatTime(t), x + 4f, 2f,
-                TextStyle(fontSize = 10.sp, color = TEXT_DIM)
+                TextStyle(fontSize = 10.sp, color = textDim)
             )
             t += stepMs
         }
@@ -476,7 +480,7 @@ fun TimelineView(
                     if (i0 < wf.size) {
                         val h = amp.coerceIn(0f, 1f).pow(0.6f) * waveH * 0.46f
                         drawLine(
-                            if (ms <= position) WAVE_PLAYED else WAVE_UNPLAYED,
+                            if (ms <= position) wavePlayed else waveUnplayed,
                             Offset(px, waveMid - h), Offset(px, waveMid + h), strokeWidth = 2f
                         )
                     }
@@ -486,23 +490,23 @@ fun TimelineView(
         } else {
             drawLabel(
                 textMeasurer, emptyHint, 16f, waveMid - 8f,
-                TextStyle(fontSize = 12.sp, color = TEXT_DIM)
+                TextStyle(fontSize = 12.sp, color = textDim)
             )
         }
 
         // 파형 위 가이드선(아주 연하게) — 비트 위치를 파형과 대조하기 위함
-        drawBeats(waveTop, waveTop + waveH, Color(0x14FFFFFF), Color(0x30FFFFFF), withNumbers = false)
+        drawBeats(waveTop, waveTop + waveH, beatLight.copy(alpha = 0.08f), beatLight.copy(alpha = 0.19f), withNumbers = false)
 
         // ── 비트 행 ───────────────────────────────────────────
-        drawRect(RULER_BG, Offset(0f, beatTop), Size(w, beatH))
+        drawRect(rulerBg, Offset(0f, beatTop), Size(w, beatH))
         drawBeats(
-            beatTop, beatTop + beatH, Color(0xAAFFFFFF), Color(0xFFFFFFFF),
+            beatTop, beatTop + beatH, beatLight.copy(alpha = 0.67f), beatLight,
             withNumbers = true, beatInset = beatH * 0.5f
         )
 
         // ── 이펙트 레인 ───────────────────────────────────────
-        drawRect(LANE_BG, Offset(0f, laneTop), Size(w, laneH))
-        drawBeats(laneTop, laneTop + laneH, Color(0x18FFFFFF), Color(0x40FFFFFF), withNumbers = false)
+        drawRect(laneBg, Offset(0f, laneTop), Size(w, laneH))
+        drawBeats(laneTop, laneTop + laneH, beatLight.copy(alpha = 0.09f), beatLight.copy(alpha = 0.25f), withNumbers = false)
         val blocks = TimelineMath.blocks(entries, durationMs)
         for (b in blocks) {
             val shift = if (b.index == dragIndex) dragDeltaMs else 0f
@@ -515,7 +519,7 @@ fun TimelineView(
             val width = max(2f, min(x1, w + 2f) - left - 1f)
             val alpha = if (b.index == dragIndex) 0.7f else 1f
 
-            drawEffectBlock(
+            drawEffectBlock(offBlock,
                 p.effectType,
                 fg = Color(p.color.r, p.color.g, p.color.b),
                 bg = Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b),
@@ -544,20 +548,20 @@ fun TimelineView(
         if (dropPreviewMs != null) {
             val x = xOf(dropPreviewMs.toFloat())
             drawLine(
-                DROP_LINE, Offset(x, 0f), Offset(x, laneTop + laneH), strokeWidth = 3f,
+                dropLine, Offset(x, 0f), Offset(x, laneTop + laneH), strokeWidth = 3f,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
             )
             drawLabel(
                 textMeasurer, TimelineMath.formatTime(dropPreviewMs, withTenths = true), x + 6f, laneTop - 16f,
-                TextStyle(fontSize = 11.sp, color = DROP_LINE)
+                TextStyle(fontSize = 11.sp, color = dropLine)
             )
         }
 
         // ── 플레이헤드 ────────────────────────────────────────
         val px = xOf(position.toFloat())
         if (px in 0f..w) {
-            drawLine(PLAYHEAD, Offset(px, 0f), Offset(px, laneTop + laneH), strokeWidth = 2f)
-            drawCircle(PLAYHEAD, radius = 6f, center = Offset(px, 6f))
+            drawLine(playheadColor, Offset(px, 0f), Offset(px, laneTop + laneH), strokeWidth = 2f)
+            drawCircle(playheadColor, radius = 6f, center = Offset(px, 6f))
         }
     }
 }

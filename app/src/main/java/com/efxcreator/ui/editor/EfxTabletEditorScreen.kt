@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.efxcreator.ui.editor
 
 import android.widget.Toast
@@ -19,21 +21,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -51,6 +49,14 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
@@ -79,7 +85,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
@@ -105,8 +110,6 @@ import kotlinx.coroutines.isActive
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-private val EDITOR_BG = Color(0xFF101014)
-private val PANEL_BG = Color(0xFF1B1B21)
 private val PREVIEW_ICON_SIZE = 84.dp
 
 /**
@@ -314,17 +317,9 @@ fun EfxTabletEditorScreen(
     }
 
     // ── 화면 ─────────────────────────────────────────────────
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(EDITOR_BG)
-            .onGloballyPositioned { rootOrigin = it.positionInWindow() }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-        ) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
             EditorTopBar(
                 name = metadata?.name ?: "",
                 musicLabel = if (musicFile != null) "음악 변경" else "음악 선택",
@@ -345,7 +340,15 @@ fun EfxTabletEditorScreen(
                 onPickMusic = { musicPicker.launch("audio/*") },
                 onDevice = { showDeviceDialog = true }
             )
-
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .onGloballyPositioned { rootOrigin = it.positionInWindow() }
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -363,7 +366,7 @@ fun EfxTabletEditorScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(PANEL_BG, MaterialTheme.shapes.large)
+                            .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
                             .padding(8.dp)
                     ) {
                         TimelineToolbar(
@@ -428,7 +431,7 @@ fun EfxTabletEditorScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .background(PANEL_BG, MaterialTheme.shapes.large)
+                            .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
                     )
                 }
 
@@ -481,7 +484,6 @@ fun EfxTabletEditorScreen(
                     )
                 }
             }
-        }
 
         // 드래그 중인 프리셋 고스트
         drag.preset?.let { preset ->
@@ -497,13 +499,14 @@ fun EfxTabletEditorScreen(
                     // 들어 올린 느낌: 그림자 + 살짝 확대
                     .graphicsLayer { scaleX = 1.06f; scaleY = 1.06f }
                     .shadow(10.dp, MaterialTheme.shapes.small)
-                    .background(Color(0xE6303040), MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.shapes.small)
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 PresetSwatch(preset)
                 Spacer(Modifier.width(8.dp))
-                Text(preset.label, color = Color.White, style = MaterialTheme.typography.labelLarge)
+                Text(preset.label, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelLarge)
             }
+        }
         }
     }
 
@@ -694,113 +697,106 @@ private fun EditorTopBar(
     onPickMusic: () -> Unit,
     onDevice: () -> Unit
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PANEL_BG)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = Color.White)
-        }
-        Text(
-            text = name.ifBlank { "EFX" } + if (dirty) "  ●" else "",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            maxLines = 1,
-            modifier = Modifier
-                .clickable(onClick = onRename)
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-        )
-        Text("· $entryCount entries", style = MaterialTheme.typography.labelMedium, color = Color(0xFF9A9AA5))
-        AnimatedVisibility(
-            visible = dirty,
-            enter = fadeIn(tween(EfxMotion.MEDIUM, easing = EfxMotion.StandardDecelerate)) +
-                expandHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized)),
-            exit = fadeOut(tween(EfxMotion.SHORT)) + shrinkHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
-        ) {
-            Text(
-                "저장 안 됨",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFFFFB74D),
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        // 실행 취소 / 다시 실행: Material Symbols 의 Undo / Redo 를 하나의 둥근 캡슐로 묶어 표시
-        Row(
-            modifier = Modifier
-                .height(36.dp)
-                .background(Color(0xFF26262E), RoundedCornerShape(18.dp)),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            HistoryButton(HistoryIcons.Undo, "실행 취소", canUndo, onUndo)
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(16.dp)
-                    .background(Color(0x33FFFFFF))
-            )
-            HistoryButton(HistoryIcons.Redo, "다시 실행", canRedo, onRedo)
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        if (analyzing) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+    TopAppBar(
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+            }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = name.ifBlank { "EFX" },
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(onClick = onRename)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+                Text(
+                    "· $entryCount entries",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                AnimatedVisibility(
+                    visible = dirty,
+                    enter = fadeIn(tween(EfxMotion.MEDIUM, easing = EfxMotion.StandardDecelerate)) +
+                        expandHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized)),
+                    exit = fadeOut(tween(EfxMotion.SHORT)) +
+                        shrinkHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
+                ) {
+                    Text(
+                        "저장 안 됨",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
+        },
+        actions = {
+            if (analyzing) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "분석 중…",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            // 실행 취소 / 다시 실행: Material Symbols 의 Undo / Redo
+            FilledTonalIconButton(onClick = onUndo, enabled = canUndo) {
+                Icon(HistoryIcons.Undo, contentDescription = "실행 취소", modifier = Modifier.size(22.dp))
+            }
+            FilledTonalIconButton(onClick = onRedo, enabled = canRedo) {
+                Icon(HistoryIcons.Redo, contentDescription = "다시 실행", modifier = Modifier.size(22.dp))
+            }
             Spacer(Modifier.width(8.dp))
-            Text("분석 중…", style = MaterialTheme.typography.labelMedium, color = Color(0xFFB0B0BA))
+            Button(onClick = onSave, enabled = dirty && !saving) {
+                if (saving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(6.dp))
+                Text("저장")
+            }
+            Spacer(Modifier.width(8.dp))
+            FilledTonalButton(onClick = onApplySets, enabled = !applying) {
+                if (applying) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(6.dp))
+                Text(if (applying) "적용 중…" else "세트 적용")
+            }
+            Spacer(Modifier.width(8.dp))
+            FilledTonalButton(onClick = onPickMusic) {
+                Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(musicLabel)
+            }
+            Spacer(Modifier.width(8.dp))
+            FilledTonalButton(onClick = onDevice) {
+                Icon(
+                    if (deviceConnected) Icons.Default.BluetoothConnected else Icons.Default.Bluetooth,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(if (deviceConnected) "기기 연결됨" else "기기 연결")
+            }
             Spacer(Modifier.width(12.dp))
         }
-        Button(onClick = onSave, enabled = dirty && !saving) {
-            if (saving) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-            }
-            Spacer(Modifier.width(6.dp))
-            Text("저장")
-        }
-        Spacer(Modifier.width(8.dp))
-        FilledTonalButton(onClick = onApplySets, enabled = !applying) {
-            if (applying) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-            }
-            Spacer(Modifier.width(6.dp))
-            Text(if (applying) "적용 중…" else "세트 적용")
-        }
-        Spacer(Modifier.width(8.dp))
-        FilledTonalButton(onClick = onPickMusic) {
-            Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(musicLabel)
-        }
-        Spacer(Modifier.width(8.dp))
-        FilledTonalButton(onClick = onDevice) {
-            Icon(
-                if (deviceConnected) Icons.Default.BluetoothConnected else Icons.Default.Bluetooth,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(if (deviceConnected) "기기 연결됨" else "기기 연결")
-        }
-    }
-}
-
-/** 캡슐 안의 36dp 원형 아이콘 버튼 (비활성은 흐리게) */
-@Composable
-private fun HistoryButton(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
-    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp)) {
-        Icon(
-            icon, contentDescription = description,
-            tint = if (enabled) Color.White else Color(0xFF555560),
-            modifier = Modifier.size(22.dp)
-        )
-    }
+    )
 }
 
 @Composable
@@ -816,7 +812,7 @@ private fun TimelineToolbar(
     onFit: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("타임라인", style = MaterialTheme.typography.titleSmall, color = Color.White)
+        Text("타임라인", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.weight(1f))
         FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text("비트 표시") })
         Spacer(Modifier.width(8.dp))
@@ -824,8 +820,8 @@ private fun TimelineToolbar(
         Spacer(Modifier.width(8.dp))
         FilterChip(selected = followPlayhead, onClick = { onFollowChange(!followPlayhead) }, label = { Text("따라가기") })
         Spacer(Modifier.width(4.dp))
-        IconButton(onClick = onZoomOut) { Icon(Icons.Default.ZoomOut, contentDescription = "축소", tint = Color.White) }
-        IconButton(onClick = onZoomIn) { Icon(Icons.Default.ZoomIn, contentDescription = "확대", tint = Color.White) }
+        IconButton(onClick = onZoomOut) { Icon(Icons.Default.ZoomOut, contentDescription = "축소") }
+        IconButton(onClick = onZoomIn) { Icon(Icons.Default.ZoomIn, contentDescription = "확대") }
         TextButton(onClick = onFit) { Text("전체 보기") }
     }
 }
@@ -860,7 +856,7 @@ private fun PreviewPanel(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PANEL_BG, MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -871,13 +867,13 @@ private fun PreviewPanel(
             Text(
                 text = current?.payload?.effectType?.name ?: "—",
                 style = MaterialTheme.typography.labelLarge,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
             Text(
                 text = listOfNotNull(section?.type, analysis?.musicStyle).joinToString(" · ").ifEmpty { " " },
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF9A9AA5),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
         }
@@ -887,10 +883,10 @@ private fun PreviewPanel(
         // 오른쪽: 컨트롤 패널
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Preview", style = MaterialTheme.typography.labelLarge, color = Color.White)
+                Text("Preview", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.weight(1f))
                 if (deviceConnected) {
-                    Text("● 실기기 동기화", style = MaterialTheme.typography.labelSmall, color = Color(0xFF66BB6A))
+                    Text("● 실기기 동기화", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -902,13 +898,12 @@ private fun PreviewPanel(
                 onPrev = onPrev,
                 onPlayPause = onToggle,
                 onNext = onNext,
-                scale = 0.75f
             )
             if (!canPlay) {
                 Text(
                     "음악을 선택하면 재생할 수 있습니다",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF8A8A95)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -927,16 +922,16 @@ private fun SelectedEntryPanel(
             .fillMaxWidth()
             // 선택/해제로 행이 늘고 줄 때 패널 높이가 부드럽게 바뀐다
             .animateContentSize(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
-            .background(PANEL_BG, MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
             .padding(12.dp)
     ) {
-        Text("선택한 이펙트", style = MaterialTheme.typography.titleSmall, color = Color.White)
+        Text("선택한 이펙트", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
         if (entry == null) {
             Text(
                 "타임라인의 블록을 탭하면 속성을 볼 수 있습니다.\n블록을 끌면 시간을 옮길 수 있습니다.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF8A8A95)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             return@Column
         }
@@ -969,7 +964,7 @@ private fun SelectedEntryPanel(
                     Text(
                         k,
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF8A8A95),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(96.dp)
                     )
                     if (swatch != null) {
@@ -978,14 +973,14 @@ private fun SelectedEntryPanel(
                             modifier = Modifier
                                 .size(18.dp)
                                 .background(swatch, MaterialTheme.shapes.extraSmall)
-                                .border(1.dp, Color(0x66FFFFFF), MaterialTheme.shapes.extraSmall)
+                                .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
                         )
                         Spacer(Modifier.width(8.dp))
                     }
                     Text(
                         v,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (k == "Random Color" && p.randomColor != 0) Color(0xFF66BB6A) else Color.White,
+                        color = if (k == "Random Color" && p.randomColor != 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                 }

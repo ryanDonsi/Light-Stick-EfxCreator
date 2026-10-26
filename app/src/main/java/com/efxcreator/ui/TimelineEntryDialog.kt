@@ -632,7 +632,7 @@ private fun RowScope.PresetColorButton(
                 if (!isSelected) {
                     Modifier.border(
                         width = 1.dp,
-                        color = ComposeColor.White.copy(alpha = 0.3f),
+                        color = MaterialTheme.colorScheme.outlineVariant,
                         shape = MaterialTheme.shapes.extraSmall
                     )
                 } else Modifier
