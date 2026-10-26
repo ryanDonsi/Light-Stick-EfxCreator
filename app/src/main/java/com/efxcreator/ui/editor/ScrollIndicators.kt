@@ -37,7 +37,7 @@ fun SlimHorizontalScrollBar(
 ) {
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     val total = durationMs.toFloat().coerceAtLeast(1f)
-    val maxStart = (total - viewMs * 0.5f).coerceAtLeast(1f)
+    val maxStart = (total - viewMs).coerceAtLeast(0f)
     // 제스처 람다는 다시 시작되지 않으므로, 계속 바뀌는 값은 항상 최신 값을 읽도록 한다
     val currentStart by rememberUpdatedState(viewStartMs)
     val currentScrollTo by rememberUpdatedState(onScrollTo)

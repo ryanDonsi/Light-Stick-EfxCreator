@@ -72,13 +72,19 @@ class TimelineState {
             (viewWidthPx / durationMs).coerceAtMost(MAX_PX_PER_MS)
         } else MIN_PX_PER_MS
 
+    /** 보이는 구간 길이(ms) */
+    val viewMs: Float get() = if (pxPerMs > 0f) viewWidthPx / pxPerMs else 0f
+
+    /** 스크롤 한계: 화면 오른쪽 끝이 곡의 끝에 닿는 위치 */
+    val maxStartMs: Float get() = max(0f, durationMs - viewMs)
+
     /** 줌 범위 밖이면 범위 안으로 되돌린다 (곡이나 화면 크기가 바뀐 경우) */
     fun clampZoom() {
         val clamped = pxPerMs.coerceIn(minPxPerMs, MAX_PX_PER_MS)
         if (clamped != pxPerMs) {
             pxPerMs = clamped
-            viewStartMs = viewStartMs.coerceAtLeast(0f)
         }
+        viewStartMs = viewStartMs.coerceIn(0f, maxStartMs)
     }
 
     fun msAtX(x: Float): Float = viewStartMs + x / pxPerMs
@@ -86,7 +92,7 @@ class TimelineState {
     fun zoom(factor: Float, anchorX: Float = viewWidthPx / 2f) {
         val anchorMs = msAtX(anchorX)
         pxPerMs = (pxPerMs * factor).coerceIn(minPxPerMs, MAX_PX_PER_MS)
-        viewStartMs = (anchorMs - anchorX / pxPerMs).coerceAtLeast(0f)
+        viewStartMs = (anchorMs - anchorX / pxPerMs).coerceIn(0f, maxStartMs)
     }
 
     /**
@@ -96,13 +102,11 @@ class TimelineState {
     fun pinch(scale: Float, prevCentroidX: Float, centroidX: Float) {
         val anchorMs = msAtX(prevCentroidX)
         pxPerMs = (pxPerMs * scale).coerceIn(minPxPerMs, MAX_PX_PER_MS)
-        viewStartMs = (anchorMs - centroidX / pxPerMs).coerceAtLeast(0f)
+        viewStartMs = (anchorMs - centroidX / pxPerMs).coerceIn(0f, maxStartMs)
     }
 
     fun panByMs(deltaMs: Float, totalMs: Long) {
-        val viewMs = if (pxPerMs > 0f) viewWidthPx / pxPerMs else 0f
-        val maxStart = max(0f, totalMs - viewMs * 0.5f)
-        viewStartMs = (viewStartMs + deltaMs).coerceIn(0f, maxStart)
+        viewStartMs = (viewStartMs + deltaMs).coerceIn(0f, max(0f, totalMs - viewMs))
     }
 }
 
@@ -299,7 +303,7 @@ fun TimelineView(
             val p = positionProvider().toFloat()
             val viewMs = state.viewWidthPx / state.pxPerMs
             if (p < state.viewStartMs || p > state.viewStartMs + viewMs * 0.85f) {
-                state.viewStartMs = max(0f, p - viewMs * 0.15f)
+                state.viewStartMs = (p - viewMs * 0.15f).coerceIn(0f, state.maxStartMs)
             }
             delay(50)
         }
