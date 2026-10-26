@@ -413,14 +413,15 @@ fun EfxTabletEditorScreen(
                         player = player,
                         durationMs = durationMs,
                         onToggle = { player.toggle() },
-                        onStop = {
-                            player.stop()
-                            if (deviceLoaded) {
-                                bleVm.stopTimeline()
-                                deviceLoaded = false
-                            }
+                        onPrev = {
+                            // 현재 섹션 시작에서 2초 넘게 지났으면 그 섹션 처음으로, 아니면 이전 섹션 시작으로
+                            val starts = analysis?.sections?.map { it.startMs }.orEmpty()
+                            seek(starts.lastOrNull { it < player.positionMs - 2_000L } ?: 0L)
                         },
-                        onRewind = { seek(0L) },
+                        onNext = {
+                            val starts = analysis?.sections?.map { it.startMs }.orEmpty()
+                            seek(starts.firstOrNull { it > player.positionMs + 100L } ?: durationMs)
+                        },
                         onSeek = { seek(it) }
                     )
                     SelectedEntryPanel(
@@ -759,57 +760,48 @@ private fun PreviewPanel(
     }
 }
 
+/**
+ * 재생 바 + 버튼 — Light-Stick-Music 과 같은 모양 (시간 좌/우, 그라데이션 진행 바, 이미지 버튼).
+ * 이전/다음 버튼은 곡 목록이 없으므로 이전/다음 **섹션 시작**으로 이동한다 (분석 결과가 없으면 처음/끝).
+ */
 @Composable
 private fun TransportPanel(
     player: MusicPlayerController,
     durationMs: Long,
     onToggle: () -> Unit,
-    onStop: () -> Unit,
-    onRewind: () -> Unit,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
     onSeek: (Long) -> Unit
 ) {
     val position = player.positionMs
     val canPlay = player.isReady
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PANEL_BG, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Slider(
-            value = position.coerceIn(0L, durationMs).toFloat(),
-            onValueChange = { onSeek(it.toLong()) },
-            valueRange = 0f..durationMs.toFloat().coerceAtLeast(1f)
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "${TimelineMath.formatTime(position, withTenths = true)} / ${TimelineMath.formatTime(durationMs)}",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFFB0B0BA)
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier = Modifier
+                .width(PREVIEW_PANEL_WIDTH)
+                .background(PANEL_BG, RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            PlayerSeekBar(currentPosition = position, duration = durationMs, onSeekTo = onSeek)
+            Spacer(Modifier.height(12.dp))
+            PlayerButtons(
+                isPlaying = player.isPlaying,
+                enabled = canPlay,
+                onPrev = onPrev,
+                onPlayPause = onToggle,
+                onNext = onNext,
+                scale = 0.8f
             )
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = onRewind) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = "처음으로", tint = Color.White)
-            }
-            IconButton(onClick = onToggle, enabled = canPlay) {
-                Icon(
-                    if (player.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (player.isPlaying) "일시정지" else "재생",
-                    tint = if (canPlay) Color.White else Color(0xFF555560),
-                    modifier = Modifier.size(32.dp)
+            if (!canPlay) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "음악을 선택하면 재생할 수 있습니다",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF8A8A95)
                 )
             }
-            IconButton(onClick = onStop) {
-                Icon(Icons.Default.Stop, contentDescription = "정지", tint = Color.White)
-            }
-        }
-        if (!canPlay) {
-            Text(
-                "음악을 선택하면 재생할 수 있습니다",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF8A8A95)
-            )
         }
     }
 }
