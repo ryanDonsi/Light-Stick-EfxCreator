@@ -59,6 +59,14 @@ class EffectLibraryViewModel(application: Application) : AndroidViewModel(applic
         commit(list)
     }
 
+    /** 여러 칸을 한 번에 비운다 */
+    fun deleteAll(slots: Collection<Int>) {
+        val list = _slots.value.toMutableList()
+        var changed = false
+        slots.forEach { if (it in list.indices && list[it] != null) { list[it] = null; changed = true } }
+        if (changed) commit(list)
+    }
+
     /**
      * 타임라인의 엔트리를 가장 앞쪽 빈 칸에 저장한다.
      * @return 저장된 칸 번호, 라이브러리가 가득 차면 -1

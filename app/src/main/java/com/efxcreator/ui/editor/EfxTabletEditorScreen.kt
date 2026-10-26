@@ -428,6 +428,7 @@ fun EfxTabletEditorScreen(
                         onDrop = { handleDrop() },
                         onUserSlotClick = { libraryEditorSlot = it },
                         onMoveSlot = { from, to -> libVm.move(from, to) },
+                        onDeleteSlots = { libVm.deleteAll(it) },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()

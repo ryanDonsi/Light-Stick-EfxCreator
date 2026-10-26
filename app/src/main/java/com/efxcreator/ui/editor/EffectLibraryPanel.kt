@@ -28,6 +28,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -84,6 +91,7 @@ fun EffectLibraryPanel(
     onDrop: () -> Unit,
     onUserSlotClick: (slot: Int) -> Unit,
     onMoveSlot: (from: Int, to: Int) -> Unit,
+    onDeleteSlots: (List<Int>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var category by remember {
@@ -92,6 +100,30 @@ fun EffectLibraryPanel(
         )
     }
     var editMode by remember { mutableStateOf(false) }
+    // 선택 삭제: 칸을 탭해 체크하고 한 번에 지운다 (편집 모드와 동시에 켜지지 않는다)
+    var deleteMode by remember { mutableStateOf(false) }
+    val checked = remember { mutableStateListOf<Int>() }
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("선택 삭제") },
+            text = { Text("선택한 ${checked.size}개의 이펙트를 내 라이브러리에서 삭제하시겠습니까?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteSlots(checked.toList())
+                        checked.clear()
+                        confirmDelete = false
+                        deleteMode = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("삭제") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("취소") } }
+        )
+    }
 
     Column(modifier = modifier.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -124,6 +156,22 @@ fun EffectLibraryPanel(
                     )
                     Spacer(Modifier.width(12.dp))
                 }
+                if (deleteMode) {
+                    Text(
+                        "탭 = 선택/해제 · ${checked.size}개 선택됨",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(onClick = {
+                        val all = userSlots.indices.filter { userSlots[it] != null }
+                        if (checked.size == all.size) checked.clear() else { checked.clear(); checked.addAll(all) }
+                    }) { Text("전체 선택") }
+                    TextButton(
+                        onClick = { confirmDelete = true },
+                        enabled = checked.isNotEmpty(),
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) { Text("삭제 (${checked.size})") }
+                }
                 Text(
                     "${userSlots.count { it != null }} / ${UserEffect.SLOT_COUNT}",
                     style = MaterialTheme.typography.labelMedium,
@@ -131,9 +179,24 @@ fun EffectLibraryPanel(
                 )
                 Spacer(Modifier.width(8.dp))
                 FilterChip(
+                    selected = deleteMode,
+                    onClick = {
+                        deleteMode = !deleteMode
+                        checked.clear()
+                        if (deleteMode) editMode = false
+                    },
+                    label = { Text("선택 삭제") },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                )
+                Spacer(Modifier.width(8.dp))
+                // 편집 모드 진입/해제 상태를 ON/OFF 로 표시
+                FilterChip(
                     selected = editMode,
-                    onClick = { editMode = !editMode },
-                    label = { Text("편집") },
+                    onClick = {
+                        editMode = !editMode
+                        if (editMode) { deleteMode = false; checked.clear() }
+                    },
+                    label = { Text(if (editMode) "편집 ON" else "편집 OFF") },
                     leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 )
             }
@@ -152,9 +215,12 @@ fun EffectLibraryPanel(
                     slots = userSlots,
                     drag = drag,
                     editMode = editMode,
+                    deleteMode = deleteMode,
+                    checked = checked,
                     onTapPreset = onTapPreset,
                     onDrop = onDrop,
                     onSlotClick = onUserSlotClick,
+                    onToggleCheck = { slot -> if (slot in checked) checked.remove(slot) else checked.add(slot) },
                     onMoveSlot = onMoveSlot
                 )
             } else {
@@ -197,9 +263,12 @@ private fun UserLibraryGrid(
     slots: List<UserEffect?>,
     drag: PresetDragState,
     editMode: Boolean,
+    deleteMode: Boolean,
+    checked: List<Int>,
     onTapPreset: (EffectPreset) -> Unit,
     onDrop: () -> Unit,
     onSlotClick: (Int) -> Unit,
+    onToggleCheck: (Int) -> Unit,
     onMoveSlot: (Int, Int) -> Unit
 ) {
     val density = LocalDensity.current
@@ -259,8 +328,16 @@ private fun UserLibraryGrid(
                                     preset = preset,
                                     drag = drag,
                                     editMode = editMode,
+                                    deleteMode = deleteMode,
+                                    checked = slot in checked,
                                     dimmed = isSource,
-                                    onTap = { if (editMode) onSlotClick(slot) else onTapPreset(preset) },
+                                    onTap = {
+                                        when {
+                                            deleteMode -> onToggleCheck(slot)
+                                            editMode -> onSlotClick(slot)
+                                            else -> onTapPreset(preset)
+                                        }
+                                    },
                                     onDrop = onDrop,
                                     onReorderStart = { offset ->
                                         reorderFrom = slot
@@ -370,6 +447,8 @@ private fun SlotTile(
     preset: EffectPreset,
     drag: PresetDragState,
     editMode: Boolean,
+    deleteMode: Boolean,
+    checked: Boolean,
     dimmed: Boolean,
     onTap: () -> Unit,
     onDrop: () -> Unit,
@@ -394,14 +473,18 @@ private fun SlotTile(
             .height(SLOT_HEIGHT)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (dimmed) 0.35f else 1f), MaterialTheme.shapes.small)
             .then(
-                if (editMode) Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
-                else Modifier
+                when {
+                    checked -> Modifier.border(2.dp, MaterialTheme.colorScheme.error, MaterialTheme.shapes.small)
+                    editMode -> Modifier.border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
+                    else -> Modifier
+                }
             )
             .onGloballyPositioned { originWindow = it.positionInWindow() }
             .pointerInput(preset.id) { detectTapGestures(onTap = { currentOnTap() }) }
-            .pointerInput(preset.id, editMode) {
+            .pointerInput(preset.id, editMode, deleteMode) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
+                        if (deleteMode) return@detectDragGesturesAfterLongPress
                         if (editMode) {
                             currentReorderStart(offset)
                         } else {
@@ -411,6 +494,7 @@ private fun SlotTile(
                     },
                     onDrag = { change, amount ->
                         change.consume()
+                        if (deleteMode) return@detectDragGesturesAfterLongPress
                         if (editMode) currentReorderDrag(amount) else drag.pointerWindow += amount
                     },
                     onDragEnd = { if (editMode) currentReorderEnd() else currentOnDrop() },
@@ -420,7 +504,16 @@ private fun SlotTile(
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         SlotContent(preset)
-        if (editMode) {
+        if (deleteMode) {
+            Icon(
+                if (checked) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                contentDescription = if (checked) "선택됨" else "선택 안 됨",
+                tint = if (checked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(16.dp)
+            )
+        } else if (editMode) {
             Icon(
                 Icons.Default.Edit, contentDescription = "수정",
                 tint = MaterialTheme.colorScheme.primary,
