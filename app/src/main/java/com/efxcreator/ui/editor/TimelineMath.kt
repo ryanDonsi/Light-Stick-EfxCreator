@@ -58,6 +58,12 @@ object TimelineMath {
      * ON/OFF 는 색 전환 시간(Transit), BLINK/STROBE/BREATH 는 이펙트 주기(Period).
      * Period / Transit / Random Delay 의 숫자는 **프레임 수**이고, 1프레임의 길이는 SPF 로 정해진다 (아래 [frameMs]).
      */
+    /** Fade(0-255) 를 밝기 퍼센트로 (255 = 100%) */
+    fun fadePercent(fade: Int): Int = Math.round(fade.coerceIn(0, 255) * 100f / 255f)
+
+    /** "39%  (100/255)" */
+    fun formatFade(fade: Int): String = "${fadePercent(fade)}%  ($fade/255)"
+
     /** 1프레임의 길이(ms). SPF 100 이면 10ms, SPF 50 이면 20ms (= 1000 / SPF) */
     fun frameMs(spf: Int): Float = 1000f / spf.coerceAtLeast(1)
 

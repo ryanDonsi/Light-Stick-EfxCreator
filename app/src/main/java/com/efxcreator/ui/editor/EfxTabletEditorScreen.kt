@@ -949,7 +949,7 @@ private fun SelectedEntryPanel(
             // 같은 패킷 필드: ON/OFF 는 Transit, BLINK/STROBE/BREATH 는 Period. 숫자는 프레임 수이고 1프레임 길이는 SPF 가 정한다
             Triple(TimelineMath.periodLabel(p.effectType), TimelineMath.formatFrames(p.period, p.spf), null),
             Triple("SPF", "${p.spf}  (${TimelineMath.frameUnitLabel(p.spf).substringBefore(" (")})", null),
-            Triple("Fade", p.fade.toString(), null),
+            Triple("Fade (밝기)", TimelineMath.formatFade(p.fade), null),
             Triple("그룹 마스크", TimelineMath.formatGroupMask(p.groupMask), null),
             Triple(
                 "Random Delay",

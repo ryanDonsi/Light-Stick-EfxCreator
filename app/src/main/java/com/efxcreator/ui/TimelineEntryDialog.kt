@@ -279,10 +279,11 @@ fun TimelineEntryDialog(
                 NumberTextField(
                     value = fade,
                     onValueChange = { fade = it },
-                    label = "Fade (0-255)",
+                    label = "Fade (밝기, 0-255)",
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
+                UnitHint("= 밝기 ${TimelineMath.fadePercent(fade)}%  (255 = 100%)")
 
                 if (showTargetOptions) {
                 // Random Color Switch
