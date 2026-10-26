@@ -94,6 +94,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.model.UserEffect
+import com.efxcreator.ui.MusicFolder
+import com.efxcreator.ui.OpenMusicDocuments
 import com.efxcreator.ui.TimelineEntryDialog
 import com.efxcreator.ui.sets.SetDropdown
 import com.efxcreator.ui.theme.EfxMotion
@@ -311,8 +313,9 @@ fun EfxTabletEditorScreen(
         }
     }
 
-    val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) editVm.setMusicFile(uri)
+    // 곡 하나를 고르는 선택기: 설정의 "음악 불러오기 위치" 에서 시작한다
+    val musicPicker = rememberLauncherForActivityResult(OpenMusicDocuments(multiple = false)) { uris ->
+        uris.firstOrNull()?.let { editVm.setMusicFile(it) }
     }
 
     val rightScroll = rememberScrollState()
@@ -338,7 +341,7 @@ fun EfxTabletEditorScreen(
                 onApplySets = { showApplyDialog = true },
                 onBack = { requestLeave() },
                 onRename = { showNameDialog = true },
-                onPickMusic = { musicPicker.launch("audio/*") },
+                onPickMusic = { musicPicker.launch(MusicFolder.initialUri(context)) },
                 onDevice = { showDeviceDialog = true }
             )
         }

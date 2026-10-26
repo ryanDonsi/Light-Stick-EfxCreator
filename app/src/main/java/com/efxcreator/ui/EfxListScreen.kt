@@ -84,7 +84,7 @@ fun EfxListScreen(
         else -> emptyList()
     }
 
-    // 내장 저장공간의 Music 폴더에서 시작하고, 여러 곡을 한 번에 고를 수 있는 음악 선택기
+    // 설정의 "음악 불러오기 위치"(기본: 내장 저장공간의 Music 폴더)에서 시작하고, 여러 곡을 한 번에 고를 수 있는 음악 선택기
     val autoMusicPicker = rememberLauncherForActivityResult(OpenMusicDocuments()) { uris ->
         if (uris.isNotEmpty()) pendingMusicUris = uris
     }
@@ -121,7 +121,7 @@ fun EfxListScreen(
                 TextButton(onClick = {
                     showCreateDialog = false
                     addTargetShowId = selectedShow?.id
-                    autoMusicPicker.launch(Unit)
+                    autoMusicPicker.launch(MusicFolder.initialUri(context))
                 }) {
                     Text("음악으로 자동 생성 (여러 곡 선택 가능)")
                 }
