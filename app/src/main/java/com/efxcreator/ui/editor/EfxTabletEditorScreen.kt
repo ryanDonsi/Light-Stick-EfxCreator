@@ -93,7 +93,7 @@ import kotlin.math.roundToInt
 
 private val EDITOR_BG = Color(0xFF101014)
 private val PANEL_BG = Color(0xFF1B1B21)
-private val PREVIEW_PANEL_WIDTH = 208.dp
+private val PREVIEW_ICON_SIZE = 84.dp
 
 /**
  * 태블릿(가로) 전용 에디터.
@@ -408,9 +408,11 @@ fun EfxTabletEditorScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    PreviewPanel(player = player, entries = entries, analysis = analysis, deviceConnected = bleConnected != null)
-                    TransportPanel(
+                    PreviewPanel(
                         player = player,
+                        entries = entries,
+                        analysis = analysis,
+                        deviceConnected = bleConnected != null,
                         durationMs = durationMs,
                         onToggle = { player.toggle() },
                         onPrev = {
@@ -715,27 +717,58 @@ private fun TimelineToolbar(
 // 우측 패널
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Preview 패널 — 왼쪽에 LED 아이콘(작게), 오른쪽에 컨트롤 패널(재생 바 + 버튼)을 가로로 배치한다.
+ * 컨트롤은 Light-Stick-Music 의 재생 바와 같은 모양이다. 이전/다음 버튼은 곡 목록이 없으므로
+ * 이전/다음 **섹션 시작**으로 이동한다 (분석 전에는 처음/끝).
+ */
 @Composable
 private fun PreviewPanel(
     player: MusicPlayerController,
     entries: List<EfxEntry>,
     analysis: MusicAnalysis?,
-    deviceConnected: Boolean
+    deviceConnected: Boolean,
+    durationMs: Long,
+    onToggle: () -> Unit,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    onSeek: (Long) -> Unit
 ) {
     val position = player.positionMs   // 이 컴포저블만 재생 위치에 따라 다시 그려진다
     val led = LedSimulator.stateAt(entries, position)
     val current = entries.getOrNull(LedSimulator.indexAt(entries, position))
     val section = analysis?.sections?.firstOrNull { position >= it.startMs && position < it.endMs }
+    val canPlay = player.isReady
 
-    // 패널 전체를 이전(폭 320dp, 높이 약 290dp)의 약 65% 로 줄여 가운데 정렬한다
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-        Column(
-            modifier = Modifier
-                .width(PREVIEW_PANEL_WIDTH)
-                .background(PANEL_BG, RoundedCornerShape(10.dp))
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(PANEL_BG, RoundedCornerShape(10.dp))
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 왼쪽: LED 아이콘 + 현재 이펙트 / 섹션
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(PREVIEW_ICON_SIZE)) {
+            LedPreview(color = led, modifier = Modifier.width(PREVIEW_ICON_SIZE))
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = current?.payload?.effectType?.name ?: "—",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+                maxLines = 1
+            )
+            Text(
+                text = listOfNotNull(section?.type, analysis?.musicStyle).joinToString(" · ").ifEmpty { " " },
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF9A9AA5),
+                maxLines = 1
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        // 오른쪽: 컨트롤 패널
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Preview", style = MaterialTheme.typography.labelLarge, color = Color.White)
                 Spacer(Modifier.weight(1f))
@@ -743,59 +776,18 @@ private fun PreviewPanel(
                     Text("● 실기기 동기화", style = MaterialTheme.typography.labelSmall, color = Color(0xFF66BB6A))
                 }
             }
-            Spacer(Modifier.height(4.dp))
-            LedPreview(color = led, modifier = Modifier.width(120.dp))
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = current?.payload?.effectType?.name ?: "—",
-                style = MaterialTheme.typography.titleSmall,
-                color = Color.White
-            )
-            Text(
-                text = listOfNotNull(section?.type, analysis?.musicStyle).joinToString(" · ").ifEmpty { " " },
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF9A9AA5)
-            )
-        }
-    }
-}
-
-/**
- * 재생 바 + 버튼 — Light-Stick-Music 과 같은 모양 (시간 좌/우, 그라데이션 진행 바, 이미지 버튼).
- * 이전/다음 버튼은 곡 목록이 없으므로 이전/다음 **섹션 시작**으로 이동한다 (분석 결과가 없으면 처음/끝).
- */
-@Composable
-private fun TransportPanel(
-    player: MusicPlayerController,
-    durationMs: Long,
-    onToggle: () -> Unit,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onSeek: (Long) -> Unit
-) {
-    val position = player.positionMs
-    val canPlay = player.isReady
-
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-        Column(
-            modifier = Modifier
-                .width(PREVIEW_PANEL_WIDTH)
-                .background(PANEL_BG, RoundedCornerShape(10.dp))
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+            Spacer(Modifier.height(6.dp))
             PlayerSeekBar(currentPosition = position, duration = durationMs, onSeekTo = onSeek)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(6.dp))
             PlayerButtons(
                 isPlaying = player.isPlaying,
                 enabled = canPlay,
                 onPrev = onPrev,
                 onPlayPause = onToggle,
                 onNext = onNext,
-                scale = 0.8f
+                scale = 0.75f
             )
             if (!canPlay) {
-                Spacer(Modifier.height(4.dp))
                 Text(
                     "음악을 선택하면 재생할 수 있습니다",
                     style = MaterialTheme.typography.labelSmall,

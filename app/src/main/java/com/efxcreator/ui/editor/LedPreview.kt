@@ -2,7 +2,6 @@ package com.efxcreator.ui.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -17,33 +16,39 @@ fun LedColor.toComposeColor(): Color = Color(
     blue = (b / 255f).coerceIn(0f, 1f)
 )
 
+/** 안쪽 원 : 바깥 링 = 4 : 6 (반지름 방향 비율, 전체 반지름을 10 으로 봤을 때) */
+private const val INNER_RATIO = 0.4f
+
 /**
  * 응원봉 상단을 위에서 본 프리뷰.
- * 실제 응원봉처럼 **바깥쪽 원(링)** 이 켜지고, 안쪽 원은 켜지지 않는 어두운 면으로 둔다.
+ * **바깥쪽 링** 이 켜지고 안쪽 원은 켜지지 않는 어두운 면이다.
+ * 반지름을 10 으로 보면 안쪽 원 4, 바깥 링 6 (링 두께 = 전체 반지름의 60%).
  */
 @Composable
 fun LedPreview(color: LedColor, modifier: Modifier = Modifier) {
     val led = color.toComposeColor()
     val brightness = maxOf(color.r, color.g, color.b) / 255f
 
-    Canvas(modifier = modifier.fillMaxWidth().aspectRatio(1f)) {
+    Canvas(modifier = modifier.aspectRatio(1f)) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension / 2f
-
-        val ringRadius = radius * 0.82f      // 링 중심선 반지름
-        val ringWidth = radius * 0.26f       // 링 두께 (0.69r ~ 0.95r)
-        val innerRadius = radius * 0.64f     // 켜지지 않는 안쪽 원
+        // 빛 번짐이 들어갈 여백을 남기고 몸체를 그린다
+        val body = radius * 0.92f
+        val innerRadius = body * INNER_RATIO
+        val ringWidth = body - innerRadius
+        val ringMid = innerRadius + ringWidth / 2f
 
         // 몸체
-        drawCircle(Color(0xFF1E1E24), radius = radius, center = center)
+        drawCircle(Color(0xFF1E1E24), radius = body, center = center)
 
-        // 링 둘레로 번지는 빛 (링 바깥/안쪽으로 부드럽게 퍼짐)
+        // 링 둘레로 번지는 빛
         if (brightness > 0.02f) {
             drawCircle(
                 brush = Brush.radialGradient(
                     0f to Color.Transparent,
-                    0.55f to Color.Transparent,
-                    0.82f to led.copy(alpha = 0.50f * brightness),
+                    (innerRadius / radius) to Color.Transparent,
+                    (ringMid / radius) to led.copy(alpha = 0.45f * brightness),
+                    (body / radius) to led.copy(alpha = 0.30f * brightness),
                     1f to Color.Transparent,
                     center = center,
                     radius = radius
@@ -55,13 +60,12 @@ fun LedPreview(color: LedColor, modifier: Modifier = Modifier) {
 
         // 링: 꺼져 있으면 어두운 회색, 켜지면 LED 색
         val ringColor = if (brightness > 0.02f) led else Color(0xFF34343C)
-        drawCircle(ringColor, radius = ringRadius, center = center, style = Stroke(width = ringWidth))
-        // 링 윗면 하이라이트
+        drawCircle(ringColor, radius = ringMid, center = center, style = Stroke(width = ringWidth))
         if (brightness > 0.02f) {
             drawCircle(
-                Color.White.copy(alpha = 0.22f * brightness),
-                radius = ringRadius + ringWidth * 0.18f, center = center,
-                style = Stroke(width = ringWidth * 0.22f)
+                Color.White.copy(alpha = 0.20f * brightness),
+                radius = ringMid + ringWidth * 0.30f, center = center,
+                style = Stroke(width = ringWidth * 0.14f)
             )
         }
 
