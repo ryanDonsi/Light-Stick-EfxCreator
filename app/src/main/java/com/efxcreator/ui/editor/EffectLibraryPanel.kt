@@ -73,7 +73,7 @@ fun EffectPreset.swatchBgColor(): Color = Color(backgroundColor.r, backgroundCol
 
 /**
  * 이펙트 라이브러리.
- * - "내 라이브러리": 사용자가 등록한 이펙트 [UserEffect.SLOT_COUNT] 칸 (7칸 x 3줄). 빈 칸을 누르면 추가,
+ * - "내 라이브러리": 사용자가 등록한 이펙트 [UserEffect.SLOT_COUNT] 칸 (6칸 x 4줄). 빈 칸을 누르면 추가,
  *   "편집"을 켜고 칸을 누르면 수정/삭제, 편집 중 칸을 길게 눌러 끌면 순서 변경(서로 바꾸기/빈 칸으로 이동).
  * - 나머지 탭: 기본 제공 프리셋.
  * - 카드 탭: 현재 재생 위치에 추가 / 길게 눌러 끌기: 타임라인의 원하는 위치에 드롭

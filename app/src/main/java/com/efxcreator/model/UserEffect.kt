@@ -20,8 +20,8 @@ data class UserEffect(
     val fade: Int
 ) {
     companion object {
-        const val COLUMNS = 7
-        const val ROWS = 3
+        const val COLUMNS = 6
+        const val ROWS = 4
         const val SLOT_COUNT = COLUMNS * ROWS
     }
 }
