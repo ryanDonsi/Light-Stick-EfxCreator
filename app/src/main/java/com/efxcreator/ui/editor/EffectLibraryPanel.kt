@@ -339,8 +339,17 @@ private fun SlotContent(preset: EffectPreset) {
         PresetSwatch(preset)
         Spacer(Modifier.width(6.dp))
         // "Red / Black" 처럼 FG / BG 로 이루어진 이름은 두 줄(위 FG, 아래 BG)로 나눠 표시
-        val lines = if (preset.isTwoColor && " / " in preset.label) preset.label.split(" / ", limit = 2)
-        else listOf(preset.label)
+        // 내 라이브러리 칸은 이름 대신 이펙트 종류와 색상을 보여 준다 (2색은 FG / BG 순서)
+        val lines = when {
+            preset.category == EffectPreset.Category.USER -> listOf(
+                preset.type.name,
+                if (preset.type == EffectType.OFF) "—"
+                else if (preset.isTwoColor) "${EffectPresets.colorName(preset.color)}/${EffectPresets.colorName(preset.backgroundColor)}"
+                else EffectPresets.colorName(preset.color)
+            )
+            preset.isTwoColor && " / " in preset.label -> preset.label.split(" / ", limit = 2)
+            else -> listOf(preset.label)
+        }
         Column(modifier = Modifier.weight(1f)) {
             lines.forEach { line ->
                 Text(
