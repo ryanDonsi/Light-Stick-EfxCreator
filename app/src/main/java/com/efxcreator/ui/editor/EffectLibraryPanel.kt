@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -378,6 +379,13 @@ private fun SlotTile(
     onReorderCancel: () -> Unit
 ) {
     var originWindow by remember { mutableStateOf(Offset.Zero) }
+    // pointerInput 블록은 키가 바뀔 때만 다시 시작되므로, 편집 모드 같은 최신 상태를 읽도록 항상 최신 람다를 참조한다
+    val currentOnTap by rememberUpdatedState(onTap)
+    val currentOnDrop by rememberUpdatedState(onDrop)
+    val currentReorderStart by rememberUpdatedState(onReorderStart)
+    val currentReorderDrag by rememberUpdatedState(onReorderDrag)
+    val currentReorderEnd by rememberUpdatedState(onReorderEnd)
+    val currentReorderCancel by rememberUpdatedState(onReorderCancel)
 
     Box(
         contentAlignment = Alignment.CenterStart,
@@ -390,12 +398,12 @@ private fun SlotTile(
                 else Modifier
             )
             .onGloballyPositioned { originWindow = it.positionInWindow() }
-            .pointerInput(preset.id) { detectTapGestures(onTap = { onTap() }) }
+            .pointerInput(preset.id) { detectTapGestures(onTap = { currentOnTap() }) }
             .pointerInput(preset.id, editMode) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
                         if (editMode) {
-                            onReorderStart(offset)
+                            currentReorderStart(offset)
                         } else {
                             drag.preset = preset
                             drag.pointerWindow = originWindow + offset
@@ -403,10 +411,10 @@ private fun SlotTile(
                     },
                     onDrag = { change, amount ->
                         change.consume()
-                        if (editMode) onReorderDrag(amount) else drag.pointerWindow += amount
+                        if (editMode) currentReorderDrag(amount) else drag.pointerWindow += amount
                     },
-                    onDragEnd = { if (editMode) onReorderEnd() else onDrop() },
-                    onDragCancel = { if (editMode) onReorderCancel() else drag.preset = null }
+                    onDragEnd = { if (editMode) currentReorderEnd() else currentOnDrop() },
+                    onDragCancel = { if (editMode) currentReorderCancel() else drag.preset = null }
                 )
             }
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -433,6 +441,9 @@ private fun PresetCard(
     onDrop: () -> Unit
 ) {
     var originWindow by remember { mutableStateOf(Offset.Zero) }
+    // pointerInput 블록은 키가 바뀔 때만 다시 시작되므로, 편집 모드 같은 최신 상태를 읽도록 항상 최신 람다를 참조한다
+    val currentOnTap by rememberUpdatedState(onTap)
+    val currentOnDrop by rememberUpdatedState(onDrop)
 
     Box(
         contentAlignment = Alignment.CenterStart,
@@ -441,7 +452,7 @@ private fun PresetCard(
             .height(SLOT_HEIGHT)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
             .onGloballyPositioned { originWindow = it.positionInWindow() }
-            .pointerInput(preset.id) { detectTapGestures(onTap = { onTap() }) }
+            .pointerInput(preset.id) { detectTapGestures(onTap = { currentOnTap() }) }
             .pointerInput(preset.id) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
@@ -452,7 +463,7 @@ private fun PresetCard(
                         change.consume()
                         drag.pointerWindow += amount
                     },
-                    onDragEnd = { onDrop() },
+                    onDragEnd = { currentOnDrop() },
                     onDragCancel = { drag.preset = null }
                 )
             }
