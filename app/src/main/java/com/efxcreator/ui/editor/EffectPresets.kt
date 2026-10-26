@@ -95,11 +95,6 @@ object EffectPresets {
         }
     }
 
-    /** 팔레트에 있는 색이면 이름(Red), 아니면 16진수(#12AB34) */
-    fun colorName(c: Color): String =
-        COLORS.firstOrNull { it.second.r == c.r && it.second.g == c.g && it.second.b == c.b }?.first
-            ?: (if (c.r == 0 && c.g == 0 && c.b == 0) "Black" else "#%02X%02X%02X".format(c.r, c.g, c.b))
-
     fun byCategory(category: EffectPreset.Category): List<EffectPreset> = all.filter { it.category == category }
 }
 
