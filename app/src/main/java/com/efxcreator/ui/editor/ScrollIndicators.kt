@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -37,20 +38,24 @@ fun SlimHorizontalScrollBar(
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     val total = durationMs.toFloat().coerceAtLeast(1f)
     val maxStart = (total - viewMs * 0.5f).coerceAtLeast(1f)
+    // 제스처 람다는 다시 시작되지 않으므로, 계속 바뀌는 값은 항상 최신 값을 읽도록 한다
+    val currentStart by rememberUpdatedState(viewStartMs)
+    val currentScrollTo by rememberUpdatedState(onScrollTo)
+    val currentMax by rememberUpdatedState(maxStart)
 
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(14.dp)
+            .height(24.dp)
             .pointerInput(total, viewMs) {
-                detectTapGestures { p -> onScrollTo((p.x / size.width * total - viewMs / 2f).coerceIn(0f, maxStart)) }
+                detectTapGestures { p ->
+                    currentScrollTo((p.x / size.width * total - viewMs / 2f).coerceIn(0f, currentMax))
+                }
             }
             .pointerInput(total, viewMs) {
                 detectDragGestures { change, drag ->
                     change.consume()
-                    onScrollTo(
-                        (viewStartMs + drag.x / size.width * total).coerceIn(0f, maxStart)
-                    )
+                    currentScrollTo((currentStart + drag.x / size.width * total).coerceIn(0f, currentMax))
                 }
             }
     ) {
