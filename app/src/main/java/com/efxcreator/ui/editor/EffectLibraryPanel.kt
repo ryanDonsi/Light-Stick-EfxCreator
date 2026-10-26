@@ -19,9 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -160,20 +157,33 @@ fun EffectLibraryPanel(
                     onMoveSlot = onMoveSlot
                 )
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(UserEffect.COLUMNS),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(EffectPresets.byCategory(cat), key = { it.id }) { preset ->
-                        PresetCard(
-                            preset = preset,
-                            drag = drag,
-                            onTap = { onTapPreset(preset) },
-                            onDrop = onDrop
-                        )
+                // "내 라이브러리" 와 같은 6칸 격자 + 같은 스크롤 막대
+                val presetScroll = rememberScrollState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 14.dp)
+                            .verticalScroll(presetScroll),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        EffectPresets.byCategory(cat).chunked(UserEffect.COLUMNS).forEach { rowItems ->
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                rowItems.forEach { preset ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        PresetCard(
+                                            preset = preset,
+                                            drag = drag,
+                                            onTap = { onTapPreset(preset) },
+                                            onDrop = onDrop
+                                        )
+                                    }
+                                }
+                                repeat(UserEffect.COLUMNS - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
                     }
+                    SlimVerticalScrollBar(presetScroll, Modifier.align(Alignment.CenterEnd))
                 }
             }
         }
@@ -210,15 +220,17 @@ private fun UserLibraryGrid(
         reorderOffset = Offset.Zero
     }
 
+    val scrollState = rememberScrollState()
     Box(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .onGloballyPositioned { gridOrigin = it.positionInWindow() }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+                .padding(end = 14.dp)   // 오른쪽 스크롤 막대 자리
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             for (row in 0 until UserEffect.ROWS) {
@@ -294,11 +306,13 @@ private fun UserLibraryGrid(
                     )
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.shapes.small)
                     .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.CenterStart
             ) {
                 SlotContent(ghostPreset)
             }
         }
+
+        SlimVerticalScrollBar(scrollState, Modifier.align(Alignment.CenterEnd))
     }
 }
 
@@ -327,7 +341,7 @@ private fun SlotContent(preset: EffectPreset) {
         // "Red / Black" 처럼 FG / BG 로 이루어진 이름은 두 줄(위 FG, 아래 BG)로 나눠 표시
         val lines = if (preset.isTwoColor && " / " in preset.label) preset.label.split(" / ", limit = 2)
         else listOf(preset.label)
-        Column(modifier = Modifier.weight(1f, fill = false)) {
+        Column(modifier = Modifier.weight(1f)) {
             lines.forEach { line ->
                 Text(
                     line,
@@ -362,7 +376,7 @@ private fun SlotTile(
     var originWindow by remember { mutableStateOf(Offset.Zero) }
 
     Box(
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.CenterStart,
         modifier = Modifier
             .fillMaxWidth()
             .height(SLOT_HEIGHT)
@@ -391,7 +405,7 @@ private fun SlotTile(
                     onDragCancel = { if (editMode) onReorderCancel() else drag.preset = null }
                 )
             }
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         SlotContent(preset)
         if (editMode) {
@@ -417,7 +431,7 @@ private fun PresetCard(
     var originWindow by remember { mutableStateOf(Offset.Zero) }
 
     Box(
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.CenterStart,
         modifier = Modifier
             .fillMaxWidth()
             .height(SLOT_HEIGHT)
@@ -438,7 +452,7 @@ private fun PresetCard(
                     onDragCancel = { drag.preset = null }
                 )
             }
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         SlotContent(preset)
     }
