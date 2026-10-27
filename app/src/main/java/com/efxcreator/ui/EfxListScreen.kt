@@ -579,7 +579,7 @@ fun EfxProjectCard(
                     .fillMaxWidth()
                     .heightIn(min = LIST_ITEM_HEIGHT)
                     .clickable(onClick = onEdit)
-                    .padding(start = 16.dp, end = 44.dp, top = 12.dp, bottom = 12.dp),
+                    .padding(start = 16.dp, end = 56.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 음악 파일의 메타데이터(앨범 아트)
@@ -618,21 +618,14 @@ fun EfxProjectCard(
                 }
             }
 
-            // 우측 상단 3점 메뉴 (저장/공유/이동/삭제)
+            // 우측 3점 메뉴 (저장/공유/이동/삭제) — 공연 목록의 메뉴와 같은 크기, 세로 가운데
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 4.dp)
             ) {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "메뉴",
-                        modifier = Modifier.size(20.dp)
-                    )
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "메뉴")
                 }
 
                 DropdownMenu(
