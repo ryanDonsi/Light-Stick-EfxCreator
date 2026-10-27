@@ -74,7 +74,8 @@ fun PaletteSetEditorDialog(
 
     // 연결된 디바이스에 편집 중인 색을 실시간으로 표시한다 (닫을 때 끈다)
     val bleVm = activityBleViewModel()
-    val deviceConnected by bleVm.connected.collectAsState()
+    val connectedDevice by bleVm.connected.collectAsState()
+    val deviceConnected = connectedDevice != null
     LaunchedEffect(current, deviceConnected) { bleVm.previewColor(current.r, current.g, current.b) }
     DisposableEffect(Unit) { onDispose { bleVm.stopPreview() } }
 
