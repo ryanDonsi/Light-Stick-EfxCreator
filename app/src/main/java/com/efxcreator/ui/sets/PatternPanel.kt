@@ -148,17 +148,17 @@ fun EffectPatternsPanel(
                             Text(
                                 "예) ON_PULSE = ① ON 0.3박(화이트) → ② ON 0.7박(보조색1, Transit 3). " +
                                     "길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. " +
-                                    "만든 이펙트는 내 라이브러리 칸에 연결해 타임라인에 넣습니다.",
+                                    "기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
-                if (patterns.isEmpty()) {
+                if (patterns.none { !it.builtIn }) {
                     item {
                         Text(
-                            "아직 만든 이펙트가 없습니다. \"이펙트 추가\" 로 만들어 보세요.",
+                            "아직 직접 만든 이펙트가 없습니다. \"이펙트 추가\" 로 만들어 보세요.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(8.dp)
@@ -169,7 +169,13 @@ fun EffectPatternsPanel(
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(pattern.name, style = MaterialTheme.typography.titleSmall)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(pattern.name, style = MaterialTheme.typography.titleSmall)
+                                    if (pattern.builtIn) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("기본 제공", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
                                 Text(
                                     "${pattern.steps.size}단계 · 총 ${formatBeats(pattern.totalBeatsTenths)}박",
                                     style = MaterialTheme.typography.labelMedium,
@@ -186,14 +192,18 @@ fun EffectPatternsPanel(
                             IconButton(onClick = { testing = pattern }) {
                                 Icon(Icons.Default.PlayArrow, contentDescription = "디바이스 테스트")
                             }
-                            IconButton(onClick = { editing = pattern to false }) {
-                                Icon(Icons.Default.Edit, contentDescription = "수정")
+                            if (!pattern.builtIn) {
+                                IconButton(onClick = { editing = pattern to false }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "수정")
+                                }
                             }
                             IconButton(onClick = {
-                                editing = pattern.copy(id = patternsVm.newId(), name = "${pattern.name} 복사본") to true
+                                editing = pattern.copy(id = patternsVm.newId(), name = "${pattern.name} 복사본", builtIn = false) to true
                             }) { Icon(Icons.Default.ContentCopy, contentDescription = "복제") }
-                            IconButton(onClick = { deleting = pattern }) {
-                                Icon(Icons.Default.Delete, contentDescription = "삭제")
+                            if (!pattern.builtIn) {
+                                IconButton(onClick = { deleting = pattern }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "삭제")
+                                }
                             }
                         }
                     }

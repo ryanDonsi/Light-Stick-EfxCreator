@@ -30,7 +30,9 @@ data class PatternStep(
 data class EffectPattern(
     val id: String,
     val name: String,
-    val steps: List<PatternStep>
+    val steps: List<PatternStep>,
+    /** 기본 제공 이펙트: 수정/삭제할 수 없고, 복제해서 고쳐 쓸 수 있다 */
+    val builtIn: Boolean = false
 ) {
     val totalBeatsTenths: Int get() = steps.sumOf { it.beatsTenths }
 }
@@ -98,4 +100,46 @@ object PatternResolver {
             EfxEntry(t, payload(step, palette)).also { t += durationMs(step, beatMs) }
         }
     }
+}
+
+/**
+ * 기본 제공 이펙트 — 자동 생성 엔진(EffectMatchingEngineV1)이 박자마다 만드는 패턴을 1박 기준 단계로 옮긴 것.
+ * 색은 팔레트 세트의 역할이라 팔레트를 바꾸면 색이 따라 바뀐다.
+ * 엔진은 곡의 BPM 에 맞춰 Period 를 계산하지만 여기서는 120BPM(1박 500ms) 기준 값을 쓴다.
+ */
+object BuiltInPatterns {
+    val ALL: List<EffectPattern> = listOf(
+        // 박자 시작에 대표색을 짧게(0.4박) 켰다가 꺼서(Transit 3) 강조
+        EffectPattern(
+            id = "builtin_on_pulse", name = "ON_PULSE", builtIn = true,
+            steps = listOf(
+                PatternStep(type = "ON", beatsTenths = 4, fg = PatternColors.MAIN, frames = 0),
+                PatternStep(type = "OFF", beatsTenths = 6, frames = 3)
+            )
+        ),
+        // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 50ms 한 사이클 @SPF 100)
+        EffectPattern(
+            id = "builtin_blink", name = "BLINK", builtIn = true,
+            steps = listOf(
+                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5)
+            )
+        ),
+        // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 250ms 한 사이클 @SPF 100)
+        EffectPattern(
+            id = "builtin_breath", name = "BREATH", builtIn = true,
+            steps = listOf(
+                PatternStep(type = "BREATH", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 25)
+            )
+        ),
+        // 박자마다 대표색 → 보조색1 → 2 → 3 으로 색이 바뀌며 전환
+        EffectPattern(
+            id = "builtin_on_transit_rotate", name = "ON_TRANSIT_ROTATE", builtIn = true,
+            steps = listOf(
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB2),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB3)
+            )
+        )
+    )
 }
