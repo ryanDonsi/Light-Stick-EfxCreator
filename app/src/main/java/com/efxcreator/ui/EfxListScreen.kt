@@ -681,8 +681,6 @@ fun EfxProjectCard(
                         }
                     )
 
-                    HorizontalDivider()
-
                     // 삭제
                     DropdownMenuItem(
                         text = { Text("삭제", color = MaterialTheme.colorScheme.error) },
