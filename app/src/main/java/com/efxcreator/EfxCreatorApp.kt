@@ -13,7 +13,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.efxcreator.ui.editor.EfxTabletEditorScreen
-import com.efxcreator.ui.sets.SetManagerScreen
 import com.efxcreator.ui.EfxListScreen
 import com.efxcreator.ui.SettingsScreen
 
@@ -22,8 +21,10 @@ sealed class Screen(val route: String) {
     object Edit : Screen("edit/{projectId}") {
         fun createRoute(projectId: String) = "edit/$projectId"
     }
-    object Settings : Screen("settings")  // ← 추가
-    object Sets : Screen("sets")          // 이펙트/팔레트 세트 관리
+    /** 설정: 저장소 관리 / 이펙트 세트 / 팔레트 세트. [section] 으로 처음 열 메뉴를 고른다. */
+    object Settings : Screen("settings?section={section}") {
+        fun createRoute(section: String = "storage") = "settings?section=$section"
+    }
 }
 
 @Composable
@@ -57,10 +58,10 @@ fun EfxCreatorApp() {
                 onNavigateToEdit = { projectId ->
                     navController.navigate(Screen.Edit.createRoute(projectId))
                 },
-                onNavigateToSettings = {  // ← 추가
-                    navController.navigate(Screen.Settings.route)
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.createRoute())
                 },
-                onNavigateToSets = { navController.navigate(Screen.Sets.route) }
+                onNavigateToSets = { navController.navigate(Screen.Settings.createRoute("effect")) }
             )
         }
 
@@ -75,18 +76,19 @@ fun EfxCreatorApp() {
             EfxTabletEditorScreen(
                 projectId = projectId,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSets = { navController.navigate(Screen.Sets.route) }
+                onNavigateToSets = { navController.navigate(Screen.Settings.createRoute("effect")) }
             )
         }
 
-        composable(Screen.Sets.route) {
-            SetManagerScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        // ← 설정 화면 추가
-        composable(Screen.Settings.route) {
+        composable(
+            route = Screen.Settings.route,
+            arguments = listOf(
+                navArgument("section") { type = NavType.StringType; defaultValue = "storage" }
+            )
+        ) { backStackEntry ->
             SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                initialSection = backStackEntry.arguments?.getString("section")
             )
         }
     }

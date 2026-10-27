@@ -272,9 +272,6 @@ fun EfxListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToSets) {
-                        Icon(Icons.Default.Tune, contentDescription = "이펙트·팔레트 세트")
-                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "설정")
                     }
