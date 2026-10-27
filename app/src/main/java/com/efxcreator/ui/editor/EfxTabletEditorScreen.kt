@@ -96,6 +96,7 @@ import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.model.UserEffect
 import com.efxcreator.ui.MusicFolder
 import com.efxcreator.ui.OpenMusicDocuments
+import com.efxcreator.ui.SongArt
 import com.efxcreator.ui.TimelineEntryDialog
 import com.efxcreator.ui.sets.SetDropdown
 import com.efxcreator.ui.theme.EfxMotion
@@ -326,6 +327,7 @@ fun EfxTabletEditorScreen(
         topBar = {
             EditorTopBar(
                 name = metadata?.name ?: "",
+                musicUriString = musicFile?.let { android.net.Uri.fromFile(it).toString() },
                 musicLabel = if (musicFile != null) "음악 변경" else "음악 선택",
                 analyzing = analyzing,
                 applying = applying,
@@ -682,6 +684,7 @@ private fun TimelineScrollBar(timeline: TimelineState, durationMs: Long) {
 @Composable
 private fun EditorTopBar(
     name: String,
+    musicUriString: String?,
     musicLabel: String,
     analyzing: Boolean,
     applying: Boolean,
@@ -711,6 +714,9 @@ private fun EditorTopBar(
         },
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // 곡 이미지(앨범 아트): 타이틀 줄 높이 안에 들어가는 크기
+                SongArt(musicUriString = musicUriString, size = 40.dp)
+                Spacer(Modifier.width(12.dp))
                 Text(
                     text = name.ifBlank { "EFX" },
                     style = MaterialTheme.typography.titleLarge,
