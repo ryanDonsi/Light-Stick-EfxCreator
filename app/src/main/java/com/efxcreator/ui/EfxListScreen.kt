@@ -609,26 +609,10 @@ fun EfxProjectCard(
                 }
             }
 
-            // 우측 상단 X 버튼
-            IconButton(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(32.dp)
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "삭제",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            // 우측 하단 3점 메뉴
+            // 우측 상단 3점 메뉴 (저장/공유/이동/삭제)
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(Alignment.TopEnd)
                     .padding(4.dp)
             ) {
                 IconButton(
@@ -691,6 +675,24 @@ fun EfxProjectCard(
                                 Icons.Default.Share,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    // 삭제
+                    DropdownMenuItem(
+                        text = { Text("삭제", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            showDeleteDialog = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
                     )
