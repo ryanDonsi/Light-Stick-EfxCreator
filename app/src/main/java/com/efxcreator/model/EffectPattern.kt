@@ -109,12 +109,12 @@ object PatternResolver {
  */
 object BuiltInPatterns {
     val ALL: List<EffectPattern> = listOf(
-        // 박자 시작에 대표색을 짧게(0.4박) 켰다가 꺼서(Transit 3) 강조
+        // 박자 시작에 대표색을 짧게(0.3박) 켰다가, 나머지 0.7박 동안 검정으로 Transit 3 만에 꺼지며 강조
         EffectPattern(
             id = "builtin_on_pulse", name = "ON_PULSE", builtIn = true,
             steps = listOf(
-                PatternStep(type = "ON", beatsTenths = 4, fg = PatternColors.MAIN, frames = 0),
-                PatternStep(type = "OFF", beatsTenths = 6, frames = 3)
+                PatternStep(type = "ON", beatsTenths = 3, fg = PatternColors.MAIN, frames = 0),
+                PatternStep(type = "ON", beatsTenths = 7, fg = PatternColors.BLACK, frames = 3)
             )
         ),
         // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 50ms 한 사이클 @SPF 100)
@@ -131,14 +131,24 @@ object BuiltInPatterns {
                 PatternStep(type = "BREATH", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 25)
             )
         ),
-        // 박자마다 대표색 → 보조색1 → 2 → 3 으로 색이 바뀌며 전환
+        // 박자마다 대표색 → 보조색1 → 2 → 3 으로 색이 바뀐다. Transit 0 = 즉시 바뀌는 ON_ROTATE
+        EffectPattern(
+            id = "builtin_on_rotate", name = "ON_ROTATE", builtIn = true,
+            steps = listOf(
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, frames = 0),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB2, frames = 0),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB3, frames = 0)
+            )
+        ),
+        // 같은 색 순서이지만 Transit 2 로 부드럽게 넘어가는 전환
         EffectPattern(
             id = "builtin_on_transit_rotate", name = "ON_TRANSIT_ROTATE", builtIn = true,
             steps = listOf(
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN),
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1),
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB2),
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB3)
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 2),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, frames = 2),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB2, frames = 2),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB3, frames = 2)
             )
         )
     )
