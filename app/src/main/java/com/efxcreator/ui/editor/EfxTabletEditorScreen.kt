@@ -158,7 +158,11 @@ fun EfxTabletEditorScreen(
     val bleConnected by bleVm.connected.collectAsState()
 
     val entries: List<EfxEntry> = efx?.body?.entries.orEmpty()
-    val frames = remember(entries) { entries.map { it.timestampMs to it.payload.toByteArray() } }
+    // 실기기로 보내는 프레임: Broadcasting Mode 설정에 따라 신호 전파 여부(broadcasting)를 덮어쓴다
+    val broadcasting by bleVm.broadcasting.collectAsState()
+    val frames = remember(entries, broadcasting) {
+        entries.map { it.timestampMs to it.payload.copy(broadcasting = if (broadcasting) 1 else 0).toByteArray() }
+    }
 
     // ── 재생 / 타임라인 상태 ──────────────────────────────────
     val player = remember { MusicPlayerController() }

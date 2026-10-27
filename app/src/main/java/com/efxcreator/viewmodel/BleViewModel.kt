@@ -74,6 +74,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     private val _battery = MutableStateFlow<Int?>(null)
     val battery: StateFlow<Int?> = _battery.asStateFlow()
 
+    private val _broadcasting = MutableStateFlow(true)
+    /** Broadcasting Mode: 연결된 기기가 보내는 이펙트 신호를 주변 응원봉에도 전파할지 (기기별 저장) */
+    val broadcasting: StateFlow<Boolean> = _broadcasting.asStateFlow()
+
     private val _groupAllowed = MutableStateFlow(true)
     /** BLE Only 모드 기기는 그룹 배정을 지원하지 않는다 */
     val groupAllowed: StateFlow<Boolean> = _groupAllowed.asStateFlow()
@@ -209,6 +213,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         _info.value = null
         _battery.value = null
         _groupAllowed.value = true
+        _broadcasting.value = true
         _otaProgress.value = null
         _otaCheck.value = null
         pendingFirmware = null
@@ -219,6 +224,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     /** 연결 직후 정보를 읽고, 이후 5초마다 연결을 확인하며 30초마다 배터리를 다시 읽는다 */
     private fun startMonitoring(device: Device) {
         monitorJob?.cancel()
+        _broadcasting.value = prefs.getBroadcasting(device.mac)
         monitorJob = viewModelScope.launch {
             refreshInfo()
             readMode(device)
@@ -270,7 +276,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             val blink = LSEffectPayload(
                 effectType = EffectType.BLINK, color = white, backgroundColor = LsColor(0, 0, 0),
                 period = 3, spf = 100, fade = 100, randomColor = 1, randomDelay = 0,
-                broadcasting = 1, effectIndex = 0
+                broadcasting = if (_broadcasting.value) 1 else 0, effectIndex = 0
             )
             device.sendEffect(blink)
             delay(3_000L)
@@ -278,6 +284,12 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 device.sendEffect(blink.copy(effectType = EffectType.ON, period = 0, randomColor = 0))
             }
         }
+    }
+
+    fun setBroadcasting(enabled: Boolean) {
+        val device = _connected.value ?: return
+        prefs.setBroadcasting(device.mac, enabled)
+        _broadcasting.value = enabled
     }
 
     fun setGroupCount(count: Int) {

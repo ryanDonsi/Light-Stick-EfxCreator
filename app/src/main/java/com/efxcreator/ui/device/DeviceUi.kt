@@ -307,6 +307,7 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     val connected by bleVm.connected.collectAsState()
     val groupAllowed by bleVm.groupAllowed.collectAsState()
     val groupCount by bleVm.groupCount.collectAsState()
+    val broadcasting by bleVm.broadcasting.collectAsState()
     val otaProgress by bleVm.otaProgress.collectAsState()
     val otaCheck by bleVm.otaCheck.collectAsState()
 
@@ -325,6 +326,15 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             label = "디바이스 정보",
             description = "기기의 정보를 확인",
             onClick = { bleVm.refreshInfo(); showInfo = true }
+        )
+        HorizontalDivider()
+        ListItem(
+            headlineContent = { Text("Broadcasting Mode", style = MaterialTheme.typography.titleSmall) },
+            supportingContent = {
+                Text("연결된 주변 응원봉에 신호를 전파해 함께 동작", style = MaterialTheme.typography.bodySmall)
+            },
+            trailingContent = { Switch(checked = broadcasting, onCheckedChange = { bleVm.setBroadcasting(it) }) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
         HorizontalDivider()
         MenuRow(

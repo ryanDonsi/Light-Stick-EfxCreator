@@ -34,6 +34,12 @@ class PreferencesManager(context: Context) {
         get() = prefs.getInt("group_count", 20).coerceIn(1, 20)
         set(value) = prefs.edit().putInt("group_count", value.coerceIn(1, 20)).apply()
 
+    // 기기별 Broadcasting Mode (연결된 기기가 주변 응원봉에 신호를 전파할지). 기본 ON
+    fun getBroadcasting(mac: String): Boolean = prefs.getBoolean("broadcasting_$mac", true)
+
+    fun setBroadcasting(mac: String, enabled: Boolean) =
+        prefs.edit().putBoolean("broadcasting_$mac", enabled).apply()
+
     // 마지막으로 선택한 이펙트/팔레트 세트 id (빈 문자열 = 자동)
     var lastEffectSetId: String
         get() = prefs.getString("last_effect_set_id", "") ?: ""
