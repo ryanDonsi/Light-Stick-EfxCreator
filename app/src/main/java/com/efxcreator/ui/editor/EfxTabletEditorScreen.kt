@@ -95,6 +95,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.model.UserEffect
 import com.efxcreator.ui.MusicFolder
+import com.efxcreator.ui.device.DevicePopup
+import com.efxcreator.ui.device.DevicePopups
+import com.efxcreator.ui.device.activityBleViewModel
+import com.efxcreator.ui.device.devicePopupFor
 import com.efxcreator.ui.OpenMusicDocuments
 import com.efxcreator.ui.SongArt
 import com.efxcreator.ui.TimelineEntryDialog
@@ -129,7 +133,7 @@ fun EfxTabletEditorScreen(
     onNavigateBack: () -> Unit,
     onNavigateToSets: () -> Unit = {},
     editVm: EfxEditViewModel = viewModel(),
-    bleVm: BleViewModel = viewModel(),
+    bleVm: BleViewModel = activityBleViewModel(),
     setsVm: SetsViewModel = viewModel(),
     libVm: EffectLibraryViewModel = viewModel()
 ) {
@@ -152,7 +156,6 @@ fun EfxTabletEditorScreen(
     val paletteSets by setsVm.paletteSets.collectAsState()
 
     val bleConnected by bleVm.connected.collectAsState()
-    val bleMessage by bleVm.message.collectAsState()
 
     val entries: List<EfxEntry> = efx?.body?.entries.orEmpty()
     val frames = remember(entries) { entries.map { it.timestampMs to it.payload.toByteArray() } }
@@ -171,13 +174,12 @@ fun EfxTabletEditorScreen(
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
 
     var showNameDialog by remember { mutableStateOf(false) }
-    var showDeviceDialog by remember { mutableStateOf(false) }
+    var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     var showApplyDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     // 내 라이브러리에서 추가/수정 중인 칸 번호 (null = 닫힘)
     var libraryEditorSlot by remember { mutableStateOf<Int?>(null) }
     var deviceLoaded by remember { mutableStateOf(false) }
-    var scanAfterPermission by remember { mutableStateOf(false) }
 
     LaunchedEffect(projectId) { editVm.loadProject(projectId) }
     LaunchedEffect(musicFile) { player.load(musicFile) }
@@ -205,12 +207,6 @@ fun EfxTabletEditorScreen(
         editMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             editVm.consumeMessage()
-        }
-    }
-    LaunchedEffect(bleMessage) {
-        bleMessage?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-            bleVm.consumeMessage()
         }
     }
     LaunchedEffect(player.error) {
@@ -294,26 +290,6 @@ fun EfxTabletEditorScreen(
         } else null
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        if (result.values.all { it }) {
-            if (scanAfterPermission) bleVm.startScan()
-        } else {
-            Toast.makeText(context, "블루투스 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
-        }
-        scanAfterPermission = false
-    }
-
-    fun requestScan() {
-        if (bleVm.hasPermissions()) {
-            bleVm.startScan()
-        } else {
-            scanAfterPermission = true
-            permissionLauncher.launch(BleViewModel.requiredPermissions())
-        }
-    }
-
     // 곡 하나를 고르는 선택기: 설정의 "음악 불러오기 위치" 에서 시작한다
     val musicPicker = rememberLauncherForActivityResult(OpenMusicDocuments(multiple = false)) { uris ->
         uris.firstOrNull()?.let { editVm.setMusicFile(it) }
@@ -344,7 +320,7 @@ fun EfxTabletEditorScreen(
                 onBack = { requestLeave() },
                 onRename = { showNameDialog = true },
                 onPickMusic = { musicPicker.launch(MusicFolder.initialUri(context)) },
-                onDevice = { showDeviceDialog = true }
+                onDevice = { devicePopup = devicePopupFor(bleConnected) }
             )
         }
     ) { innerPadding ->
@@ -653,16 +629,8 @@ fun EfxTabletEditorScreen(
         )
     }
 
-    if (showDeviceDialog) {
-        DeviceDialog(
-            bleVm = bleVm,
-            onScan = { requestScan() },
-            onDismiss = {
-                bleVm.stopScan()
-                showDeviceDialog = false
-            }
-        )
-    }
+    // 디바이스 연결(미연결) / 관리(연결) 팝업 — 메인 화면, 설정과 같은 UI
+    DevicePopups(bleVm, devicePopup) { devicePopup = DevicePopup.NONE }
 }
 
 /** 타임라인 좌우 스크롤바 — 위치 상태를 이 컴포저블 안에서만 읽어 화면 전체가 다시 그려지지 않게 한다. */
@@ -1015,93 +983,4 @@ private fun SelectedEntryPanel(
             Text("내 라이브러리에 저장")
         }
     }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 기기 연결 다이얼로그
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun DeviceDialog(
-    bleVm: BleViewModel,
-    onScan: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val scanning by bleVm.scanning.collectAsState()
-    val found by bleVm.found.collectAsState()
-    val connected by bleVm.connected.collectAsState()
-    val connectingMac by bleVm.connectingMac.collectAsState()
-    val hasScanned by bleVm.hasScanned.collectAsState()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("응원봉 연결") },
-        text = {
-            Column(modifier = Modifier.width(360.dp)) {
-                connected?.let { device ->
-                    Text(
-                        "연결됨: ${device.name ?: device.mac}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "재생하면 편집 중인 이펙트가 이 기기로 음악과 동기화되어 전송됩니다.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = { bleVm.disconnect() }) { Text("연결 해제") }
-                    Spacer(Modifier.height(12.dp))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = onScan, enabled = !scanning) { Text(if (scanning) "검색 중…" else "기기 검색") }
-                    if (scanning) {
-                        Spacer(Modifier.width(12.dp))
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                if (hasScanned && !scanning && found.isEmpty()) {
-                    Text(
-                        "검색된 응원봉이 없습니다. 아래를 확인해 주세요.\n" +
-                            "• 응원봉 전원이 켜져 있고 연결 대기(광고) 상태인지\n" +
-                            "• 다른 앱(Light Stick Music 등)이나 다른 기기에 이미 연결돼 있지 않은지 — 연결된 응원봉은 검색되지 않습니다\n" +
-                            "• 기기 이름이 LS / GL / RL 로 끝나는지\n" +
-                            "• 블루투스가 켜져 있는지 (Android 11 이하는 위치도)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                LazyColumn(modifier = Modifier.height(200.dp)) {
-                    items(found, key = { it.mac }) { device ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = connectingMac == null) { bleVm.connect(device) }
-                                .padding(vertical = 10.dp)
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(device.name ?: "(이름 없음)", style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    device.mac,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            if (connectingMac == device.mac) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            } else {
-                                device.rssi?.let {
-                                    Text("$it dBm", style = MaterialTheme.typography.labelSmall)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("닫기") } }
-    )
 }

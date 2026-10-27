@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
@@ -22,6 +23,8 @@ import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.efxcreator.ui.device.DeviceSettingsContent
+import com.efxcreator.ui.device.activityBleViewModel
 import com.efxcreator.ui.editor.SlimVerticalScrollBar
 import com.efxcreator.ui.sets.EffectSetsPanel
 import com.efxcreator.ui.sets.PaletteSetsPanel
@@ -281,6 +284,17 @@ fun SettingsScreen(
                                 }
                             }
                         }
+                        SettingsSection.DEVICE -> {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("디바이스 관리", style = MaterialTheme.typography.titleMedium)
+                                }
+                                DeviceSettingsContent(activityBleViewModel(), Modifier.fillMaxSize())
+                            }
+                        }
                         SettingsSection.EFFECT_SETS -> EffectSetsPanel(modifier = Modifier.fillMaxSize())
                         SettingsSection.PALETTE_SETS -> PaletteSetsPanel(modifier = Modifier.fillMaxSize())
                     }
@@ -293,6 +307,7 @@ fun SettingsScreen(
 /** 설정 화면의 왼쪽 메뉴 항목 */
 enum class SettingsSection(val route: String, val label: String, val subtitle: String, val icon: ImageVector) {
     STORAGE("storage", "저장소 관리", "EFX 저장 위치 · 음악 불러오기 위치", Icons.Default.FolderOpen),
+    DEVICE("device", "디바이스 관리", "응원봉 검색 · 연결 · 관리", Icons.Default.Bluetooth),
     EFFECT_SETS("effect", "이펙트 세트", "섹션별 이펙트 규칙", Icons.Default.AutoAwesome),
     PALETTE_SETS("palette", "팔레트 세트", "자동 생성에 쓰는 색 조합", Icons.Default.Palette);
 

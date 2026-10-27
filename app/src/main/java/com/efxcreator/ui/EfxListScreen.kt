@@ -23,8 +23,14 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.model.EfxProjectMetadata
 import com.efxcreator.model.Show
+import com.efxcreator.ui.device.DevicePopup
+import com.efxcreator.ui.device.DevicePopups
+import com.efxcreator.ui.device.DeviceStatusButton
+import com.efxcreator.ui.device.activityBleViewModel
+import com.efxcreator.ui.device.devicePopupFor
 import com.efxcreator.ui.editor.SlimVerticalScrollBar
 import com.efxcreator.ui.sets.SetSelectionDialog
+import com.efxcreator.viewmodel.BleViewModel
 import com.efxcreator.viewmodel.EfxListViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.viewmodel.ShowViewModel
@@ -51,11 +57,14 @@ fun EfxListScreen(
     onNavigateToSets: () -> Unit = {},
     viewModel: EfxListViewModel = viewModel(),
     setsViewModel: SetsViewModel = viewModel(),
-    showViewModel: ShowViewModel = viewModel()
+    showViewModel: ShowViewModel = viewModel(),
+    bleVm: BleViewModel = activityBleViewModel()
 ) {
     val projects by viewModel.projects.collectAsState()
     val shows by showViewModel.shows.collectAsState()
     val autoGenState by viewModel.autoGenState.collectAsState()
+    val bleConnected by bleVm.connected.collectAsState()
+    var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     val context = LocalContext.current
 
     var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -261,6 +270,8 @@ fun EfxListScreen(
         )
     }
 
+    DevicePopups(bleVm, devicePopup) { devicePopup = DevicePopup.NONE }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -272,6 +283,9 @@ fun EfxListScreen(
                     }
                 },
                 actions = {
+                    // 디바이스 연결 정보: 미연결이면 연결 팝업, 연결 중이면 관리 팝업
+                    DeviceStatusButton(bleVm, onClick = { devicePopup = devicePopupFor(bleConnected) })
+                    Spacer(Modifier.width(4.dp))
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "설정")
                     }

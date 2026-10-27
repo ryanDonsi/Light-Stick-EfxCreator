@@ -29,6 +29,11 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString(KEY_MUSIC_LOAD_PATH, DEFAULT_MUSIC_PATH) ?: DEFAULT_MUSIC_PATH
         set(value) = prefs.edit().putString(KEY_MUSIC_LOAD_PATH, value).apply()
 
+    // 이번 행사의 전체 그룹 개수 (그룹 배정 방송에 사용, 1~20)
+    var groupCount: Int
+        get() = prefs.getInt("group_count", 20).coerceIn(1, 20)
+        set(value) = prefs.edit().putInt("group_count", value.coerceIn(1, 20)).apply()
+
     // 마지막으로 선택한 이펙트/팔레트 세트 id (빈 문자열 = 자동)
     var lastEffectSetId: String
         get() = prefs.getString("last_effect_set_id", "") ?: ""
