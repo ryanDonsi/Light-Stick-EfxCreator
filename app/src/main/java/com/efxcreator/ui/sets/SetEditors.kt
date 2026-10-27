@@ -28,6 +28,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +42,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.efxcreator.ui.components.HsvColorPicker
+import com.efxcreator.ui.device.activityBleViewModel
 import com.efxcreator.music.sets.EffectRuleSet
 import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.music.sets.RgbColor
@@ -66,6 +71,12 @@ fun PaletteSetEditorDialog(
     val colors = remember { initial.colors.toMutableStateList() }
     var selectedSlot by remember { mutableIntStateOf(0) }
     val current = colors[selectedSlot]
+
+    // 연결된 디바이스에 편집 중인 색을 실시간으로 표시한다 (닫을 때 끈다)
+    val bleVm = activityBleViewModel()
+    val deviceConnected by bleVm.connected.collectAsState()
+    LaunchedEffect(current, deviceConnected) { bleVm.previewColor(current.r, current.g, current.b) }
+    DisposableEffect(Unit) { onDispose { bleVm.stopPreview() } }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -110,9 +121,14 @@ fun PaletteSetEditorDialog(
                     "${PaletteSet.COLOR_ROLES[selectedSlot]}: RGB(${current.r}, ${current.g}, ${current.b})",
                     style = MaterialTheme.typography.labelMedium
                 )
-                ChannelSlider("R", current.r) { colors[selectedSlot] = current.copy(r = it) }
-                ChannelSlider("G", current.g) { colors[selectedSlot] = current.copy(g = it) }
-                ChannelSlider("B", current.b) { colors[selectedSlot] = current.copy(b = it) }
+                HsvColorPicker(color = current, onChange = { colors[selectedSlot] = it })
+                Text(
+                    if (deviceConnected) "● 디바이스에 색상이 실시간으로 표시됩니다."
+                    else "디바이스를 연결하면 색상이 실시간으로 표시됩니다.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (deviceConnected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 Text("빠른 선택", style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

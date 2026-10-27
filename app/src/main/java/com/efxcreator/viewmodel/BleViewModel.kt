@@ -286,6 +286,44 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ── 색상 실시간 미리보기 (팔레트 편집 등) ─────────────────────
+
+    private var previewPending: Triple<Int, Int, Int>? = null
+    private var previewJob: Job? = null
+
+    private fun solidPayload(type: EffectType, r: Int, g: Int, b: Int) = LSEffectPayload(
+        effectType = type, color = LsColor(r, g, b), backgroundColor = LsColor(0, 0, 0),
+        period = 0, spf = 100, fade = 100, randomColor = 0, randomDelay = 0,
+        broadcasting = if (_broadcasting.value) 1 else 0, effectIndex = 0
+    )
+
+    /**
+     * 연결된 기기에 색을 바로 켠다. 슬라이더를 끌 때처럼 값이 빠르게 바뀌어도 기기가 밀리지 않도록
+     * 약 80ms 간격으로 가장 최근 값만 보낸다. 연결돼 있지 않으면 아무것도 하지 않는다.
+     */
+    fun previewColor(r: Int, g: Int, b: Int) {
+        if (connectedOrNull() == null) return
+        previewPending = Triple(r, g, b)
+        if (previewJob?.isActive == true) return
+        previewJob = viewModelScope.launch {
+            while (true) {
+                val c = previewPending ?: break
+                previewPending = null
+                val device = connectedOrNull() ?: break
+                device.sendEffect(solidPayload(EffectType.ON, c.first, c.second, c.third))
+                delay(80L)
+            }
+        }
+    }
+
+    /** 미리보기를 끝내고 기기를 끈다 */
+    fun stopPreview() {
+        previewPending = null
+        previewJob?.cancel()
+        val device = connectedOrNull() ?: return
+        device.sendEffect(solidPayload(EffectType.OFF, 0, 0, 0))
+    }
+
     fun setBroadcasting(enabled: Boolean) {
         val device = _connected.value ?: return
         prefs.setBroadcasting(device.mac, enabled)
