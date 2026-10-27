@@ -367,6 +367,31 @@ private fun UserLibraryGrid(
                     }
                 }
             }
+
+            // 설정의 "이펙트 라이브러리" 에서 만든 이펙트는 칸을 따로 연결하지 않아도 여기에 모두 나온다
+            if (patterns.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "이펙트 라이브러리 (설정에서 만든 이펙트) · 탭 = 재생 위치에 추가",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                patterns.map { it.toPreset() }.chunked(UserEffect.COLUMNS).forEach { rowItems ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        rowItems.forEach { preset ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                PresetCard(
+                                    preset = preset,
+                                    drag = drag,
+                                    onTap = { onTapPreset(preset) },
+                                    onDrop = onDrop
+                                )
+                            }
+                        }
+                        repeat(UserEffect.COLUMNS - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
         }
 
         // 끄는 동안 손가락을 따라다니는 칸 (원래 칸은 흐리게 남겨 둔다)

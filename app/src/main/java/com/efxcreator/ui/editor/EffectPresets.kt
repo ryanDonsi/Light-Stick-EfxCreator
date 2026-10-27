@@ -1,5 +1,8 @@
 package com.efxcreator.ui.editor
 
+import com.efxcreator.model.EffectPattern
+import com.efxcreator.model.PatternResolver
+import com.efxcreator.model.PatternStep
 import com.efxcreator.model.UserEffect
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.Color
@@ -113,3 +116,21 @@ fun UserEffect.toPreset(): EffectPreset = EffectPreset(
     fade = fade,
     patternId = patternId
 )
+
+/** 설정의 이펙트 라이브러리(패턴)를 라이브러리 칸으로 쓸 수 있는 프리셋으로 변환 (첫 단계로 칸의 모양을 정한다) */
+fun EffectPattern.toPreset(): EffectPreset {
+    val first = steps.firstOrNull() ?: PatternStep()
+    val payload = PatternResolver.payload(first, null)
+    return EffectPreset(
+        id = "pattern_$id",
+        label = name,
+        category = EffectPreset.Category.USER,
+        type = first.effectType,
+        color = payload.color,
+        backgroundColor = payload.backgroundColor,
+        period = first.frames,
+        spf = first.spf,
+        fade = first.fade,
+        patternId = id
+    )
+}
