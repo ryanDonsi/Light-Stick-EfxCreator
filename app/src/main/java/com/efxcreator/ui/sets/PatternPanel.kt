@@ -84,6 +84,8 @@ private fun isTwoColor(type: String) = type == "BLINK" || type == "BREATH" || ty
 
 private const val MAX_BEATS_TENTHS = 320   // 32박
 private const val MAX_STEPS = 32
+private const val MIN_BEAT_MS = 250   // 240 BPM
+private const val MAX_BEAT_MS = 1500  // 40 BPM
 
 /** 한 단계를 "1. ON 0.3박 · 화이트" 처럼 한 줄로 요약한다 */
 fun PatternStep.summary(index: Int): String {
@@ -455,7 +457,9 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
     val connected by bleVm.connected.collectAsState()
     val testing by bleVm.patternTesting.collectAsState()
     var paletteId by remember { mutableStateOf("") }
-    var bpm by remember { mutableIntStateOf(120) }
+    // 박자 길이(ms)를 기준 값으로 두고, BPM 과 서로 환산해 어느 쪽으로든 수정할 수 있게 한다
+    var beatMs by remember { mutableIntStateOf(500) }
+    val bpm = Math.round(60000f / beatMs.coerceAtLeast(1))
     var loop by remember { mutableStateOf(true) }
     val palette = paletteSets.firstOrNull { it.id == paletteId }
 
@@ -471,6 +475,22 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
             nameOf = { it.name },
             onSelect = { paletteId = it }
         )
+        // 선택한 팔레트의 색 역할 (대표색, 보조색1~3)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            listOf(PatternColors.MAIN, PatternColors.SUB1, PatternColors.SUB2, PatternColors.SUB3).forEach { ref ->
+                val c = PatternColors.resolve(ref, palette)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .background(Color(c.r, c.g, c.b))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                    )
+                    Text(PatternColors.label(ref), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
         // 이 팔레트에서 각 단계 색이 어떻게 풀리는지 미리 보여 준다
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("색 미리보기", style = MaterialTheme.typography.labelMedium)
@@ -487,13 +507,12 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             NumberTextField(
-                value = bpm, onValueChange = { bpm = it }, label = "BPM",
-                range = 40..240, modifier = Modifier.width(110.dp)
+                value = bpm, onValueChange = { beatMs = Math.round(60000f / it).coerceIn(MIN_BEAT_MS, MAX_BEAT_MS) },
+                label = "BPM", range = 40..240, modifier = Modifier.width(110.dp)
             )
-            Text(
-                "1박 = ${60000 / bpm.coerceAtLeast(1)}ms",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            NumberTextField(
+                value = beatMs, onValueChange = { beatMs = it },
+                label = "1박 (ms)", range = MIN_BEAT_MS..MAX_BEAT_MS, modifier = Modifier.width(120.dp)
             )
             Checkbox(checked = loop, onCheckedChange = { loop = it })
             Text("반복", style = MaterialTheme.typography.labelLarge)
@@ -515,9 +534,8 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
                 Button(
                     enabled = connected != null && steps.isNotEmpty(),
                     onClick = {
-                        val beatMs = 60000L / bpm.coerceAtLeast(1)
                         bleVm.startPatternTest(
-                            steps.map { PatternResolver.payload(it, palette) to PatternResolver.durationMs(it, beatMs) },
+                            steps.map { PatternResolver.payload(it, palette) to PatternResolver.durationMs(it, beatMs.toLong()) },
                             loop
                         )
                     }
