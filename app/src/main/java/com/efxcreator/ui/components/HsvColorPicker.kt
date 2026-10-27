@@ -91,11 +91,11 @@ fun HsvColorPicker(color: RgbColor, onChange: (RgbColor) -> Unit, modifier: Modi
 
         SliderBlock("밝기 조절") {
             val gradient = remember(hsv.h, hsv.s) {
-                Brush.horizontalGradient(listOf(hsvToColor(hsv.h, hsv.s, 1f), hsvToColor(hsv.h, hsv.s, 0f)))
+                Brush.horizontalGradient(listOf(hsvToColor(hsv.h, hsv.s, 0f), hsvToColor(hsv.h, hsv.s, 1f)))
             }
             CustomSlider(
-                value = 1f - hsv.v,
-                onValueChange = { update(hsv.copy(v = 1f - it)) },
+                value = hsv.v,
+                onValueChange = { update(hsv.copy(v = it)) },
                 valueRange = 0f..1f,
                 steps = 99,
                 trackGradient = gradient,
