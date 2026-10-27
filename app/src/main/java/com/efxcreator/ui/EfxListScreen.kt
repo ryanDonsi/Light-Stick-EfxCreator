@@ -264,7 +264,13 @@ fun EfxListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("GLOWSYNC Editor") },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppIcon(size = 36.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text("GLOWSYNC Editor")
+                    }
+                },
                 actions = {
                     IconButton(onClick = onNavigateToSets) {
                         Icon(Icons.Default.Tune, contentDescription = "이펙트·팔레트 세트")
@@ -568,16 +574,19 @@ fun EfxProjectCard(
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             // 메인 콘텐츠
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = LIST_ITEM_HEIGHT)
                     .clickable(onClick = onEdit)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.Center
+                    .padding(start = 16.dp, end = 44.dp, top = 12.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // 음악 파일의 메타데이터(앨범 아트)
+                SongArt(musicUriString = project.musicUriString, size = 64.dp)
+                Spacer(Modifier.width(16.dp))
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
                         text = project.name,

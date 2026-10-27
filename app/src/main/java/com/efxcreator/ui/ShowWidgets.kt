@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -270,5 +272,73 @@ fun ShowEditDialog(
             },
             dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("취소") } }
         )
+    }
+}
+
+/** 앱 런처 아이콘 (적응형 아이콘이라 painterResource 대신 Drawable 을 비트맵으로 그린다) */
+@Composable
+fun AppIcon(size: Dp, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val px = with(density) { size.roundToPx() }
+    val bitmap = remember(px) {
+        androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+            ?.let { androidx.core.graphics.drawable.DrawableCompat.wrap(it) }
+            ?.toBitmap(px, px)
+            ?.asImageBitmap()
+    }
+    Box(modifier = modifier.size(size).clip(MaterialTheme.shapes.small)) {
+        bitmap?.let { Image(it, contentDescription = "GLOWSYNC", modifier = Modifier.size(size)) }
+    }
+}
+
+/**
+ * 곡 이미지: 음악 파일에 들어 있는 앨범 아트(메타데이터)를 보여 준다.
+ * 이미지가 없거나 파일을 읽을 수 없으면 음표 아이콘을 보여 준다.
+ */
+@Composable
+fun SongArt(musicUriString: String?, size: Dp, modifier: Modifier = Modifier) {
+    val bitmap by produceState<ImageBitmap?>(initialValue = null, musicUriString) {
+        value = withContext(Dispatchers.IO) { loadAlbumArt(musicUriString, 256) }
+    }
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center
+    ) {
+        val bmp = bitmap
+        if (bmp != null) {
+            Image(bmp, contentDescription = "앨범 이미지", contentScale = ContentScale.Crop, modifier = Modifier.size(size))
+        } else {
+            Icon(
+                Icons.Default.MusicNote,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(size / 2)
+            )
+        }
+    }
+}
+
+private fun loadAlbumArt(musicUriString: String?, maxPx: Int): ImageBitmap? {
+    val path = musicUriString?.let { Uri.parse(it).path } ?: return null
+    val file = java.io.File(path)
+    if (!file.exists()) return null
+    val retriever = android.media.MediaMetadataRetriever()
+    return try {
+        retriever.setDataSource(path)
+        val bytes = retriever.embeddedPicture ?: return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= maxPx && bounds.outHeight / (sample * 2) >= maxPx) sample *= 2
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)?.asImageBitmap()
+    } catch (e: Exception) {
+        null
+    } finally {
+        runCatching { retriever.release() }
     }
 }
