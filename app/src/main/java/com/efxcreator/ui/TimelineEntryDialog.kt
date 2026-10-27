@@ -18,7 +18,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.efxcreator.music.sets.RgbColor
+import com.efxcreator.ui.components.HsvColorPicker
 import com.efxcreator.ui.components.NumberTextField
+import com.efxcreator.ui.device.activityBleViewModel
 import com.efxcreator.ui.editor.TimelineMath
 import com.lightstick.types.Color
 import com.lightstick.types.Colors
@@ -426,6 +429,13 @@ fun ColorPickerDialog(
     // 현재 선택된 색상 (실시간)
     val selectedColor = Color(red, green, blue)
 
+    // 연결된 디바이스에 편집 중인 색을 실시간으로 표시한다 (닫을 때 끈다)
+    val bleVm = activityBleViewModel()
+    val connectedDevice by bleVm.connected.collectAsState()
+    val deviceConnected = connectedDevice != null
+    LaunchedEffect(red, green, blue, deviceConnected) { bleVm.previewColor(red, green, blue) }
+    DisposableEffect(Unit) { onDispose { bleVm.stopPreview() } }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, style = MaterialTheme.typography.titleMedium) },
@@ -434,37 +444,17 @@ fun ColorPickerDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // ========== 색상 미리보기 ==========
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(ComposeColor(red, green, blue))
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outline,
-                            MaterialTheme.shapes.small
-                        )
+                // 색상/선명도/밝기 슬라이더 + RGB 직접 입력 (팔레트 세트 편집과 같은 색상 선택)
+                HsvColorPicker(
+                    color = RgbColor(red, green, blue),
+                    onChange = { red = it.r; green = it.g; blue = it.b }
                 )
-
-                // ========== RGB 슬라이더 ==========
-                CompactColorSlider(
-                    label = "R",
-                    value = red,
-                    onValueChange = { red = it }
-                )
-
-                CompactColorSlider(
-                    label = "G",
-                    value = green,
-                    onValueChange = { green = it }
-                )
-
-                CompactColorSlider(
-                    label = "B",
-                    value = blue,
-                    onValueChange = { blue = it }
+                Text(
+                    if (deviceConnected) "● 디바이스에 색상이 실시간으로 표시됩니다."
+                    else "디바이스를 연결하면 색상이 실시간으로 표시됩니다.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (deviceConnected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // ========== 프리셋 색상 ==========
@@ -546,90 +536,6 @@ fun ColorPickerDialog(
             }
         }
     )
-}
-
-/**
- * ✅ 컴팩트 RGB 슬라이더
- */
-@Composable
-private fun CompactColorSlider(
-    label: String,
-    value: Int,
-    onValueChange: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.width(20.dp)
-        )
-
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.toInt()) },
-            valueRange = 0f..255f,
-            modifier = Modifier
-                .weight(1f)
-                .height(20.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.onSurface,
-                activeTrackColor = MaterialTheme.colorScheme.onSurface,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            thumb = {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(
-                            MaterialTheme.colorScheme.onSurface,
-                            shape = CircleShape
-                        )
-                )
-            },
-            track = { sliderState ->
-                val fraction = sliderState.value / 255f
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                ) {
-                    // Inactive track
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .align(Alignment.Center)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                RoundedCornerShape(1.dp)
-                            )
-                    )
-                    // Active track
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(fraction)
-                            .height(2.dp)
-                            .align(Alignment.CenterStart)
-                            .background(
-                                MaterialTheme.colorScheme.onSurface,
-                                RoundedCornerShape(1.dp)
-                            )
-                    )
-                }
-            }
-        )
-
-        Text(
-            text = value.toString(),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(32.dp),
-            fontWeight = FontWeight.Medium
-        )
-    }
 }
 
 /**
