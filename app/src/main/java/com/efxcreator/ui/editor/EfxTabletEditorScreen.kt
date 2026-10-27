@@ -107,7 +107,6 @@ import com.efxcreator.ui.sets.SetDropdown
 import com.efxcreator.ui.theme.EfxMotion
 import com.efxcreator.ui.sets.SetSelectionDialog
 import com.efxcreator.viewmodel.BleViewModel
-import com.efxcreator.viewmodel.EffectLibraryViewModel
 import com.efxcreator.viewmodel.EfxEditViewModel
 import com.efxcreator.viewmodel.PatternsViewModel
 import com.efxcreator.viewmodel.SetsViewModel
@@ -135,11 +134,11 @@ fun EfxTabletEditorScreen(
     projectId: String,
     onNavigateBack: () -> Unit,
     onNavigateToSets: () -> Unit = {},
+    onNavigateToEffectLibrary: () -> Unit = {},
     editVm: EfxEditViewModel = viewModel(),
     bleVm: BleViewModel = activityBleViewModel(),
     setsVm: SetsViewModel = viewModel(),
-    patternsVm: PatternsViewModel = activityViewModel(),
-    libVm: EffectLibraryViewModel = viewModel()
+    patternsVm: PatternsViewModel = activityViewModel()
 ) {
     val context = LocalContext.current
 
@@ -155,7 +154,6 @@ fun EfxTabletEditorScreen(
     val canRedo by editVm.canRedo.collectAsState()
     val dirty by editVm.dirty.collectAsState()
     val saving by editVm.saving.collectAsState()
-    val userSlots by libVm.slots.collectAsState()
     val effectSets by setsVm.effectSets.collectAsState()
     val paletteSets by setsVm.paletteSets.collectAsState()
 
@@ -186,8 +184,6 @@ fun EfxTabletEditorScreen(
     var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     var showApplyDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
-    // 내 라이브러리에서 추가/수정 중인 칸 번호 (null = 닫힘)
-    var libraryEditorSlot by remember { mutableStateOf<Int?>(null) }
     var deviceLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(projectId) { editVm.loadProject(projectId) }
@@ -296,7 +292,13 @@ fun EfxTabletEditorScreen(
             // 색 역할은 마지막으로 쓴 팔레트 세트로 풀어 넣는다 (선택한 적이 없으면 기본 팔레트)
             val palette = setsVm.paletteSets.value.firstOrNull { it.id == setsVm.lastPaletteSetId }
             pendingSelectTs = ts
-            editVm.addTimelineEntries(PatternResolver.expand(pattern, ts, beatLengthAt(ts), palette))
+            // 시작 위치부터 이펙트 길이(비트 수)만큼의 기존 엔트리는 새 이펙트로 교체된다
+            val beatMs = beatLengthAt(ts)
+            editVm.addTimelineEntries(
+                PatternResolver.expand(pattern, ts, beatMs, palette),
+                replaceFromMs = ts,
+                replaceToMs = ts + PatternResolver.totalDurationMs(pattern, beatMs)
+            )
             return
         }
         val existing = entries.indexOfFirst { it.timestampMs == ts }
@@ -435,13 +437,10 @@ fun EfxTabletEditorScreen(
 
                     EffectLibraryPanel(
                         drag = drag,
-                        userSlots = userSlots,
+                        patterns = patterns,
                         onTapPreset = { addPreset(it, snapAt(player.positionMs)) },
                         onDrop = { handleDrop() },
-                        onUserSlotClick = { libraryEditorSlot = it },
-                        onMoveSlot = { from, to -> libVm.move(from, to) },
-                        onDeleteSlots = { libVm.deleteAll(it) },
-                        patterns = patterns,
+                        onManageEffects = onNavigateToEffectLibrary,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
@@ -477,17 +476,6 @@ fun EfxTabletEditorScreen(
                     )
                     SelectedEntryPanel(
                         entry = entries.getOrNull(selectedIndex),
-                        onSaveToLibrary = {
-                            entries.getOrNull(selectedIndex)?.let { e ->
-                                val slot = libVm.addFromEntry(e)
-                                Toast.makeText(
-                                    context,
-                                    if (slot >= 0) "내 라이브러리 ${slot + 1}번 칸에 저장했습니다."
-                                    else "내 라이브러리가 가득 찼습니다 (${UserEffect.SLOT_COUNT}칸). 편집 모드에서 칸을 비워 주세요.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        },
                         onEdit = { entries.getOrNull(selectedIndex)?.let { editVm.startEditingEntry(selectedIndex, it) } },
                         onDelete = {
                             if (selectedIndex in entries.indices) {
@@ -584,27 +572,6 @@ fun EfxTabletEditorScreen(
                 ) { Text("저장") }
             },
             dismissButton = { TextButton(onClick = { showNameDialog = false }) { Text("취소") } }
-        )
-    }
-
-    libraryEditorSlot?.let { slot ->
-        val existing = userSlots.getOrNull(slot)
-        UserEffectEditorDialog(
-            slot = slot,
-            initial = existing,
-            newId = libVm::newId,
-            onSave = {
-                libVm.save(slot, it)
-                libraryEditorSlot = null
-            },
-            onDelete = if (existing != null) {
-                {
-                    libVm.delete(slot)
-                    libraryEditorSlot = null
-                }
-            } else null,
-            onDismiss = { libraryEditorSlot = null },
-            patterns = patterns
         )
     }
 
@@ -924,7 +891,6 @@ private fun PreviewPanel(
 @Composable
 private fun SelectedEntryPanel(
     entry: EfxEntry?,
-    onSaveToLibrary: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -1010,10 +976,6 @@ private fun SelectedEntryPanel(
                 Spacer(Modifier.width(4.dp))
                 Text("삭제")
             }
-        }
-        Spacer(Modifier.height(6.dp))
-        OutlinedButton(onClick = onSaveToLibrary) {
-            Text("내 라이브러리에 저장")
         }
     }
 }

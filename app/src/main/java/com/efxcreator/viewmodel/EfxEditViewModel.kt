@@ -337,11 +337,19 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         commitDraft(current.body.entries + entry)
     }
 
-    /** 여러 엔트리를 한 번에 넣는다 (같은 시각의 기존 엔트리는 교체). 실행 취소 한 번으로 모두 되돌린다. */
-    fun addTimelineEntries(new: List<EfxEntry>) {
+    /**
+     * 여러 엔트리를 한 번에 넣는다. 같은 시각의 기존 엔트리는 교체하고,
+     * [replaceFromMs] 이상 [replaceToMs] 미만 구간의 기존 엔트리도 함께 지운다 (이펙트 길이만큼 교체).
+     * 실행 취소 한 번으로 모두 되돌린다.
+     */
+    fun addTimelineEntries(new: List<EfxEntry>, replaceFromMs: Long? = null, replaceToMs: Long? = null) {
         val current = _efx.value ?: return
         val times = new.map { it.timestampMs }.toSet()
-        commitDraft(current.body.entries.filterNot { it.timestampMs in times } + new)
+        val kept = current.body.entries.filterNot { e ->
+            e.timestampMs in times ||
+                (replaceFromMs != null && replaceToMs != null && e.timestampMs >= replaceFromMs && e.timestampMs < replaceToMs)
+        }
+        commitDraft(kept + new)
     }
 
     fun updateTimelineEntry(index: Int, updatedEntry: EfxEntry) {

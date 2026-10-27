@@ -76,7 +76,8 @@ fun EfxCreatorApp() {
             EfxTabletEditorScreen(
                 projectId = projectId,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSets = { navController.navigate(Screen.Settings.createRoute("effect")) }
+                onNavigateToSets = { navController.navigate(Screen.Settings.createRoute("effect")) },
+                onNavigateToEffectLibrary = { navController.navigate(Screen.Settings.createRoute("library")) }
             )
         }
 

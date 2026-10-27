@@ -22,7 +22,9 @@ data class EffectPreset(
     val spf: Int = 100,
     val fade: Int = 100,
     /** 이펙트 라이브러리(패턴)에서 온 프리셋이면 그 패턴의 id (타임라인에 넣을 때 여러 단계로 펼쳐진다) */
-    val patternId: String? = null
+    val patternId: String? = null,
+    /** 칸의 이름 아래에 한 줄 더 보여 줄 설명 (패턴이면 "1비트" 같은 길이) */
+    val subLabel: String? = null
 ) {
     enum class Category(val label: String) {
         USER("내 라이브러리"), ON("ON"), OFF("OFF"), BLINK("BLINK"), BREATH("BREATH"), STROBE("STROBE")
@@ -131,6 +133,11 @@ fun EffectPattern.toPreset(): EffectPreset {
         period = first.frames,
         spf = first.spf,
         fade = first.fade,
-        patternId = id
+        patternId = id,
+        subLabel = formatBeatsLabel(totalBeatsTenths)
     )
 }
+
+/** 박자 길이를 "1비트", "1.5비트" 로 (소수점 한 자리, 정수면 소수점 생략) */
+fun formatBeatsLabel(tenths: Int): String =
+    if (tenths % 10 == 0) "${tenths / 10}비트" else "%.1f비트".format(java.util.Locale.US, tenths / 10f)

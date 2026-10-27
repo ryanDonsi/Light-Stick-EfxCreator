@@ -87,6 +87,10 @@ object PatternResolver {
     fun durationMs(step: PatternStep, beatMs: Long): Long =
         Math.round(step.beatsTenths / 10.0 * beatMs / 10.0) * 10L
 
+    /** 패턴 전체 길이(ms) = 단계 길이의 합 */
+    fun totalDurationMs(pattern: EffectPattern, beatMs: Long): Long =
+        pattern.steps.sumOf { durationMs(it, beatMs) }
+
     /** 시작 시각 [startMs] 부터 단계마다 하나씩 타임라인 엔트리를 만든다 */
     fun expand(pattern: EffectPattern, startMs: Long, beatMs: Long, palette: PaletteSet?): List<EfxEntry> {
         var t = startMs
