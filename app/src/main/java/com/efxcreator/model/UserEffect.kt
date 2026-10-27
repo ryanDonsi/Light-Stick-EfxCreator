@@ -17,7 +17,9 @@ data class UserEffect(
     /** 프레임 수 (ON/OFF 는 전환 시간, 그 외는 이펙트 주기). 1프레임 = 1000/[spf] ms */
     val period: Int,
     val spf: Int,
-    val fade: Int
+    val fade: Int,
+    /** 이펙트 라이브러리(패턴)와 연결된 칸이면 그 패턴의 id. 이때 칸을 타임라인에 넣으면 패턴의 모든 단계가 들어간다 */
+    val patternId: String? = null
 ) {
     companion object {
         const val COLUMNS = 6

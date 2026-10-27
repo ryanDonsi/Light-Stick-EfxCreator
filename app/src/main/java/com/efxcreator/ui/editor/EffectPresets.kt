@@ -17,7 +17,9 @@ data class EffectPreset(
     /** 프레임 수 (1프레임 = 1000/[spf] ms). ON/OFF 에서는 전환(transit) 시간, 그 외에는 이펙트 주기 */
     val period: Int = 0,
     val spf: Int = 100,
-    val fade: Int = 100
+    val fade: Int = 100,
+    /** 이펙트 라이브러리(패턴)에서 온 프리셋이면 그 패턴의 id (타임라인에 넣을 때 여러 단계로 펼쳐진다) */
+    val patternId: String? = null
 ) {
     enum class Category(val label: String) {
         USER("내 라이브러리"), ON("ON"), OFF("OFF"), BLINK("BLINK"), BREATH("BREATH"), STROBE("STROBE")
@@ -108,5 +110,6 @@ fun UserEffect.toPreset(): EffectPreset = EffectPreset(
     backgroundColor = bg.toLs(),
     period = period,
     spf = spf,
-    fade = fade
+    fade = fade,
+    patternId = patternId
 )

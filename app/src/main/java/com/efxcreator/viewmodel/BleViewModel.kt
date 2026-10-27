@@ -324,6 +324,49 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         device.sendEffect(solidPayload(EffectType.OFF, 0, 0, 0))
     }
 
+    // ── 패턴(이펙트 라이브러리) 디바이스 테스트 ────────────────────
+
+    private val _patternTesting = MutableStateFlow(false)
+    val patternTesting: StateFlow<Boolean> = _patternTesting.asStateFlow()
+    private var patternJob: Job? = null
+
+    /**
+     * 패턴의 단계를 순서대로 기기에 보낸다. [steps] = (보낼 이펙트, 그 이펙트를 유지할 시간 ms).
+     * [loop] 면 [stopPatternTest] 를 부를 때까지 반복하고, 아니면 한 번 재생한 뒤 기기를 끈다.
+     */
+    fun startPatternTest(steps: List<Pair<LSEffectPayload, Long>>, loop: Boolean) {
+        val device = connectedOrNull()
+        if (device == null) {
+            _message.value = "디바이스를 연결한 뒤 테스트할 수 있습니다."
+            return
+        }
+        if (steps.isEmpty()) return
+        patternJob?.cancel()
+        previewJob?.cancel()
+        patternJob = viewModelScope.launch {
+            _patternTesting.value = true
+            try {
+                do {
+                    for ((payload, ms) in steps) {
+                        if (connectedOrNull() == null) return@launch
+                        device.sendEffect(payload.copy(broadcasting = if (_broadcasting.value) 1 else 0))
+                        delay(ms.coerceAtLeast(10L))
+                    }
+                } while (loop)
+                device.sendEffect(solidPayload(EffectType.OFF, 0, 0, 0))
+            } finally {
+                _patternTesting.value = false
+            }
+        }
+    }
+
+    fun stopPatternTest() {
+        patternJob?.cancel()
+        patternJob = null
+        _patternTesting.value = false
+        connectedOrNull()?.sendEffect(solidPayload(EffectType.OFF, 0, 0, 0))
+    }
+
     fun setBroadcasting(enabled: Boolean) {
         val device = _connected.value ?: return
         prefs.setBroadcasting(device.mac, enabled)

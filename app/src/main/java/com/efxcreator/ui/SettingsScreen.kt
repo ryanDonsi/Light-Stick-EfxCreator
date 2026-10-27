@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.ui.device.DeviceSettingsContent
 import com.efxcreator.ui.device.activityBleViewModel
 import com.efxcreator.ui.editor.SlimVerticalScrollBar
+import com.efxcreator.ui.sets.EffectPatternsPanel
 import com.efxcreator.ui.sets.EffectSetsPanel
 import com.efxcreator.ui.sets.PaletteSetsPanel
 import com.efxcreator.viewmodel.SettingsViewModel
@@ -295,6 +297,7 @@ fun SettingsScreen(
                                 DeviceSettingsContent(activityBleViewModel(), Modifier.fillMaxSize())
                             }
                         }
+                        SettingsSection.EFFECT_LIBRARY -> EffectPatternsPanel(modifier = Modifier.fillMaxSize())
                         SettingsSection.EFFECT_SETS -> EffectSetsPanel(modifier = Modifier.fillMaxSize())
                         SettingsSection.PALETTE_SETS -> PaletteSetsPanel(modifier = Modifier.fillMaxSize())
                     }
@@ -308,6 +311,7 @@ fun SettingsScreen(
 enum class SettingsSection(val route: String, val label: String, val subtitle: String, val icon: ImageVector) {
     STORAGE("storage", "저장소 관리", "EFX 저장 위치 · 음악 불러오기 위치", Icons.Default.FolderOpen),
     DEVICE("device", "디바이스 관리", "응원봉 검색 · 연결 · 관리", Icons.Default.Bluetooth),
+    EFFECT_LIBRARY("library", "이펙트 라이브러리", "박자 단위 이펙트 묶음 만들기", Icons.Default.Layers),
     EFFECT_SETS("effect", "이펙트 세트", "섹션별 이펙트 규칙", Icons.Default.AutoAwesome),
     PALETTE_SETS("palette", "팔레트 세트", "자동 생성에 쓰는 색 조합", Icons.Default.Palette);
 

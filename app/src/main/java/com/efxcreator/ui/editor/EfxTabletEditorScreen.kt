@@ -108,7 +108,9 @@ import com.efxcreator.ui.sets.SetSelectionDialog
 import com.efxcreator.viewmodel.BleViewModel
 import com.efxcreator.viewmodel.EffectLibraryViewModel
 import com.efxcreator.viewmodel.EfxEditViewModel
+import com.efxcreator.viewmodel.PatternsViewModel
 import com.efxcreator.viewmodel.SetsViewModel
+import com.efxcreator.model.PatternResolver
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.EffectType
 import kotlinx.coroutines.delay
@@ -135,6 +137,7 @@ fun EfxTabletEditorScreen(
     editVm: EfxEditViewModel = viewModel(),
     bleVm: BleViewModel = activityBleViewModel(),
     setsVm: SetsViewModel = viewModel(),
+    patternsVm: PatternsViewModel = viewModel(),
     libVm: EffectLibraryViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -156,6 +159,7 @@ fun EfxTabletEditorScreen(
     val paletteSets by setsVm.paletteSets.collectAsState()
 
     val bleConnected by bleVm.connected.collectAsState()
+    val patterns by patternsVm.patterns.collectAsState()
 
     val entries: List<EfxEntry> = efx?.body?.entries.orEmpty()
     // 실기기로 보내는 프레임: Broadcasting Mode 설정에 따라 신호 전파 여부(broadcasting)를 덮어쓴다
@@ -270,8 +274,30 @@ fun EfxTabletEditorScreen(
         return TimelineMath.snap(ms, analysis?.beatTimesMs.orEmpty(), tolerance, snapToBeats)
     }
 
+    /** [ms] 근처 한 박의 길이(ms): 분석된 비트 간격, 없으면 120BPM(500ms) */
+    fun beatLengthAt(ms: Long): Long {
+        val beats = analysis?.beatTimesMs.orEmpty()
+        if (beats.size < 2) return 500L
+        val i = beats.indexOfLast { it <= ms }.coerceAtLeast(0)
+        val len = if (i + 1 < beats.size) beats[i + 1] - beats[i] else beats[i] - beats[i - 1]
+        return len.takeIf { it in 100L..3000L } ?: 500L
+    }
+
     fun addPreset(preset: EffectPreset, timestampMs: Long) {
         val ts = timestampMs.coerceAtLeast(0L)
+        // 이펙트 라이브러리(패턴)와 연결된 칸: 모든 단계를 박자 길이에 맞춰 한 번에 넣는다
+        preset.patternId?.let { id ->
+            val pattern = patterns.firstOrNull { it.id == id }
+            if (pattern == null) {
+                Toast.makeText(context, "연결된 이펙트를 찾을 수 없습니다. 설정의 이펙트 라이브러리를 확인해 주세요.", Toast.LENGTH_SHORT).show()
+                return
+            }
+            // 색 역할은 마지막으로 쓴 팔레트 세트로 풀어 넣는다 (선택한 적이 없으면 기본 팔레트)
+            val palette = setsVm.paletteSets.value.firstOrNull { it.id == setsVm.lastPaletteSetId }
+            pendingSelectTs = ts
+            editVm.addTimelineEntries(PatternResolver.expand(pattern, ts, beatLengthAt(ts), palette))
+            return
+        }
         val existing = entries.indexOfFirst { it.timestampMs == ts }
         val entry = preset.toEntry(ts)
         pendingSelectTs = ts
@@ -414,6 +440,7 @@ fun EfxTabletEditorScreen(
                         onUserSlotClick = { libraryEditorSlot = it },
                         onMoveSlot = { from, to -> libVm.move(from, to) },
                         onDeleteSlots = { libVm.deleteAll(it) },
+                        patterns = patterns,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
@@ -575,7 +602,8 @@ fun EfxTabletEditorScreen(
                     libraryEditorSlot = null
                 }
             } else null,
-            onDismiss = { libraryEditorSlot = null }
+            onDismiss = { libraryEditorSlot = null },
+            patterns = patterns
         )
     }
 

@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import com.efxcreator.model.EffectPattern
 import com.efxcreator.model.UserEffect
 import com.efxcreator.ui.theme.EfxMotion
 import com.lightstick.types.EffectType
@@ -92,6 +93,7 @@ fun EffectLibraryPanel(
     onUserSlotClick: (slot: Int) -> Unit,
     onMoveSlot: (from: Int, to: Int) -> Unit,
     onDeleteSlots: (List<Int>) -> Unit,
+    patterns: List<EffectPattern> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var category by remember {
@@ -221,7 +223,8 @@ fun EffectLibraryPanel(
                     onDrop = onDrop,
                     onSlotClick = onUserSlotClick,
                     onToggleCheck = { slot -> if (slot in checked) checked.remove(slot) else checked.add(slot) },
-                    onMoveSlot = onMoveSlot
+                    onMoveSlot = onMoveSlot,
+                    patterns = patterns
                 )
             } else {
                 // "내 라이브러리" 와 같은 6칸 격자 + 같은 스크롤 막대
@@ -269,7 +272,8 @@ private fun UserLibraryGrid(
     onDrop: () -> Unit,
     onSlotClick: (Int) -> Unit,
     onToggleCheck: (Int) -> Unit,
-    onMoveSlot: (Int, Int) -> Unit
+    onMoveSlot: (Int, Int) -> Unit,
+    patterns: List<EffectPattern>
 ) {
     val density = LocalDensity.current
 
@@ -323,7 +327,7 @@ private fun UserLibraryGrid(
                             if (effect == null) {
                                 EmptySlot(onClick = { onSlotClick(slot) })
                             } else {
-                                val preset = remember(effect) { effect.toPreset() }
+                                val preset = remember(effect, patterns) { effect.toPreset().withPatternName(patterns) }
                                 SlotTile(
                                     preset = preset,
                                     drag = drag,
@@ -369,7 +373,7 @@ private fun UserLibraryGrid(
         val sourceEffect = slots.getOrNull(reorderFrom)
         val sourceBounds = slotBounds[reorderFrom]
         if (sourceEffect != null && sourceBounds != null) {
-            val ghostPreset = remember(sourceEffect) { sourceEffect.toPreset() }
+            val ghostPreset = remember(sourceEffect, patterns) { sourceEffect.toPreset().withPatternName(patterns) }
             Box(
                 modifier = Modifier
                     .offset {
@@ -393,6 +397,10 @@ private fun UserLibraryGrid(
         SlimVerticalScrollBar(scrollState, Modifier.align(Alignment.CenterEnd))
     }
 }
+
+/** 패턴과 연결된 칸이면 이름을 패턴의 현재 이름으로 맞춘다 (설정에서 이름을 바꿔도 따라오도록) */
+private fun EffectPreset.withPatternName(patterns: List<EffectPattern>): EffectPreset =
+    patternId?.let { id -> patterns.firstOrNull { it.id == id } }?.let { copy(label = it.name) } ?: this
 
 private val SLOT_HEIGHT = 48.dp
 
@@ -419,6 +427,8 @@ private fun SlotContent(preset: EffectPreset) {
         // "Red / Black" 처럼 FG / BG 로 이루어진 이름은 두 줄(위 FG, 아래 BG)로 나눠 표시
         // 내 라이브러리 칸은 이름 대신 이펙트 종류만 보여 준다 (색은 왼쪽 원으로 구분)
         val lines = when {
+            // 이펙트 라이브러리(패턴)와 연결된 칸은 패턴 이름을 보여 준다
+            preset.category == EffectPreset.Category.USER && preset.patternId != null -> listOf(preset.label)
             preset.category == EffectPreset.Category.USER -> listOf(preset.type.name)
             preset.isTwoColor && " / " in preset.label -> preset.label.split(" / ", limit = 2)
             else -> listOf(preset.label)
