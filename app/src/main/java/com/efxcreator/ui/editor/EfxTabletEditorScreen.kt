@@ -95,6 +95,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.model.UserEffect
 import com.efxcreator.ui.MusicFolder
+import com.efxcreator.ui.activityViewModel
 import com.efxcreator.ui.device.DevicePopup
 import com.efxcreator.ui.device.DevicePopups
 import com.efxcreator.ui.device.activityBleViewModel
@@ -137,7 +138,7 @@ fun EfxTabletEditorScreen(
     editVm: EfxEditViewModel = viewModel(),
     bleVm: BleViewModel = activityBleViewModel(),
     setsVm: SetsViewModel = viewModel(),
-    patternsVm: PatternsViewModel = viewModel(),
+    patternsVm: PatternsViewModel = activityViewModel(),
     libVm: EffectLibraryViewModel = viewModel()
 ) {
     val context = LocalContext.current

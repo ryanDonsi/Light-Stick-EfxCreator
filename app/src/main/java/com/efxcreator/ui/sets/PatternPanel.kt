@@ -68,6 +68,7 @@ import com.efxcreator.model.EffectPattern
 import com.efxcreator.model.PatternColors
 import com.efxcreator.model.PatternResolver
 import com.efxcreator.model.PatternStep
+import com.efxcreator.ui.activityViewModel
 import com.efxcreator.ui.components.NumberTextField
 import com.efxcreator.ui.device.activityBleViewModel
 import com.efxcreator.ui.editor.SlimVerticalScrollBar
@@ -108,7 +109,7 @@ private fun formatBeats(tenths: Int) = "%.1f".format(Locale.US, tenths / 10f)
 @Composable
 fun EffectPatternsPanel(
     modifier: Modifier = Modifier,
-    patternsVm: PatternsViewModel = viewModel(),
+    patternsVm: PatternsViewModel = activityViewModel(),
     setsVm: SetsViewModel = viewModel(),
     bleVm: BleViewModel = activityBleViewModel()
 ) {
