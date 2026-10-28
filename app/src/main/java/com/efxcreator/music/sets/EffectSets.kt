@@ -130,6 +130,17 @@ object SetCatalog {
     fun patternLabel(engineName: String?): String =
         PATTERNS.firstOrNull { it.engine.name == engineName }?.label ?: "자동"
 
+    /** 섹션이 곡의 어디인지 설명 (이펙트 세트 편집 화면에 작게 보여 준다) */
+    val SECTION_DESCRIPTIONS: Map<String, String> = mapOf(
+        "INTRO" to "곡의 시작 부분. 분위기를 여는 도입 구간",
+        "VERSE" to "노래의 본문(1절·2절). 후렴보다 차분하게 이어지는 구간",
+        "CHORUS" to "후렴. 곡에서 가장 강하고 반복되는 하이라이트 구간",
+        "BRIDGE" to "후렴 사이를 잇는 전환 구간 (브릿지, 분위기가 바뀌는 부분)",
+        "BREAK" to "소리가 거의 없는 무음 구간",
+        "OUTRO" to "곡의 마무리. 서서히 끝나는 구간",
+        "END" to "음악이 끝난 뒤 마지막 정리 구간"
+    )
+
     /** 곡 분위기(장르) 이름과 화면 표시 이름 — 값은 MusicStyleClassifier.MusicStyle 이름 */
     val GENRES: List<Pair<String, String>> = listOf(
         "DANCE_POP" to "댄스팝", "POP" to "팝", "BALLAD" to "발라드",

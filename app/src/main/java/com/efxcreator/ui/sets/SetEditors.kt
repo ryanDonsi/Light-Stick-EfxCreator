@@ -311,6 +311,10 @@ private fun SectionRuleCard(
                     label = { Text("직접 지정") }
                 )
             }
+            // 이 섹션이 곡의 어디인지
+            SetCatalog.SECTION_DESCRIPTIONS[sectionKey]?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             // 자동일 때 엔진이 실제로 하는 동작
             Text(
                 "자동: " + (SetCatalog.DEFAULT_BEHAVIOR[sectionKey] ?: "-"),
