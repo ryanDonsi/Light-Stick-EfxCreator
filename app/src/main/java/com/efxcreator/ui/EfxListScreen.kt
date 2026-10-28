@@ -236,6 +236,7 @@ fun EfxListScreen(
                 val targetShow = addTargetShowId
                 viewModel.createProjectsFromMusic(uris, options) { projectId ->
                     setsViewModel.rememberSongPalette(projectId, paletteId)
+                    setsViewModel.rememberSongEffectSet(projectId, effectId)
                     targetShow?.let { showViewModel.addSong(it, projectId) }
                 }
             },

@@ -33,6 +33,12 @@ class SetsViewModel(application: Application) : AndroidViewModel(application) {
     fun songPaletteSetId(projectId: String): String =
         prefs.getSongPaletteSetId(projectId) ?: prefs.lastPaletteSetId
 
+    fun songEffectSetId(projectId: String): String =
+        prefs.getSongEffectSetId(projectId) ?: prefs.lastEffectSetId
+
+    fun rememberSongEffectSet(projectId: String, effectSetId: String?) =
+        prefs.setSongEffectSetId(projectId, effectSetId.orEmpty())
+
     fun rememberSongPalette(projectId: String, paletteSetId: String?) =
         prefs.setSongPaletteSetId(projectId, paletteSetId.orEmpty())
 

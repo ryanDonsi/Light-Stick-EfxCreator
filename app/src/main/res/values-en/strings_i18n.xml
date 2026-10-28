@@ -422,4 +422,8 @@
     <string name="label_broadcasting">Broadcasting mode</string>
     <string name="label_transit">Transition time</string>
     <string name="label_period">Period</string>
+    <string name="song_info_palette">Palette</string>
+    <string name="song_info_effect_set">Effect set</string>
+    <string name="song_info_default">Default</string>
+    <string name="song_info_auto">Auto</string>
 </resources>

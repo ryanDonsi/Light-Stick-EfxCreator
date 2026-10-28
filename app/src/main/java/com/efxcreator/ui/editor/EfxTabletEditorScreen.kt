@@ -160,6 +160,8 @@ fun EfxTabletEditorScreen(
     val saving by editVm.saving.collectAsState()
     val effectSets by setsVm.effectSets.collectAsState()
     val paletteSets by setsVm.paletteSets.collectAsState()
+    // 곡별 세트 선택은 설정값이라 상태가 아니므로, 적용할 때마다 올려서 표시를 갱신한다
+    var songSetsRev by remember { mutableIntStateOf(0) }
 
     val bleConnected by bleVm.connected.collectAsState()
     val patterns by patternsVm.patterns.collectAsState()
@@ -390,6 +392,8 @@ fun EfxTabletEditorScreen(
                             .padding(8.dp)
                     ) {
                         TimelineToolbar(
+                            paletteSet = songSetsRev.let { paletteSets.firstOrNull { it.id == setsVm.songPaletteSetId(projectId) } },
+                            effectSetName = effectSets.firstOrNull { it.id == setsVm.songEffectSetId(projectId) }?.name,
                             snapToBeats = snapToBeats,
                             showBeats = showBeats,
                             followPlayhead = followPlayhead,
@@ -601,12 +605,14 @@ fun EfxTabletEditorScreen(
             confirmLabel = Loc.str(R.string.efx_edit_screen_5),
             effectSets = effectSets,
             paletteSets = paletteSets,
-            initialEffectId = setsVm.lastEffectSetId,
+            initialEffectId = setsVm.songEffectSetId(projectId),
             initialPaletteId = setsVm.songPaletteSetId(projectId),
             confirmEnabled = ready && !analyzing,
             onConfirm = { effectId, paletteId ->
                 val options = setsVm.rememberSelection(effectId, paletteId)
                 setsVm.rememberSongPalette(projectId, paletteId)
+                setsVm.rememberSongEffectSet(projectId, effectId)
+                songSetsRev++
                 editVm.applySets(options, if (scopeIndex < 0) null else scopeIndex)
                 showApplyDialog = false
             },
@@ -791,6 +797,8 @@ private fun EditorTopBar(
 
 @Composable
 private fun TimelineToolbar(
+    paletteSet: com.efxcreator.music.sets.PaletteSet?,
+    effectSetName: String?,
     snapToBeats: Boolean,
     showBeats: Boolean,
     followPlayhead: Boolean,
@@ -803,7 +811,50 @@ private fun TimelineToolbar(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(Loc.str(R.string.efx_tablet_editor_screen_26), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(16.dp))
+        // 이 곡에 적용된 팔레트 / 이펙트 세트
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    Loc.str(R.string.song_info_palette),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(6.dp))
+                paletteSet?.colors?.forEach { c ->
+                    Box(
+                        Modifier
+                            .padding(end = 3.dp)
+                            .size(12.dp)
+                            .background(Color(c.r, c.g, c.b), androidx.compose.foundation.shape.CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, androidx.compose.foundation.shape.CircleShape)
+                    )
+                }
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    paletteSet?.name ?: Loc.str(R.string.song_info_default),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    Loc.str(R.string.song_info_effect_set),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    effectSetName ?: Loc.str(R.string.song_info_auto),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
         FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_27)) })
         Spacer(Modifier.width(8.dp))
         FilterChip(selected = snapToBeats, onClick = { onSnapChange(!snapToBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_28)) })

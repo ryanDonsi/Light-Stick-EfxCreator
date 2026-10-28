@@ -422,4 +422,8 @@
     <string name="label_broadcasting">ブロードキャストモード</string>
     <string name="label_transit">切り替え時間</string>
     <string name="label_period">周期</string>
+    <string name="song_info_palette">パレット</string>
+    <string name="song_info_effect_set">エフェクトセット</string>
+    <string name="song_info_default">デフォルト</string>
+    <string name="song_info_auto">自動</string>
 </resources>

@@ -51,6 +51,11 @@ class PreferencesManager(context: Context) {
     fun setSongPaletteSetId(projectId: String, paletteSetId: String) =
         prefs.edit().putString("song_palette_$projectId", paletteSetId).apply()
 
+    fun getSongEffectSetId(projectId: String): String? = prefs.getString("song_effect_set_$projectId", null)
+
+    fun setSongEffectSetId(projectId: String, effectSetId: String) =
+        prefs.edit().putString("song_effect_set_$projectId", effectSetId).apply()
+
     var lastPaletteSetId: String
         get() = prefs.getString("last_palette_set_id", "") ?: ""
         set(value) = prefs.edit().putString("last_palette_set_id", value).apply()

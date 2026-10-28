@@ -422,4 +422,8 @@
     <string name="label_broadcasting">브로드캐스팅 모드</string>
     <string name="label_transit">전환 시간</string>
     <string name="label_period">주기</string>
+    <string name="song_info_palette">팔레트</string>
+    <string name="song_info_effect_set">이펙트 세트</string>
+    <string name="song_info_default">기본</string>
+    <string name="song_info_auto">자동</string>
 </resources>
