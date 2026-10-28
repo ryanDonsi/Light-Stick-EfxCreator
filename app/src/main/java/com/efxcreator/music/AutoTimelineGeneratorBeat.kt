@@ -180,7 +180,7 @@ class AutoTimelineGeneratorBeat {
         val sectionGroups = groupAnnotatedBeats(annotated, input.durationMs)
         val musicStyle = MusicStyleClassifier.MusicStyle.valueOf(input.musicStyle)
 
-        val engine = EffectMatchingEngineRouter.createEngine(options.ruleSet)
+        val engine = EffectMatchingEngineRouter.createEngine(options.ruleSet, options.patterns)
         val palette = options.paletteSet?.let { engine.buildCustomPalette(it) }
             ?: engine.buildPalette(musicId, musicStyle)
 

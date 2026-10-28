@@ -67,7 +67,9 @@ interface EffectMatchingEngine {
         // CHORUS 전용 순환색. colorGroup(5개, 빈도 균등화용)을 그대로 쓰면 사이사이 간격이
         // 좁은 색도 섞여서 "탁탁 튀는" 느낌이 약해진다 — CHORUS는 간격이 가장 큰 3개만
         // 골라 전환마다 또렷이 달라지도록 white 포함 4개로 미리 계산해 둔다.
-        val chorusColors: List<LSColor>
+        val chorusColors: List<LSColor>,
+        // 이펙트 라이브러리의 색 역할(대표색, 보조색1~3)에 해당하는 4색 — 사용자 팔레트 세트면 그 색 그대로
+        val roleColors: List<LSColor> = emptyList()
     )
 
     data class ColorSet(val fg: LSColor, val bg: LSColor)

@@ -63,7 +63,8 @@ fun PaletteStrip(colors: List<RgbColor>, modifier: Modifier = Modifier, swatchSi
 /** 섹션별 규칙 한 줄 요약 */
 fun EffectRuleSet.summary(): String =
     SetCatalog.EDITABLE_SECTIONS.joinToString("  ·  ") { (key, label) ->
-        "$label ${SetCatalog.patternLabel(rules[key])}"
+        val n = casesFor(key).size
+        if (n > 0) "$label 조건 ${n}개" else "$label ${SetCatalog.patternLabel(rules[key])}"
     }
 
 /**

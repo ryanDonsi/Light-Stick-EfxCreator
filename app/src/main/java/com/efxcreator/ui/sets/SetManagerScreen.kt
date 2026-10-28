@@ -44,6 +44,8 @@ import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.music.sets.RgbColor
 import com.efxcreator.music.sets.SetCatalog
 import com.efxcreator.ui.editor.SlimVerticalScrollBar
+import com.efxcreator.ui.activityViewModel
+import com.efxcreator.viewmodel.PatternsViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 
 /** 편집 중인 세트 (isNew 이면 "추가" 제목) */
@@ -70,7 +72,12 @@ private fun SetPanelHeader(title: String, onAdd: () -> Unit) {
  * 내장 세트는 읽기 전용이고, "복제"해서 내 세트로 만든 뒤 수정할 수 있다.
  */
 @Composable
-fun EffectSetsPanel(viewModel: SetsViewModel = viewModel(), modifier: Modifier = Modifier) {
+fun EffectSetsPanel(
+    viewModel: SetsViewModel = viewModel(),
+    modifier: Modifier = Modifier,
+    patternsVm: PatternsViewModel = activityViewModel()
+) {
+    val patterns by patternsVm.patterns.collectAsState()
     val effectSets by viewModel.effectSets.collectAsState()
     var editing by remember { mutableStateOf<Editing<EffectRuleSet>?>(null) }
     var deleting by remember { mutableStateOf<EffectRuleSet?>(null) }
@@ -121,6 +128,7 @@ fun EffectSetsPanel(viewModel: SetsViewModel = viewModel(), modifier: Modifier =
         EffectSetEditorDialog(
             initial = e.value,
             isNew = e.isNew,
+            patterns = patterns,
             onSave = {
                 viewModel.saveEffectSet(it)
                 editing = null

@@ -18,6 +18,22 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
+import com.efxcreator.ui.editor.formatBeatsLabel
+import com.efxcreator.ui.components.NumberTextField
+import com.efxcreator.music.sets.RuleCase
+import com.efxcreator.music.effect.EffectMatchingEngine.FgEngine
+import com.efxcreator.model.EffectPattern
+import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Checkbox
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -184,17 +200,30 @@ private fun ChannelSlider(label: String, value: Int, onChange: (Int) -> Unit) {
 }
 
 /**
- * 이펙트 세트(섹션별 규칙) 추가/수정. 규칙을 지정하지 않은 섹션("자동")은 기본 동작을 따른다.
+ * 이펙트 세트(섹션별 규칙) 추가/수정.
+ * 섹션마다 "자동"(엔진 기본 동작)이거나, 직접 지정한 규칙 목록을 쓴다. 규칙은 조건(마디 에너지, 섹션 에너지, 곡 분위기)과
+ * 이펙트(엔진 기본 패턴 또는 이펙트 라이브러리의 이펙트)로 이뤄지고, 위에서부터 조건이 맞는 첫 규칙이 적용된다.
  */
 @Composable
 fun EffectSetEditorDialog(
     initial: EffectRuleSet,
     isNew: Boolean,
+    patterns: List<EffectPattern>,
     onSave: (EffectRuleSet) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initial.name) }
-    val rules = remember { mutableStateMapOf<String, String>().apply { putAll(initial.rules) } }
+    // 섹션 -> 규칙 목록 (비어 있으면 "자동")
+    val sections = remember {
+        mutableStateMapOf<String, List<RuleCase>>().apply {
+            SetCatalog.EDITABLE_SECTIONS.forEach { (key, _) ->
+                val list = initial.casesFor(key).ifEmpty {
+                    initial.rules[key]?.let { listOf(RuleCase(it)) }.orEmpty()
+                }
+                if (list.isNotEmpty()) put(key, list)
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -202,9 +231,9 @@ fun EffectSetEditorDialog(
         text = {
             Column(
                 modifier = Modifier
-                    .width(460.dp)
+                    .width(560.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
                     value = name,
@@ -214,17 +243,18 @@ fun EffectSetEditorDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "섹션마다 사용할 패턴을 고르세요. 곡의 비트·섹션 분석 결과 위에 이 규칙이 적용됩니다.",
+                    "섹션마다 \"자동\"(아래에 표시된 기본 동작) 또는 직접 정한 규칙을 씁니다. " +
+                        "규칙은 마디/섹션 에너지 같은 조건에 따라 이펙트를 고르며, 이펙트 라이브러리에서 만든 이펙트도 쓸 수 있습니다.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 SetCatalog.EDITABLE_SECTIONS.forEach { (key, label) ->
-                    PatternRow(
+                    SectionRuleCard(
+                        sectionKey = key,
                         sectionLabel = label,
-                        patternName = rules[key],
-                        onSelect = { selected ->
-                            if (selected == null) rules.remove(key) else rules[key] = selected
-                        }
+                        cases = sections[key].orEmpty(),
+                        patterns = patterns,
+                        onChange = { list -> if (list.isEmpty()) sections.remove(key) else sections[key] = list }
                     )
                 }
             }
@@ -232,44 +262,242 @@ fun EffectSetEditorDialog(
         confirmButton = {
             TextButton(
                 enabled = name.isNotBlank(),
-                onClick = { onSave(initial.copy(name = name.trim(), rules = rules.toMap(), builtIn = false)) }
+                onClick = {
+                    // 조건 없이 엔진 기본 패턴 하나뿐인 섹션은 예전 형식(rules)으로, 나머지는 조건부 규칙(cases)으로 저장한다
+                    val rules = mutableMapOf<String, String>()
+                    val cases = mutableMapOf<String, List<RuleCase>>()
+                    sections.forEach { (key, list) ->
+                        val only = list.singleOrNull()
+                        if (only != null && !only.hasCondition && only.engine != null) rules[key] = only.effect
+                        else cases[key] = list
+                    }
+                    onSave(initial.copy(name = name.trim(), rules = rules, cases = cases.ifEmpty { null }, builtIn = false))
+                }
             ) { Text("저장") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
     )
 }
 
+/** 섹션 하나의 규칙 편집: 자동/직접 지정 전환, 기본 동작 표시, 규칙 목록 */
 @Composable
-private fun PatternRow(sectionLabel: String, patternName: String?, onSelect: (String?) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val description = SetCatalog.PATTERNS.firstOrNull { it.engine.name == patternName }?.description
-        ?: "기본 규칙을 따릅니다."
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(sectionLabel, modifier = Modifier.width(110.dp), style = MaterialTheme.typography.bodyMedium)
-        Column(modifier = Modifier.weight(1f)) {
-            Box {
-                OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(SetCatalog.patternLabel(patternName), modifier = Modifier.weight(1f))
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(text = { Text("자동 (기본)") }, onClick = {
-                        onSelect(null)
-                        expanded = false
-                    })
-                    SetCatalog.PATTERNS.forEach { p ->
-                        DropdownMenuItem(
-                            text = { Text("${p.label} — ${p.description}") },
-                            onClick = {
-                                onSelect(p.engine.name)
-                                expanded = false
+private fun SectionRuleCard(
+    sectionKey: String,
+    sectionLabel: String,
+    cases: List<RuleCase>,
+    patterns: List<EffectPattern>,
+    onChange: (List<RuleCase>) -> Unit
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(sectionLabel, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                FilterChip(
+                    selected = cases.isEmpty(),
+                    onClick = { onChange(emptyList()) },
+                    label = { Text("자동") }
+                )
+                Spacer(Modifier.width(8.dp))
+                FilterChip(
+                    selected = cases.isNotEmpty(),
+                    onClick = {
+                        if (cases.isEmpty()) {
+                            val start = SetCatalog.DEFAULT_RULES[sectionKey] ?: FgEngine.BREATH.name
+                            onChange(listOf(RuleCase(start)))
+                        }
+                    },
+                    label = { Text("직접 지정") }
+                )
+            }
+            // 자동일 때 엔진이 실제로 하는 동작
+            Text(
+                "자동: " + (SetCatalog.DEFAULT_BEHAVIOR[sectionKey] ?: "-"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (cases.isNotEmpty()) {
+                cases.forEachIndexed { i, case ->
+                    CaseEditor(
+                        index = i,
+                        case = case,
+                        count = cases.size,
+                        patterns = patterns,
+                        onChange = { c -> onChange(cases.toMutableList().also { it[i] = c }) },
+                        onMove = { delta ->
+                            val j = i + delta
+                            if (j in cases.indices) {
+                                onChange(cases.toMutableList().also { val t = it[i]; it[i] = it[j]; it[j] = t })
                             }
-                        )
+                        },
+                        onDelete = { onChange(cases.toMutableList().also { it.removeAt(i) }) }
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onChange(cases + RuleCase(FgEngine.BREATH.name)) }) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("규칙 추가")
+                    }
+                    if (sectionKey == "VERSE") {
+                        TextButton(onClick = { onChange(SetCatalog.DEFAULT_VERSE_CASES) }) { Text("기본 동작으로 채우기") }
                     }
                 }
+                Text(
+                    "위에서부터 조건이 맞는 첫 규칙이 쓰입니다. 조건이 없는 규칙은 \"그 외 모두\"이고, 맞는 규칙이 없으면 자동 동작을 따릅니다.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Text(description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+@Composable
+private fun CaseEditor(
+    index: Int,
+    case: RuleCase,
+    count: Int,
+    patterns: List<EffectPattern>,
+    onChange: (RuleCase) -> Unit,
+    onMove: (Int) -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("규칙 ${index + 1}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = { onMove(-1) }, enabled = index > 0) {
+                    Icon(Icons.Default.ArrowUpward, contentDescription = "위로")
+                }
+                IconButton(onClick = { onMove(1) }, enabled = index < count - 1) {
+                    Icon(Icons.Default.ArrowDownward, contentDescription = "아래로")
+                }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "규칙 삭제") }
+            }
+            EffectChoice(case.effect, patterns) { onChange(case.copy(effect = it)) }
+
+            // 조건: 곡 분위기
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("곡 분위기", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(76.dp))
+                listOf(null to "전체", "BALLAD" to "발라드·힙합/R&B", "NON_BALLAD" to "그 외").forEach { (key, label) ->
+                    FilterChip(selected = case.mood == key, onClick = { onChange(case.copy(mood = key)) }, label = { Text(label) })
+                }
+            }
+            // 조건: 마디 에너지 / 섹션 에너지
+            EnergyCondition(
+                label = "마디 에너지",
+                hint = "섹션 안에서의 순위 (100% = 가장 센 마디)",
+                min = case.minBarEnergy, max = case.maxBarEnergy,
+                onChange = { mn, mx -> onChange(case.copy(minBarEnergy = mn, maxBarEnergy = mx)) }
+            )
+            EnergyCondition(
+                label = "섹션 에너지",
+                hint = "곡 전체 섹션 중 상대 에너지 (100% = 가장 센 섹션)",
+                min = case.minSectionEnergy, max = case.maxSectionEnergy,
+                onChange = { mn, mx -> onChange(case.copy(minSectionEnergy = mn, maxSectionEnergy = mx)) }
+            )
+            Text(
+                case.describe(patterns),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/** 에너지 범위 조건: 체크하면 이상/이하(%) 입력칸이 나타난다 */
+@Composable
+private fun EnergyCondition(label: String, hint: String, min: Int?, max: Int?, onChange: (Int?, Int?) -> Unit) {
+    val enabled = min != null || max != null
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = enabled, onCheckedChange = { on -> if (on) onChange(50, null) else onChange(null, null) })
+            Text(label, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.width(8.dp))
+            Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (enabled) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 40.dp)
+            ) {
+                NumberTextField(
+                    value = min ?: 0, onValueChange = { onChange(it, max) },
+                    label = "이상 (%)", range = 0..100, modifier = Modifier.width(110.dp)
+                )
+                Text("~", style = MaterialTheme.typography.bodyMedium)
+                NumberTextField(
+                    value = max ?: 100, onValueChange = { onChange(min, it) },
+                    label = "이하 (%)", range = 0..100, modifier = Modifier.width(110.dp)
+                )
+            }
+        }
+    }
+}
+
+/** 이펙트 선택: 엔진 기본 패턴 + 이펙트 라이브러리의 이펙트 */
+@Composable
+private fun EffectChoice(effect: String, patterns: List<EffectPattern>, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(effectLabel(effect, patterns), modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text(
+                "엔진 기본 패턴", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+            SetCatalog.PATTERNS.forEach { info ->
+                DropdownMenuItem(
+                    text = { Column { Text(info.label); Text(info.description, style = MaterialTheme.typography.labelSmall) } },
+                    onClick = { onSelect(info.engine.name); expanded = false }
+                )
+            }
+            if (patterns.isNotEmpty()) {
+                HorizontalDivider()
+                Text(
+                    "이펙트 라이브러리", style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+                patterns.forEach { p ->
+                    DropdownMenuItem(
+                        text = { Column { Text(p.name); Text("${p.steps.size}단계 · ${formatBeatsLabel(p.totalBeatsTenths)}", style = MaterialTheme.typography.labelSmall) } },
+                        onClick = { onSelect(RuleCase.library(p.id)); expanded = false }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun effectLabel(effect: String, patterns: List<EffectPattern>): String {
+    if (effect.startsWith(RuleCase.PATTERN_PREFIX)) {
+        val id = effect.removePrefix(RuleCase.PATTERN_PREFIX)
+        return patterns.firstOrNull { it.id == id }?.let { "라이브러리 · ${it.name}" } ?: "(삭제된 이펙트)"
+    }
+    return SetCatalog.patternLabel(effect)
+}
+
+/** "마디 에너지 80% 이상 · 비발라드 → BLINK" */
+fun RuleCase.describe(patterns: List<EffectPattern>): String {
+    val conds = buildList {
+        if (minBarEnergy != null || maxBarEnergy != null) add("마디 에너지 ${rangeText(minBarEnergy, maxBarEnergy)}")
+        if (minSectionEnergy != null || maxSectionEnergy != null) add("섹션 에너지 ${rangeText(minSectionEnergy, maxSectionEnergy)}")
+        when (mood) { "BALLAD" -> add("발라드·힙합/R&B"); "NON_BALLAD" -> add("발라드 외") }
+    }
+    val target = effectLabel(effect, patterns)
+    return if (conds.isEmpty()) "그 외 모두 → $target" else conds.joinToString(" · ") + " → $target"
+}
+
+private fun rangeText(min: Int?, max: Int?): String = when {
+    min != null && max != null -> "$min~$max%"
+    min != null -> "$min% 이상"
+    else -> "$max% 이하"
 }

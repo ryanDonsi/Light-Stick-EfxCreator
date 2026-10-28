@@ -1,5 +1,6 @@
 package com.efxcreator.music.effect
 
+import com.efxcreator.model.EffectPattern
 import com.efxcreator.music.sets.EffectRuleSet
 
 /**
@@ -10,5 +11,6 @@ import com.efxcreator.music.sets.EffectRuleSet
  */
 object EffectMatchingEngineRouter {
 
-    fun createEngine(ruleSet: EffectRuleSet? = null): EffectMatchingEngine = EffectMatchingEngineV1(ruleSet)
+    fun createEngine(ruleSet: EffectRuleSet? = null, patterns: List<EffectPattern> = emptyList()): EffectMatchingEngine =
+        EffectMatchingEngineV1(ruleSet, patterns)
 }

@@ -73,11 +73,15 @@ object PatternColors {
 object PatternResolver {
 
     /** 단계 하나의 페이로드. 색은 [palette] 로 풀고, [broadcasting] 은 기기의 Broadcasting Mode 값 */
-    fun payload(step: PatternStep, palette: PaletteSet?, broadcasting: Int = 1): LSEffectPayload {
+    fun payload(step: PatternStep, palette: PaletteSet?, broadcasting: Int = 1): LSEffectPayload =
+        payloadWith(step, broadcasting) { ref -> PatternColors.resolve(ref, palette) }
+
+    /** 색 역할(화이트, 보조색1 …)을 [resolve] 로 풀어 단계 하나의 페이로드를 만든다 (자동 생성 엔진도 이 방식으로 쓴다) */
+    fun payloadWith(step: PatternStep, broadcasting: Int = 1, resolve: (String) -> RgbColor): LSEffectPayload {
         val type = step.effectType
-        val fg = if (type == EffectType.OFF) RgbColor(0, 0, 0) else PatternColors.resolve(step.fg, palette)
+        val fg = if (type == EffectType.OFF) RgbColor(0, 0, 0) else resolve(step.fg)
         val twoColor = type == EffectType.BLINK || type == EffectType.BREATH || type == EffectType.STROBE
-        val bg = if (twoColor) PatternColors.resolve(step.bg, palette) else RgbColor(0, 0, 0)
+        val bg = if (twoColor) resolve(step.bg) else RgbColor(0, 0, 0)
         return LSEffectPayload(
             effectType = type, color = fg.toLs(), backgroundColor = bg.toLs(),
             period = step.frames, spf = step.spf, fade = step.fade,

@@ -2,7 +2,9 @@ package com.efxcreator.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import com.efxcreator.data.PatternRepository
 import com.efxcreator.data.PreferencesManager
+import com.efxcreator.model.BuiltInPatterns
 import com.efxcreator.data.SetRepository
 import com.efxcreator.music.sets.EffectRuleSet
 import com.efxcreator.music.sets.GenerationOptions
@@ -68,6 +70,8 @@ class SetsViewModel(application: Application) : AndroidViewModel(application) {
     fun rememberSelection(effectSetId: String?, paletteSetId: String?): GenerationOptions {
         prefs.lastEffectSetId = effectSetId.orEmpty()
         prefs.lastPaletteSetId = paletteSetId.orEmpty()
-        return repository.resolveOptions(effectSetId, paletteSetId)
+        // 조건부 규칙이 이펙트 라이브러리의 이펙트를 가리킬 수 있으므로 함께 넘긴다
+        val patterns = BuiltInPatterns.ALL + PatternRepository(getApplication()).load().filterNot { it.builtIn }
+        return repository.resolveOptions(effectSetId, paletteSetId).copy(patterns = patterns)
     }
 }

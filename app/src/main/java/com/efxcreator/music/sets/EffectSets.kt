@@ -1,5 +1,6 @@
 package com.efxcreator.music.sets
 
+import com.efxcreator.model.EffectPattern
 import com.efxcreator.music.effect.EffectMatchingEngine.FgEngine
 import com.efxcreator.music.effect.EffectMatchingEngineV1
 import com.lightstick.types.Color as LSColor
@@ -41,16 +42,61 @@ data class EffectRuleSet(
     val id: String,
     val name: String,
     val rules: Map<String, String>,
-    val builtIn: Boolean = false
+    val builtIn: Boolean = false,
+    /**
+     * 섹션 종류별 조건부 규칙 (key = SectionType 이름). 위에서부터 조건이 맞는 첫 규칙이 쓰인다.
+     * 이 섹션에 규칙이 있으면 [rules] 의 단일 패턴보다 우선한다. (이전 버전에서 저장한 세트에는 없으므로 null 일 수 있다)
+     */
+    val cases: Map<String, List<RuleCase>>? = null
 ) {
     fun patternFor(sectionType: String): FgEngine? =
         rules[sectionType]?.let { runCatching { FgEngine.valueOf(it) }.getOrNull() }
+
+    fun casesFor(sectionType: String): List<RuleCase> = cases?.get(sectionType).orEmpty()
+}
+
+/**
+ * 조건부 규칙 하나: 모든 조건이 맞으면 [effect] 를 쓴다. 조건이 하나도 없으면 "그 외 모두" 이다.
+ * [effect] 는 엔진 기본 패턴 이름([FgEngine]) 이거나 이펙트 라이브러리의 이펙트("pattern:<id>").
+ *
+ * 에너지는 모두 0~100(%) 의 상대값이다.
+ * - 마디 에너지: 섹션 안의 마디들 중 이 마디의 순위 (100 에 가까울수록 섹션에서 가장 센 마디)
+ * - 섹션 에너지: 곡 전체 섹션들 중 이 섹션의 상대 에너지
+ */
+data class RuleCase(
+    val effect: String,
+    val minBarEnergy: Int? = null,
+    val maxBarEnergy: Int? = null,
+    val minSectionEnergy: Int? = null,
+    val maxSectionEnergy: Int? = null,
+    /** null = 모든 곡, "BALLAD" = 발라드 계열만, "NON_BALLAD" = 그 외 */
+    val mood: String? = null
+) {
+    val patternId: String? get() = effect.removePrefix(PATTERN_PREFIX).takeIf { effect.startsWith(PATTERN_PREFIX) }
+    val engine: FgEngine? get() = if (patternId != null) null else runCatching { FgEngine.valueOf(effect) }.getOrNull()
+    val hasCondition: Boolean
+        get() = minBarEnergy != null || maxBarEnergy != null || minSectionEnergy != null ||
+            maxSectionEnergy != null || mood != null
+
+    fun matches(barEnergyPct: Int, sectionEnergyPct: Int, ballad: Boolean): Boolean =
+        (minBarEnergy == null || barEnergyPct >= minBarEnergy) &&
+            (maxBarEnergy == null || barEnergyPct <= maxBarEnergy) &&
+            (minSectionEnergy == null || sectionEnergyPct >= minSectionEnergy) &&
+            (maxSectionEnergy == null || sectionEnergyPct <= maxSectionEnergy) &&
+            (mood == null || (mood == "BALLAD") == ballad)
+
+    companion object {
+        const val PATTERN_PREFIX = "pattern:"
+        fun library(patternId: String) = "$PATTERN_PREFIX$patternId"
+    }
 }
 
 /** 자동 생성/세트 적용 시 선택한 세트. null 이면 기본 동작(자동). */
 data class GenerationOptions(
     val ruleSet: EffectRuleSet? = null,
-    val paletteSet: PaletteSet? = null
+    val paletteSet: PaletteSet? = null,
+    /** 조건부 규칙이 가리키는 이펙트 라이브러리의 이펙트들 (기본 제공 + 사용자) */
+    val patterns: List<EffectPattern> = emptyList()
 )
 
 /** 편집 가능한 패턴(FgEngine) 설명 */
@@ -81,6 +127,24 @@ object SetCatalog {
     fun patternLabel(engineName: String?): String =
         PATTERNS.firstOrNull { it.engine.name == engineName }?.label ?: "자동"
 
+    /** 섹션 종류별로 엔진이 "자동" 일 때 하는 동작 (이펙트 세트 편집 화면에 보여 준다) */
+    val DEFAULT_BEHAVIOR: Map<String, String> = mapOf(
+        "INTRO" to "BREATH (호흡)",
+        "VERSE" to "발라드·힙합/R&B: BREATH(마디마다 색 순환). 그 외: 마디 에너지가 섹션 안에서 상위 20%(80% 이상)면 BLINK, 나머지는 ON_PULSE(2박마다)",
+        "CHORUS" to "ON_TRANSIT_ROTATE (박마다 색 회전)",
+        "BRIDGE" to "BREATH (호흡)",
+        "BREAK" to "FREEZE (한 색 고정)",
+        "OUTRO" to "OFF_TRANSIT (서서히 꺼짐)",
+        "END" to "OFF_TRANSIT (꺼짐)"
+    )
+
+    /** 벌스의 기본 동작을 조건부 규칙으로 옮긴 것 (에너지에 따라 BLINK / ON_PULSE) */
+    val DEFAULT_VERSE_CASES: List<RuleCase> = listOf(
+        RuleCase(FgEngine.BREATH.name, mood = "BALLAD"),
+        RuleCase(FgEngine.BLINK.name, minBarEnergy = 80),
+        RuleCase(FgEngine.ON_PULSE.name)
+    )
+
     /** 엔진의 기본 동작과 같은 규칙 (새 세트를 만들 때의 출발점) */
     val DEFAULT_RULES: Map<String, String> = mapOf(
         "INTRO" to FgEngine.BREATH.name,
@@ -93,6 +157,12 @@ object SetCatalog {
     )
 
     val BUILT_IN_RULE_SETS: List<EffectRuleSet> = listOf(
+        EffectRuleSet(
+            "builtin_energy", "에너지 반응 (벌스 BLINK / ON_PULSE)",
+            DEFAULT_RULES - "VERSE",
+            builtIn = true,
+            cases = mapOf("VERSE" to DEFAULT_VERSE_CASES)
+        ),
         EffectRuleSet(
             "builtin_calm", "차분 (호흡 위주)",
             DEFAULT_RULES + mapOf(

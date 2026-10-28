@@ -5,7 +5,10 @@ import com.efxcreator.music.style.MusicStyleClassifier
 
 import com.efxcreator.core.AppConstants
 import com.efxcreator.core.Log
+import com.efxcreator.model.EffectPattern
+import com.efxcreator.model.PatternResolver
 import com.efxcreator.music.sets.EffectRuleSet
+import com.efxcreator.music.sets.RgbColor
 import com.efxcreator.music.sets.PaletteSet
 import com.lightstick.types.Color as LSColor
 import com.lightstick.types.LSEffectPayload
@@ -90,7 +93,11 @@ private val BLUE_PURE_SHADE    = LSColor(0, 0, 122)     // 순수 파랑 셰이�
  * EffectMatchingEngineV1 - 섹션 타입 기반 이펙트 매칭 엔진
  * 섹션 타입별 이펙트 엔진 할당 (ON_PULSE / BREATH / ON_TRANSIT_ROTATE 등)
  */
-class EffectMatchingEngineV1(private val ruleSet: EffectRuleSet? = null) : EffectMatchingEngine {
+class EffectMatchingEngineV1(
+    private val ruleSet: EffectRuleSet? = null,
+    /** 조건부 규칙이 가리키는 이펙트 라이브러리의 이펙트들 */
+    private val patterns: List<EffectPattern> = emptyList()
+) : EffectMatchingEngine {
 
     companion object {
         private const val TAG = AppConstants.Feature.AUTO_TIMELINE
@@ -299,7 +306,8 @@ class EffectMatchingEngineV1(private val ruleSet: EffectRuleSet? = null) : Effec
             chorusBg    = cDeep, colorGroup = colorGroup,
             verseBlinkBg = verseBlinkBg,
             verseBlinkFgCycle = verseBlinkFgCycle,
-            chorusColors = chorusColors
+            chorusColors = chorusColors,
+            roleColors = listOf(cMain, cStep1, cStep2, cStep3)
         )
     }
 
@@ -444,9 +452,49 @@ class EffectMatchingEngineV1(private val ruleSet: EffectRuleSet? = null) : Effec
             val verseEnergyBlinkCutoff =
                 if (verseBarEnergy.isNotEmpty()) percentile(verseBarEnergy.values.toList(), 0.80f) else 0f
 
+            // ── 사용자 조건부 규칙(이펙트 세트의 "조건별") 준비 ──
+            // 마디 에너지는 섹션 안의 마디들 사이의 순위(%)로 비교한다 (100 에 가까울수록 섹션에서 센 마디).
+            val cases = ruleSet?.casesFor(section.type.name).orEmpty()
+            val barEnergyAll: Map<Int, Float> =
+                if (cases.any { it.minBarEnergy != null || it.maxBarEnergy != null } && barMs > 0L) {
+                    effectiveBeats.map { barIndexAt(it, downbeatMs, section.beatMs, beatsPerBar) }.distinct()
+                        .associateWith { barIdx ->
+                            val barStartMs = downbeatMs + barIdx.toLong() * barMs
+                            computeGroupEnergy(barStartMs, barStartMs + barMs, fullEnv, durationMs, hopMs)
+                        }
+                } else emptyMap()
+            fun barRankPct(barIdx: Int): Int {
+                val e = barEnergyAll[barIdx] ?: return 0
+                return Math.round(barEnergyAll.values.count { it <= e } * 100f / barEnergyAll.size)
+            }
+            val sectionEnergyPct = Math.round(section.relScore * 100f)
+            var patternBusyUntil = Long.MIN_VALUE      // 이펙트 라이브러리 이펙트가 차지하고 있는 구간의 끝
+            var lastPatternBytes: ByteArray? = null    // 한 단계짜리 이펙트가 같은 내용으로 반복될 때 건너뛰기 위함
+
             for ((beatIndex, t) in effectiveBeats.withIndex()) {
                 val barIdx = barIndexAt(t, downbeatMs, section.beatMs, beatsPerBar)
-                val beatEngine = when {
+
+                var caseEngine: EffectMatchingEngine.FgEngine? = null
+                if (cases.isNotEmpty()) {
+                    val matched = cases.firstOrNull { it.matches(barRankPct(barIdx), sectionEnergyPct, isBalladMode) }
+                    val pattern = matched?.patternId?.let { id -> patterns.firstOrNull { it.id == id } }
+                    if (pattern != null) {
+                        // 이펙트 라이브러리의 이펙트: 이 박에서 시작해 단계들을 박자 길이에 맞춰 넣는다.
+                        // 이미 앞선 이펙트가 진행 중인 박은 건너뛴다.
+                        if (t < patternBusyUntil) continue
+                        val frames = patternFrames(pattern, t, section.endMs, section.beatMs, palette)
+                        lastRepeatKey = null
+                        val single = frames.singleOrNull()?.second
+                        val same = pattern.steps.size == 1 && single != null && lastPatternBytes?.contentEquals(single) == true
+                        if (!same) frames.forEach { (ft, bytes) -> put(ft, bytes) }
+                        lastPatternBytes = if (pattern.steps.size == 1) single else null
+                        patternBusyUntil = t + PatternResolver.totalDurationMs(pattern, section.beatMs)
+                        patternLastFg(pattern, palette)?.let { lastFg = it }
+                        continue
+                    }
+                    caseEngine = matched?.engine
+                }
+                val beatEngine = caseEngine ?: when {
                     section.type == SectionDetector.SectionType.BRIDGE &&
                         ruleEngine(SectionDetector.SectionType.BRIDGE) == null ->
                         bridgePhaseEngine()
@@ -551,6 +599,40 @@ class EffectMatchingEngineV1(private val ruleSet: EffectRuleSet? = null) : Effec
 
         return frameMap.entries.sortedBy { it.key }.map { it.key to it.value }
     }
+
+    /** 이펙트 라이브러리 이펙트의 색 역할(화이트/검정/대표색/보조색1~3)을 엔진 팔레트의 색으로 푼다 */
+    private fun roleColor(ref: String, palette: EffectMatchingEngine.Palette): RgbColor {
+        val c = when (ref) {
+            "WHITE" -> palette.white
+            "BLACK" -> palette.black
+            "P0" -> palette.roleColors.getOrNull(0)
+            "P1" -> palette.roleColors.getOrNull(1)
+            "P2" -> palette.roleColors.getOrNull(2)
+            "P3" -> palette.roleColors.getOrNull(3)
+            else -> null
+        } ?: palette.white
+        return RgbColor(c.r, c.g, c.b)
+    }
+
+    /** 이펙트 라이브러리 이펙트를 [startMs] 부터 단계별 프레임으로 펼친다 (섹션 끝을 넘는 단계는 버린다) */
+    private fun patternFrames(
+        pattern: EffectPattern, startMs: Long, endLimitMs: Long, beatMs: Long,
+        palette: EffectMatchingEngine.Palette
+    ): List<Pair<Long, ByteArray>> {
+        var t = startMs
+        val out = ArrayList<Pair<Long, ByteArray>>(pattern.steps.size)
+        for (step in pattern.steps) {
+            if (t >= endLimitMs) break
+            out += t to PatternResolver.payloadWith(step, broadcasting = 0) { roleColor(it, palette) }.toByteArray()
+            t += PatternResolver.durationMs(step, beatMs)
+        }
+        return out
+    }
+
+    /** OUTRO 페이드가 이어받을 "마지막으로 떠 있던 색": 이펙트의 단계 중 검정이 아닌 마지막 색 */
+    private fun patternLastFg(pattern: EffectPattern, palette: EffectMatchingEngine.Palette): LSColor? =
+        pattern.steps.lastOrNull { it.effectType != com.lightstick.types.EffectType.OFF && it.fg != "BLACK" }
+            ?.let { step -> roleColor(step.fg, palette).let { LSColor(it.r, it.g, it.b) } }
 
     private fun scaleColor(c: LSColor, factor: Float): LSColor {
         val f = factor.coerceIn(0f, 1f)
