@@ -426,14 +426,14 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             onProgress = { _otaProgress.value = it },
             onResult = { r ->
                 _otaProgress.value = null
-                _message.value = if (r.isSuccess) "펌웨어 업그레이드가 완료되었습니다."
-                else "펌웨어 업그레이드에 실패했습니다: ${r.exceptionOrNull()?.message}"
+                _message.value = if (r.isSuccess) "펌웨어 업데이트가 완료되었습니다."
+                else "펌웨어 업데이트에 실패했습니다: ${r.exceptionOrNull()?.message}"
                 refreshInfo()
             }
         )
         if (!ok) {
             _otaProgress.value = null
-            _message.value = "펌웨어 업그레이드를 시작할 수 없습니다."
+            _message.value = "펌웨어 업데이트를 시작할 수 없습니다."
         }
     }
 

@@ -37,7 +37,7 @@ import kotlin.math.roundToInt
 
 /**
  * 디바이스(응원봉) 연결/관리 UI — 메인 화면 상단, 에디터 상단, 설정의 "디바이스 관리" 가 함께 쓴다.
- * 관리 메뉴(디바이스 정보 / 기기찾기 / 그룹 배정 / 펌웨어 업그레이드)는 Light-Stick-Music 의 디바이스 상세 화면을 가져왔다.
+ * 관리 메뉴(디바이스 정보 / 기기찾기 / 그룹 배정 / 펌웨어 업데이트)는 Light-Stick-Music 의 디바이스 상세 화면을 가져왔다.
  */
 
 /** 화면이 바뀌어도 연결 상태가 같도록 Activity 범위의 [BleViewModel] 을 쓴다 */
@@ -300,7 +300,7 @@ private fun InfoLine(label: String, value: String) {
     }
 }
 
-/** 관리 메뉴: 디바이스 정보 / 기기찾기 / 그룹 배정 / 펌웨어 업그레이드 (Light-Stick-Music 의 연결된 기기 화면과 같은 구성) */
+/** 관리 메뉴: 디바이스 정보 / 기기찾기 / 그룹 배정 / 펌웨어 업데이트 (Light-Stick-Music 의 연결된 기기 화면과 같은 구성) */
 @Composable
 fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     val info by bleVm.info.collectAsState()
@@ -354,9 +354,9 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("펌웨어 업그레이드", style = MaterialTheme.typography.titleSmall)
+                    Text("펌웨어 업데이트", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        if (otaRunning) "펌웨어 업그레이드 중 (${otaProgress}%)" else "펌웨어 업그레이드를 진행",
+                        if (otaRunning) "펌웨어 업데이트 중 (${otaProgress}%)" else "펌웨어 업데이트를 진행",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -368,9 +368,9 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
                         )
-                    ) { Text("업그레이드 중지") }
+                    ) { Text("업데이트 중지") }
                 } else {
-                    FilledTonalButton(onClick = { firmwarePicker.launch("*/*") }) { Text("업그레이드") }
+                    FilledTonalButton(onClick = { firmwarePicker.launch("*/*") }) { Text("업데이트") }
                 }
             }
             otaProgress?.let { LinearProgressIndicator(progress = { it / 100f }, modifier = Modifier.fillMaxWidth()) }
@@ -416,7 +416,7 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                 text = {
                     Text(
                         "$name\n현재 버전: ${check.deviceVersion.ifEmpty { "-" }} → 새 버전: " +
-                            "${check.fileVersion ?: "확인 불가"}\n업그레이드를 진행하시겠습니까?"
+                            "${check.fileVersion ?: "확인 불가"}\n업데이트를 진행하시겠습니까?"
                     )
                 },
                 confirmButton = { TextButton(onClick = { bleVm.startOta() }) { Text("확인") } },
