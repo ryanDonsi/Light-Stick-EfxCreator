@@ -74,6 +74,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -451,13 +453,18 @@ fun EfxTabletEditorScreen(
                 }
 
                 // 우측: Preview + 재생 + 선택 이펙트
-                Box(modifier = Modifier.width(320.dp).fillMaxHeight()) {
+                androidx.compose.foundation.layout.BoxWithConstraints(modifier = Modifier.width(320.dp).fillMaxHeight()) {
+                // 선택 이펙트 패널 하단을 좌측 라이브러리 하단과 맞추기 위해, 남는 높이를 패널 최소 높이로 준다
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                var previewHeightPx by remember { mutableStateOf(0) }
+                val selectedMinHeight = with(density) { (maxHeight - previewHeightPx.toDp() - 8.dp).coerceAtLeast(0.dp) }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rightScroll),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Box(Modifier.onSizeChanged { previewHeightPx = it.height }) {
                     PreviewPanel(
                         player = player,
                         entries = entries,
@@ -476,7 +483,9 @@ fun EfxTabletEditorScreen(
                         },
                         onSeek = { seek(it) }
                     )
+                    }
                     SelectedEntryPanel(
+                        modifier = Modifier.heightIn(min = selectedMinHeight),
                         entry = entries.getOrNull(selectedIndex),
                         onEdit = { entries.getOrNull(selectedIndex)?.let { editVm.startEditingEntry(selectedIndex, it) } },
                         onDelete = {
@@ -892,12 +901,13 @@ private fun PreviewPanel(
 
 @Composable
 private fun SelectedEntryPanel(
+    modifier: Modifier = Modifier,
     entry: EfxEntry?,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             // 선택/해제로 행이 늘고 줄 때 패널 높이가 부드럽게 바뀐다
             .animateContentSize(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
