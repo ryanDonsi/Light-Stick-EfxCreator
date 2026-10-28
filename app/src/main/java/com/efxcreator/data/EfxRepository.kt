@@ -512,6 +512,27 @@ class EfxRepository(private val context: Context) {
     /**
      * 현재 EFX 저장 위치 정보
      */
+    /**
+     * 폴더 선택기가 돌려준 트리 URI 를 사람이 읽을 수 있는 경로로 바꾼다.
+     * 내장 저장소는 `/storage/emulated/0/Music/하위폴더`, SD 카드는 `/storage/XXXX-XXXX/폴더` 처럼 보여 주고,
+     * 그 외 제공자(다운로드, 클라우드 등)는 경로를 알 수 없어 폴더 이름만 보여 준다.
+     */
+    private fun describeTreeUri(uriString: String): String = try {
+        val uri = Uri.parse(uriString)
+        val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)   // 예: "primary:Music/Sub"
+        val volume = docId.substringBefore(':')
+        val relative = docId.substringAfter(':', "")
+        if (uri.authority == "com.android.externalstorage.documents") {
+            val root = if (volume == "primary") "/storage/emulated/0" else "/storage/$volume"
+            if (relative.isEmpty()) root else "$root/$relative"
+        } else {
+            DocumentFile.fromTreeUri(context, uri)?.name ?: uriString
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error describing tree uri", e)
+        DocumentFile.fromTreeUri(context, Uri.parse(uriString))?.name ?: "알 수 없는 위치"
+    }
+
     fun getEfxStorageInfo(): String {
         val path = prefs.efxStoragePath
 
@@ -520,14 +541,7 @@ class EfxRepository(private val context: Context) {
                 "기본: ${context.filesDir.absolutePath}"
             }
             path.startsWith("content://") -> {
-                try {
-                    val uri = Uri.parse(path)
-                    val documentFile = DocumentFile.fromTreeUri(context, uri)
-                    documentFile?.name?.let { "사용자 지정: $it" } ?: "사용자 지정"
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error getting DocumentFile name", e)
-                    "사용자 지정"
-                }
+                "사용자 지정: ${describeTreeUri(path)}"
             }
             else -> {
                 "사용자 지정: $path"
@@ -546,14 +560,7 @@ class EfxRepository(private val context: Context) {
                 "기본: ${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath}"
             }
             path.startsWith("content://") -> {
-                try {
-                    val uri = Uri.parse(path)
-                    val documentFile = DocumentFile.fromTreeUri(context, uri)
-                    documentFile?.name?.let { "사용자 지정: $it" } ?: "사용자 지정"
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error getting DocumentFile name", e)
-                    "사용자 지정"
-                }
+                "사용자 지정: ${describeTreeUri(path)}"
             }
             else -> {
                 "사용자 지정: $path"
