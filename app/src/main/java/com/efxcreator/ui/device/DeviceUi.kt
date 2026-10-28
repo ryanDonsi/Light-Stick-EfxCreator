@@ -447,7 +447,7 @@ fun DeviceInfoDialog(name: String, model: String, firmware: String, manufacturer
         title = { Text("디바이스 정보") },
         text = {
             Column(modifier = Modifier.width(320.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf("Name" to name, "Model" to model, "Firmware" to firmware, "Manufacturer" to manufacturer)
+                listOf("기기명" to name, "모델명" to model, "펌웨어 버전" to firmware, "제조사" to manufacturer)
                     .forEach { (k, v) ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(k, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
