@@ -512,9 +512,31 @@ class EfxRepository(private val context: Context) {
     /**
      * 현재 EFX 저장 위치 정보
      */
+    /** 설정 > 휴대폰 정보의 "기기 이름" (예: "상인의 Tab S9"). 없으면 모델명 */
+    private fun deviceName(): String =
+        runCatching { android.provider.Settings.Global.getString(context.contentResolver, android.provider.Settings.Global.DEVICE_NAME) }
+            .getOrNull()?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL
+
+    /** 저장소 루트 이름: 내장 저장소는 기기 이름, SD 카드 등은 시스템이 붙인 볼륨 이름 */
+    private fun volumeLabel(volumeId: String): String {
+        if (volumeId == "primary") return deviceName()
+        return runCatching {
+            val sm = context.getSystemService(Context.STORAGE_SERVICE) as android.os.storage.StorageManager
+            sm.storageVolumes.firstOrNull { it.uuid.equals(volumeId, ignoreCase = true) }?.getDescription(context)
+        }.getOrNull() ?: volumeId
+    }
+
+    /** "/storage/emulated/0/Music/Effects" → "상인의 Tab S9 > Music > Effects" (파일 선택기의 표시와 비슷하게) */
+    private fun friendlyPath(absolutePath: String): String {
+        val internalRoot = "/storage/emulated/0"
+        if (absolutePath != internalRoot && !absolutePath.startsWith("$internalRoot/")) return absolutePath
+        val parts = absolutePath.removePrefix(internalRoot).split('/').filter { it.isNotEmpty() }
+        return (listOf(deviceName()) + parts).joinToString(" > ")
+    }
+
     /**
      * 폴더 선택기가 돌려준 트리 URI 를 사람이 읽을 수 있는 경로로 바꾼다.
-     * 내장 저장소는 `/storage/emulated/0/Music/하위폴더`, SD 카드는 `/storage/XXXX-XXXX/폴더` 처럼 보여 주고,
+     * 내장 저장소는 `기기이름 > Music > Effects`, SD 카드는 `SD 카드 이름 > 폴더` 처럼 보여 주고,
      * 그 외 제공자(다운로드, 클라우드 등)는 경로를 알 수 없어 폴더 이름만 보여 준다.
      */
     private fun describeTreeUri(uriString: String): String = try {
@@ -523,8 +545,7 @@ class EfxRepository(private val context: Context) {
         val volume = docId.substringBefore(':')
         val relative = docId.substringAfter(':', "")
         if (uri.authority == "com.android.externalstorage.documents") {
-            val root = if (volume == "primary") "/storage/emulated/0" else "/storage/$volume"
-            if (relative.isEmpty()) root else "$root/$relative"
+            (listOf(volumeLabel(volume)) + relative.split('/').filter { it.isNotEmpty() }).joinToString(" > ")
         } else {
             DocumentFile.fromTreeUri(context, uri)?.name ?: uriString
         }
@@ -544,7 +565,7 @@ class EfxRepository(private val context: Context) {
                 "사용자 지정: ${describeTreeUri(path)}"
             }
             else -> {
-                "사용자 지정: $path"
+                "사용자 지정: ${friendlyPath(path)}"
             }
         }
     }
@@ -557,13 +578,13 @@ class EfxRepository(private val context: Context) {
 
         return when {
             path == "default_music" || path.isEmpty() -> {
-                "기본: ${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath}"
+                "기본: ${friendlyPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath)}"
             }
             path.startsWith("content://") -> {
                 "사용자 지정: ${describeTreeUri(path)}"
             }
             else -> {
-                "사용자 지정: $path"
+                "사용자 지정: ${friendlyPath(path)}"
             }
         }
     }
