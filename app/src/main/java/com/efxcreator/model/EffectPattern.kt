@@ -115,13 +115,13 @@ object PatternResolver {
  */
 object BuiltInPatterns {
     val ALL: List<EffectPattern> = listOf(
-        // 박자 시작에 대표색을 짧게(0.3박) 켰다가, 나머지 0.7박 동안 검정으로 Transit 3 만에 꺼지며 강조
+        // 엔진의 ON_PULSE 는 2박마다 한 번 울린다: 대표색을 짧게(0.3박) 켰다가, 나머지 1.7박 동안 검정으로 Transit 3 만에 꺼진 채 유지
         EffectPattern(
             id = "builtin_on_pulse", name = "펄스", builtIn = true,
-            description = "박자마다 짧게 켜졌다 돌아오는 강조 (ON_PULSE)",
+            description = "2박에 걸쳐 짧게 켜졌다 꺼지는 강조 (ON_PULSE)",
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 3, fg = PatternColors.MAIN, frames = 0),
-                PatternStep(type = "ON", beatsTenths = 7, fg = PatternColors.BLACK, frames = 3)
+                PatternStep(type = "ON", beatsTenths = 17, fg = PatternColors.BLACK, frames = 3)
             )
         ),
         // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 2.5초 한 사이클 @SPF 100)

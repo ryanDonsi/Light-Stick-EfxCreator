@@ -146,7 +146,7 @@ fun EffectPatternsPanel(
                             Text("이펙트 묶음 만들기", style = MaterialTheme.typography.titleSmall)
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "예) ON_PULSE = ① ON 0.3박(화이트) → ② ON 0.7박(보조색1, Transit 3). " +
+                                "예) 펄스 = ① ON 0.3박(대표색) → ② ON 1.7박(검정, Transit 3). " +
                                     "길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. " +
                                     "기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.",
                                 style = MaterialTheme.typography.bodySmall,
@@ -297,7 +297,7 @@ fun PatternEditorDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("이름 (예: ON_PULSE)") },
+                    label = { Text("이름 (예: 펄스)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
