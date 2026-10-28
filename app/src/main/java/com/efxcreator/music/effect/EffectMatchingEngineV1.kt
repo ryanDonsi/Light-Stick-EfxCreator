@@ -499,10 +499,7 @@ class EffectMatchingEngineV1(private val ruleSet: EffectRuleSet? = null) : Effec
 
                 val skipRepeat = if (skipOnPulseOdd) {
                     true
-                } else if (effectiveEngine == EffectMatchingEngine.FgEngine.ON_TRANSIT_ROTATE
-                    || effectiveEngine == EffectMatchingEngine.FgEngine.BLINK   // 깜빡임은 기기가 계속 반복하므로 같은 속성이면 첫 박에만 보낸다
-                    || effectiveEngine == EffectMatchingEngine.FgEngine.BREATH
-                    || effectiveEngine == EffectMatchingEngine.FgEngine.FREEZE) {
+                } else if (effectiveEngine.keepsRunning) {   // 기기가 상태를 유지하는 패턴은 같은 속성이면 첫 박에만 보낸다
                     val key = RepeatKey(effectiveEngine,
                         fg.r, fg.g, fg.b, bgNonNull.r, bgNonNull.g, bgNonNull.b,
                         beatPeriod ?: 0, beatRandomDelay ?: 0)

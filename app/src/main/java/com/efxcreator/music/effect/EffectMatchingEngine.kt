@@ -29,7 +29,22 @@ interface EffectMatchingEngine {
     // 공통 데이터 클래스 및 enum
     // =========================================================================
 
-    enum class FgEngine { ON_PULSE, BLINK, BREATH, ON_TRANSIT_ROTATE, OFF_TRANSIT, FREEZE }
+    /**
+     * 박자마다 쓰는 이펙트 패턴.
+     *
+     * [keepsRunning] = 기기가 명령 한 번으로 그 상태(켜 둠 / 깜빡임 / 호흡 등)를 계속 유지하는가.
+     * true 이면 같은 속성(색, 배경색, Period, Random Delay)이 이어지는 동안 첫 박에만 보내고 나머지 박은 건너뛴다.
+     * false 이면(예: 박마다 ON → OFF 를 보내야 하는 ON_PULSE) 매 박 보낸다.
+     * 새 패턴을 추가할 때는 이 값을 반드시 정해야 한다 (기본값이 없다).
+     */
+    enum class FgEngine(val keepsRunning: Boolean) {
+        ON_PULSE(keepsRunning = false),
+        BLINK(keepsRunning = true),
+        BREATH(keepsRunning = true),
+        ON_TRANSIT_ROTATE(keepsRunning = true),
+        OFF_TRANSIT(keepsRunning = false),
+        FREEZE(keepsRunning = true)
+    }
     enum class ChangeLevel { MEDIUM, STRONG }
 
     data class Palette(
