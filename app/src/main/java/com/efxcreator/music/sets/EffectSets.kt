@@ -183,7 +183,7 @@ object SetCatalog {
 
     val BUILT_IN_RULE_SETS: List<EffectRuleSet> = listOf(
         EffectRuleSet(
-            "builtin_energy", "에너지 반응 (벌스 BLINK / ON_PULSE)",
+            "builtin_energy", "에너지 반응 (벌스 블링크·펄스)",
             DEFAULT_RULES - "VERSE",
             builtIn = true,
             cases = mapOf("VERSE" to DEFAULT_VERSE_CASES)
@@ -203,15 +203,6 @@ object SetCatalog {
                 "BRIDGE" to FgEngine.ON_PULSE.name,
                 "VERSE" to FgEngine.ON_PULSE.name,
                 "CHORUS" to FgEngine.ON_TRANSIT_ROTATE.name
-            ),
-            builtIn = true
-        ),
-        EffectRuleSet(
-            "builtin_blink", "블링크 위주",
-            DEFAULT_RULES + mapOf(
-                "VERSE" to FgEngine.BLINK.name,
-                "CHORUS" to FgEngine.BLINK.name,
-                "BRIDGE" to FgEngine.BLINK.name
             ),
             builtIn = true
         )
