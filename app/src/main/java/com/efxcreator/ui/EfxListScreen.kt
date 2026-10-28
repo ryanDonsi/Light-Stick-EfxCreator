@@ -235,6 +235,7 @@ fun EfxListScreen(
                 // 곡이 하나 만들어질 때마다 선택해 둔 공연에 바로 추가한다
                 val targetShow = addTargetShowId
                 viewModel.createProjectsFromMusic(uris, options) { projectId ->
+                    setsViewModel.rememberSongPalette(projectId, paletteId)
                     targetShow?.let { showViewModel.addSong(it, projectId) }
                 }
             },

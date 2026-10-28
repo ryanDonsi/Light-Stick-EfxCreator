@@ -29,6 +29,13 @@ class SetsViewModel(application: Application) : AndroidViewModel(application) {
     val lastEffectSetId: String get() = prefs.lastEffectSetId
     val lastPaletteSetId: String get() = prefs.lastPaletteSetId
 
+    /** 곡에 마지막으로 적용한 팔레트 세트 id. 기록이 없으면 마지막으로 고른 팔레트 세트. */
+    fun songPaletteSetId(projectId: String): String =
+        prefs.getSongPaletteSetId(projectId) ?: prefs.lastPaletteSetId
+
+    fun rememberSongPalette(projectId: String, paletteSetId: String?) =
+        prefs.setSongPaletteSetId(projectId, paletteSetId.orEmpty())
+
     private fun reload() {
         _effectSets.value = repository.allEffectSets()
         _paletteSets.value = repository.allPaletteSets()

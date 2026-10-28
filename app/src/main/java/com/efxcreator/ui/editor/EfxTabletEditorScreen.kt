@@ -293,8 +293,9 @@ fun EfxTabletEditorScreen(
                 Toast.makeText(context, Loc.str(R.string.efx_tablet_editor_screen_1), Toast.LENGTH_SHORT).show()
                 return
             }
-            // 색 역할은 마지막으로 쓴 팔레트 세트로 풀어 넣는다 (선택한 적이 없으면 기본 팔레트)
-            val palette = setsVm.paletteSets.value.firstOrNull { it.id == setsVm.lastPaletteSetId }
+            // 색 역할은 현재 곡에 적용된 팔레트 세트로 풀어 넣는다 (없으면 기본 팔레트)
+            val songPaletteId = setsVm.songPaletteSetId(projectId)
+            val palette = setsVm.paletteSets.value.firstOrNull { it.id == songPaletteId }
             pendingSelectTs = ts
             // 시작 위치부터 이펙트 길이(비트 수)만큼의 기존 엔트리는 새 이펙트로 교체된다
             val beatMs = beatLengthAt(ts)
@@ -601,10 +602,11 @@ fun EfxTabletEditorScreen(
             effectSets = effectSets,
             paletteSets = paletteSets,
             initialEffectId = setsVm.lastEffectSetId,
-            initialPaletteId = setsVm.lastPaletteSetId,
+            initialPaletteId = setsVm.songPaletteSetId(projectId),
             confirmEnabled = ready && !analyzing,
             onConfirm = { effectId, paletteId ->
                 val options = setsVm.rememberSelection(effectId, paletteId)
+                setsVm.rememberSongPalette(projectId, paletteId)
                 editVm.applySets(options, if (scopeIndex < 0) null else scopeIndex)
                 showApplyDialog = false
             },

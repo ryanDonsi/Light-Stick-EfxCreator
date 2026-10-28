@@ -45,6 +45,12 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString("last_effect_set_id", "") ?: ""
         set(value) = prefs.edit().putString("last_effect_set_id", value).apply()
 
+    // 곡별로 마지막에 적용한 팔레트 세트 id (없으면 null)
+    fun getSongPaletteSetId(projectId: String): String? = prefs.getString("song_palette_$projectId", null)
+
+    fun setSongPaletteSetId(projectId: String, paletteSetId: String) =
+        prefs.edit().putString("song_palette_$projectId", paletteSetId).apply()
+
     var lastPaletteSetId: String
         get() = prefs.getString("last_palette_set_id", "") ?: ""
         set(value) = prefs.edit().putString("last_palette_set_id", value).apply()
