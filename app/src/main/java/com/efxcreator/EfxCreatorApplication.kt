@@ -1,11 +1,21 @@
 package com.efxcreator
 
 import android.app.Application
+import android.content.Context
+import com.efxcreator.core.Loc
+import com.efxcreator.core.LocaleHelper
 import android.util.Log
 import com.lightstick.LSBluetooth
 import com.lightstick.config.DeviceFilter
 
 class EfxCreatorApplication : Application() {
+
+    // 저장된 표시 언어(자동 = 시스템 언어)를 앱 전체에 적용한다
+    override fun attachBaseContext(base: Context) {
+        val wrapped = LocaleHelper.wrap(base)
+        super.attachBaseContext(wrapped)
+        Loc.init(this)
+    }
 
     override fun onCreate() {
         super.onCreate()

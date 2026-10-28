@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
@@ -296,6 +297,17 @@ fun SettingsScreen(
                         SettingsSection.EFFECT_LIBRARY -> EffectPatternsPanel(modifier = Modifier.fillMaxSize())
                         SettingsSection.EFFECT_SETS -> EffectSetsPanel(modifier = Modifier.fillMaxSize())
                         SettingsSection.PALETTE_SETS -> PaletteSetsPanel(modifier = Modifier.fillMaxSize())
+                        SettingsSection.LANGUAGE -> {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("언어 설정", style = MaterialTheme.typography.titleMedium)
+                                }
+                                LanguageSettingsContent(Modifier.fillMaxSize())
+                            }
+                        }
                     }
                 }
             }
@@ -309,7 +321,8 @@ enum class SettingsSection(val route: String, val label: String, val subtitle: S
     DEVICE("device", "디바이스 관리", "응원봉 검색 · 연결 · 관리", Icons.Default.Bluetooth),
     EFFECT_LIBRARY("library", "이펙트 라이브러리", "박자 단위 이펙트 묶음 만들기", Icons.Default.Layers),
     EFFECT_SETS("effect", "이펙트 세트", "섹션별 이펙트 규칙", Icons.Default.AutoAwesome),
-    PALETTE_SETS("palette", "팔레트 세트", "자동 생성에 쓰는 색 조합", Icons.Default.Palette);
+    PALETTE_SETS("palette", "팔레트 세트", "자동 생성에 쓰는 색 조합", Icons.Default.Palette),
+    LANGUAGE("language", "언어 설정", "자동 · 한국어 · English · 日本語 · 简体中文", Icons.Default.Language);
 
     companion object {
         fun from(route: String?): SettingsSection = entries.firstOrNull { it.route == route } ?: STORAGE
