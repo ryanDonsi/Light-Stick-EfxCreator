@@ -17,7 +17,7 @@ data class EffectPreset(
     val type: EffectType,
     val color: Color,
     val backgroundColor: Color = Color(0, 0, 0),
-    /** 프레임 수 (1프레임 = 1000/[spf] ms). ON/OFF 에서는 전환(transit) 시간, 그 외에는 이펙트 주기 */
+    /** 프레임 수 (1프레임 = [spf] ms). ON/OFF 에서는 전환(transit) 시간, 그 외에는 이펙트 주기 */
     val period: Int = 0,
     val spf: Int = 100,
     val fade: Int = 100,
