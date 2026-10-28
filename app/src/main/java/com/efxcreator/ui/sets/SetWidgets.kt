@@ -42,6 +42,8 @@ import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.music.sets.RgbColor
 import com.efxcreator.music.sets.SetCatalog
 import kotlin.math.roundToInt
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 fun RgbColor.toComposeColor(): Color = Color(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
 
@@ -64,7 +66,7 @@ fun PaletteStrip(colors: List<RgbColor>, modifier: Modifier = Modifier, swatchSi
 fun EffectRuleSet.summary(): String =
     SetCatalog.EDITABLE_SECTIONS.joinToString("  ·  ") { (key, label) ->
         val n = casesFor(key).size
-        if (n > 0) "$label 조건 ${n}개" else "$label ${SetCatalog.patternLabel(rules[key])}"
+        if (n > 0) Loc.str(R.string.set_widgets_1, label, n) else "$label ${SetCatalog.patternLabel(rules[key])}"
     }
 
 /**
@@ -149,8 +151,8 @@ fun SetSelectionDialog(
             ) {
                 Column {
                     SetDropdown(
-                        label = "이펙트 세트",
-                        autoLabel = "자동 (기본 규칙)",
+                        label = Loc.str(R.string.settings_screen_19),
+                        autoLabel = Loc.str(R.string.set_manager_screen_2),
                         items = effectSets,
                         selectedId = effectId,
                         idOf = { it.id },
@@ -159,15 +161,15 @@ fun SetSelectionDialog(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        selectedEffect?.summary() ?: "곡의 섹션·에너지에 따라 기본 규칙으로 패턴을 고릅니다.",
+                        selectedEffect?.summary() ?: Loc.str(R.string.set_widgets_2),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Column {
                     SetDropdown(
-                        label = "팔레트 세트",
-                        autoLabel = "자동 (장르·곡 기반)",
+                        label = Loc.str(R.string.settings_screen_21),
+                        autoLabel = Loc.str(R.string.set_manager_screen_4),
                         items = paletteSets,
                         selectedId = paletteId,
                         idOf = { it.id },
@@ -179,20 +181,20 @@ fun SetSelectionDialog(
                         PaletteStrip(selectedPalette.colors)
                     } else {
                         Text(
-                            "장르에 어울리는 색 계열을 곡마다 자동으로 고릅니다.",
+                            Loc.str(R.string.set_widgets_3),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
                 extraContent()
-                TextButton(onClick = onManageSets) { Text("세트 관리…") }
+                TextButton(onClick = onManageSets) { Text(Loc.str(R.string.set_widgets_4)) }
             }
         },
         confirmButton = {
             TextButton(enabled = confirmEnabled, onClick = { onConfirm(effectId, paletteId) }) { Text(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
     )
 }
 

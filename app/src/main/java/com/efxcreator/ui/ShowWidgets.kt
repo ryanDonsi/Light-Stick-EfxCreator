@@ -63,10 +63,11 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import com.efxcreator.core.Loc
 
 /** "2025.03.14 (금) 19:30" */
 fun formatShowDate(ms: Long): String =
-    SimpleDateFormat("yyyy.MM.dd (E) HH:mm", Locale.KOREA).format(Date(ms))
+    SimpleDateFormat("yyyy.MM.dd (E) HH:mm", Locale.getDefault()).format(Date(ms))
 
 /** [maxPx] 정도 크기로 줄여서 읽는다 (목록용 썸네일이라 원본 해상도가 필요 없다) */
 private fun decodeSampled(open: () -> InputStream?, maxPx: Int): Bitmap? {
@@ -113,7 +114,7 @@ fun ShowImage(
     ) {
         val bmp = bitmap
         if (bmp != null) {
-            Image(bmp, contentDescription = "공연 이미지", contentScale = ContentScale.Crop, modifier = Modifier.size(size))
+            Image(bmp, contentDescription = Loc.str(R.string.show_widgets_1), contentScale = ContentScale.Crop, modifier = Modifier.size(size))
         } else {
             // 기본 이미지: 검은 바탕에 GLOWSYNC 로고
             Image(
@@ -165,29 +166,29 @@ fun ShowEditDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("공연 이름") },
+                    label = { Text(Loc.str(R.string.show_widgets_2)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 // 공연 일시
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("공연 일시", style = MaterialTheme.typography.labelMedium)
+                    Text(Loc.str(R.string.show_widgets_3), style = MaterialTheme.typography.labelMedium)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { showDatePicker = true }) {
                             Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text(performanceAt?.let { formatShowDate(it) } ?: "일시 선택")
+                            Text(performanceAt?.let { formatShowDate(it) } ?: Loc.str(R.string.show_widgets_4))
                         }
                         if (performanceAt != null) {
-                            TextButton(onClick = { performanceAt = null }) { Text("지우기") }
+                            TextButton(onClick = { performanceAt = null }) { Text(Loc.str(R.string.show_widgets_5)) }
                         }
                     }
                 }
 
                 // 공연 이미지
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("공연 이미지", style = MaterialTheme.typography.labelMedium)
+                    Text(Loc.str(R.string.show_widgets_1), style = MaterialTheme.typography.labelMedium)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         ShowImage(
                             imagePath = if (removeImage) null else initial?.imagePath,
@@ -198,13 +199,13 @@ fun ShowEditDialog(
                             OutlinedButton(onClick = { imagePicker.launch("image/*") }) {
                                 Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (hasCustomImage) "이미지 변경" else "이미지 선택")
+                                Text(if (hasCustomImage) Loc.str(R.string.show_widgets_6) else Loc.str(R.string.show_widgets_7))
                             }
                             if (hasCustomImage) {
-                                TextButton(onClick = { pickedImage = null; removeImage = true }) { Text("기본 이미지로") }
+                                TextButton(onClick = { pickedImage = null; removeImage = true }) { Text(Loc.str(R.string.show_widgets_8)) }
                             }
                             Text(
-                                "지정하지 않으면 GLOWSYNC 이미지가 쓰입니다.",
+                                Loc.str(R.string.show_widgets_9),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -218,7 +219,7 @@ fun ShowEditDialog(
                 Text(confirmLabel)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
     )
 
     if (showDatePicker) {
@@ -243,9 +244,9 @@ fun ShowEditDialog(
                         showDatePicker = false
                         showTimePicker = true
                     }
-                ) { Text("다음") }
+                ) { Text(Loc.str(R.string.show_widgets_10)) }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         ) { DatePicker(state = dateState) }
     }
 
@@ -258,7 +259,7 @@ fun ShowEditDialog(
         )
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("공연 시간") },
+            title = { Text(Loc.str(R.string.show_widgets_11)) },
             text = { TimePicker(state = timeState) },
             confirmButton = {
                 TextButton(onClick = {
@@ -268,9 +269,9 @@ fun ShowEditDialog(
                         }.timeInMillis
                     }
                     showTimePicker = false
-                }) { Text("확인") }
+                }) { Text(Loc.str(R.string.efx_edit_screen_19)) }
             },
-            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 }
@@ -310,7 +311,7 @@ fun SongArt(musicUriString: String?, size: Dp, modifier: Modifier = Modifier) {
     ) {
         val bmp = bitmap
         if (bmp != null) {
-            Image(bmp, contentDescription = "앨범 이미지", contentScale = ContentScale.Crop, modifier = Modifier.size(size))
+            Image(bmp, contentDescription = Loc.str(R.string.show_widgets_12), contentScale = ContentScale.Crop, modifier = Modifier.size(size))
         } else {
             Icon(
                 Icons.Default.MusicNote,

@@ -3,6 +3,8 @@ package com.efxcreator.ui.editor
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.EffectType
 import kotlin.math.abs
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 타임라인의 "다음 이펙트까지" 구간 블록 */
 data class TimelineBlock(val index: Int, val startMs: Long, val endMs: Long, val entry: EfxEntry)
@@ -84,7 +86,7 @@ object TimelineMath {
     fun frameUnitLabel(spf: Int): String {
         val ms = frameMs(spf)
         val text = if (ms == ms.toLong().toFloat()) "${ms.toLong()}ms" else "%.1fms".format(ms)
-        return "1프레임 = $text (SPF $spf)"
+        return Loc.str(R.string.timeline_math_1, text, spf)
     }
 
     fun periodLabel(type: EffectType): String =
@@ -97,8 +99,8 @@ object TimelineMath {
      * - 그 외       = 켜진 비트의 GRPn 목록 (bit(n-1) = 그룹 n)
      */
     fun formatGroupMask(mask: Long): String = when (mask) {
-        0L -> "마스터 · 모든 그룹 (0)"
-        0xFFFFFFFFL -> "전체 그룹 지정 (0xFFFFFFFF)"
+        0L -> Loc.str(R.string.timeline_math_2)
+        0xFFFFFFFFL -> Loc.str(R.string.timeline_math_3)
         else -> {
             val groups = (0 until 32).filter { ((mask shr it) and 1L) == 1L }.map { "GRP${it + 1}" }
             "${groups.joinToString(", ")} (0x%08X)".format(mask)

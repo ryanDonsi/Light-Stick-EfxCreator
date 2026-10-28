@@ -65,6 +65,8 @@ import kotlin.math.roundToInt
 import com.efxcreator.model.EffectPattern
 import com.efxcreator.ui.theme.EfxMotion
 import com.lightstick.types.EffectType
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 라이브러리 카드를 타임라인으로 끌고 가는 동안의 드래그 상태 (윈도우 좌표) */
 class PresetDragState {
@@ -102,10 +104,10 @@ fun EffectLibraryPanel(
 
     Column(modifier = modifier.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("이펙트 라이브러리", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            Text(Loc.str(R.string.settings_screen_17), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
             Spacer(Modifier.width(12.dp))
             Text(
-                "탭 = 재생 위치에 추가 · 길게 눌러 끌기 = 원하는 위치에 놓기",
+                Loc.str(R.string.effect_library_panel_1),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -124,7 +126,7 @@ fun EffectLibraryPanel(
             if (category == EffectPreset.Category.USER) {
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "${patterns.size}개",
+                    Loc.str(R.string.effect_library_panel_2, patterns.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -132,7 +134,7 @@ fun EffectLibraryPanel(
                 // 이펙트의 추가/수정/삭제는 설정의 "이펙트 라이브러리" 에서 한다
                 AssistChip(
                     onClick = onManageEffects,
-                    label = { Text("이펙트 관리") },
+                    label = { Text(Loc.str(R.string.effect_library_panel_3)) },
                     leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 )
             }
@@ -151,7 +153,7 @@ fun EffectLibraryPanel(
             Box(modifier = Modifier.fillMaxSize()) {
                 if (presets.isEmpty()) {
                     Text(
-                        "설정 > 이펙트 라이브러리에서 이펙트를 만들면 여기에 나타납니다.",
+                        Loc.str(R.string.effect_library_panel_4),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(8.dp)

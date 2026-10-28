@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * 에디터용 간단한 음악 재생 컨트롤러 (MediaPlayer 기반).
@@ -54,7 +56,7 @@ class MusicPlayerController {
             }
             mp.setOnErrorListener { _, what, extra ->
                 Log.e(TAG, "MediaPlayer error what=$what extra=$extra")
-                error = "음악을 재생할 수 없습니다."
+                error = Loc.str(R.string.music_player_controller_1)
                 isPlaying = false
                 isReady = false
                 true
@@ -63,7 +65,7 @@ class MusicPlayerController {
             player = mp
         } catch (e: Exception) {
             Log.e(TAG, "load failed", e)
-            error = "음악을 불러올 수 없습니다: ${e.message}"
+            error = Loc.str(R.string.music_player_controller_2, e.message)
             release()
         }
     }

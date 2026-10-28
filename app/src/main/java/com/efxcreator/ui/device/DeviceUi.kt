@@ -34,6 +34,8 @@ import com.efxcreator.viewmodel.BleViewModel
 import com.lightstick.device.Device
 import com.lightstick.types.GroupPalette
 import kotlin.math.roundToInt
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * 디바이스(응원봉) 연결/관리 UI — 메인 화면 상단, 에디터 상단, 설정의 "디바이스 관리" 가 함께 쓴다.
@@ -75,7 +77,7 @@ fun DeviceStatusButton(bleVm: BleViewModel, onClick: () -> Unit, modifier: Modif
             Text(
                 connected?.let { d ->
                     (d.name ?: d.mac) + (battery?.let { " · $it%" } ?: "")
-                } ?: "디바이스 연결"
+                } ?: Loc.str(R.string.device_ui_1)
             )
         }
     )
@@ -125,7 +127,7 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
         if (result.values.all { it }) {
             if (scanAfterPermission) bleVm.startScan()
         } else {
-            Toast.makeText(context, "블루투스 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, Loc.str(R.string.device_ui_2), Toast.LENGTH_SHORT).show()
         }
         scanAfterPermission = false
     }
@@ -147,12 +149,12 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("디바이스 연결") },
+        title = { Text(Loc.str(R.string.device_ui_1)) },
         text = {
             Column(modifier = Modifier.width(380.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Button(onClick = { requestScan() }, enabled = !scanning) {
-                        Text(if (scanning) "검색 중…" else "기기 검색")
+                        Text(if (scanning) Loc.str(R.string.device_ui_3) else Loc.str(R.string.device_ui_4))
                     }
                     if (scanning) {
                         Spacer(Modifier.width(12.dp))
@@ -162,11 +164,7 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 if (hasScanned && !scanning && found.isEmpty()) {
                     Text(
-                        "검색된 응원봉이 없습니다. 아래를 확인해 주세요.\n" +
-                            "• 응원봉 전원이 켜져 있고 연결 대기(광고) 상태인지\n" +
-                            "• 다른 앱(Light Stick Music 등)이나 다른 기기에 이미 연결돼 있지 않은지 — 연결된 응원봉은 검색되지 않습니다\n" +
-                            "• 기기 이름이 LS / GL / RL 로 끝나는지\n" +
-                            "• 블루투스가 켜져 있는지 (Android 11 이하는 위치도)",
+                        Loc.str(R.string.device_ui_5),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -182,7 +180,7 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
                                 .padding(vertical = 10.dp)
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(device.name ?: "(이름 없음)", style = MaterialTheme.typography.bodyMedium)
+                                Text(device.name ?: Loc.str(R.string.device_ui_6), style = MaterialTheme.typography.bodyMedium)
                                 Text(
                                     device.mac,
                                     style = MaterialTheme.typography.labelSmall,
@@ -199,7 +197,7 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("닫기") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_6)) } }
     )
 }
 
@@ -219,7 +217,7 @@ fun DeviceManageDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("디바이스 관리") },
+        title = { Text(Loc.str(R.string.settings_screen_13)) },
         text = {
             Column(
                 modifier = Modifier.width(420.dp).verticalScroll(rememberScrollState()),
@@ -233,12 +231,12 @@ fun DeviceManageDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
                         contentColor = MaterialTheme.colorScheme.onError
                     ),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("연결 해제") }
+                ) { Text(Loc.str(R.string.device_ui_7)) }
                 HorizontalDivider()
                 DeviceManageMenu(bleVm)
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("닫기") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_6)) } }
     )
 
     if (confirmDisconnect) {
@@ -257,9 +255,9 @@ fun DeviceManageDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
 fun DisconnectConfirmDialog(deviceName: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        text = { Text("$deviceName 기기 연결을 해제할까요?") },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("확인") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+        text = { Text(Loc.str(R.string.device_ui_8, deviceName)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(Loc.str(R.string.efx_edit_screen_19)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
     )
 }
 
@@ -323,30 +321,30 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         MenuRow(
-            label = "디바이스 정보",
-            description = "기기의 정보를 확인",
+            label = Loc.str(R.string.device_ui_9),
+            description = Loc.str(R.string.device_ui_10),
             onClick = { bleVm.refreshInfo(); showInfo = true }
         )
         HorizontalDivider()
         ListItem(
             headlineContent = { Text("Broadcasting Mode", style = MaterialTheme.typography.titleSmall) },
             supportingContent = {
-                Text("연결된 주변 응원봉에 신호를 전파해 함께 동작", style = MaterialTheme.typography.bodySmall)
+                Text(Loc.str(R.string.device_ui_11), style = MaterialTheme.typography.bodySmall)
             },
             trailingContent = { Switch(checked = broadcasting, onCheckedChange = { bleVm.setBroadcasting(it) }) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
         HorizontalDivider()
         MenuRow(
-            label = "기기찾기",
-            description = "연결한 기기에 특정 이펙트를 전달하여 기기 찾기",
+            label = Loc.str(R.string.device_ui_12),
+            description = Loc.str(R.string.device_ui_13),
             onClick = { showFind = true }
         )
         HorizontalDivider()
         MenuRow(
-            label = "그룹 배정",
-            description = if (groupAllowed) "그룹 색상을 방송하여 응원봉을 그룹에 배정"
-            else "BLE Only 모드에서는 지원하지 않는 기능입니다",
+            label = Loc.str(R.string.device_ui_14),
+            description = if (groupAllowed) Loc.str(R.string.device_ui_15)
+            else Loc.str(R.string.device_ui_16),
             enabled = groupAllowed,
             onClick = { showGroup = true }
         )
@@ -354,9 +352,9 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("펌웨어 업데이트", style = MaterialTheme.typography.titleSmall)
+                    Text(Loc.str(R.string.device_ui_17), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        if (otaRunning) "펌웨어 업데이트 중 (${otaProgress}%)" else "펌웨어 업데이트를 진행",
+                        if (otaRunning) Loc.str(R.string.device_ui_18, otaProgress) else Loc.str(R.string.device_ui_19),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -368,9 +366,9 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
                         )
-                    ) { Text("업데이트 중지") }
+                    ) { Text(Loc.str(R.string.device_ui_20)) }
                 } else {
-                    FilledTonalButton(onClick = { firmwarePicker.launch("*/*") }) { Text("업데이트") }
+                    FilledTonalButton(onClick = { firmwarePicker.launch("*/*") }) { Text(Loc.str(R.string.device_ui_21)) }
                 }
             }
             otaProgress?.let { LinearProgressIndicator(progress = { it / 100f }, modifier = Modifier.fillMaxWidth()) }
@@ -389,9 +387,9 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     if (showFind) {
         AlertDialog(
             onDismissRequest = { showFind = false },
-            text = { Text("기기에 이펙트를 전송할까요?") },
-            confirmButton = { TextButton(onClick = { showFind = false; bleVm.sendFind() }) { Text("확인") } },
-            dismissButton = { TextButton(onClick = { showFind = false }) { Text("취소") } }
+            text = { Text(Loc.str(R.string.device_ui_22)) },
+            confirmButton = { TextButton(onClick = { showFind = false; bleVm.sendFind() }) { Text(Loc.str(R.string.efx_edit_screen_19)) } },
+            dismissButton = { TextButton(onClick = { showFind = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
     if (showGroup) {
@@ -407,20 +405,19 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
         if (check.fileVersion != null && !check.updateAvailable) {
             AlertDialog(
                 onDismissRequest = { bleVm.clearOtaCheck() },
-                text = { Text("$name(${check.deviceVersion})은\n최신 버전입니다.") },
-                confirmButton = { TextButton(onClick = { bleVm.clearOtaCheck() }) { Text("확인") } }
+                text = { Text(Loc.str(R.string.device_ui_23, name, check.deviceVersion)) },
+                confirmButton = { TextButton(onClick = { bleVm.clearOtaCheck() }) { Text(Loc.str(R.string.efx_edit_screen_19)) } }
             )
         } else {
             AlertDialog(
                 onDismissRequest = { bleVm.clearOtaCheck() },
                 text = {
                     Text(
-                        "$name\n현재 버전: ${check.deviceVersion.ifEmpty { "-" }} → 새 버전: " +
-                            "${check.fileVersion ?: "확인 불가"}\n업데이트를 진행하시겠습니까?"
+                        Loc.str(R.string.device_ui_25, name, check.deviceVersion.ifEmpty { "-" }, check.fileVersion ?: Loc.str(R.string.device_ui_24))
                     )
                 },
-                confirmButton = { TextButton(onClick = { bleVm.startOta() }) { Text("확인") } },
-                dismissButton = { TextButton(onClick = { bleVm.clearOtaCheck() }) { Text("취소") } }
+                confirmButton = { TextButton(onClick = { bleVm.startOta() }) { Text(Loc.str(R.string.efx_edit_screen_19)) } },
+                dismissButton = { TextButton(onClick = { bleVm.clearOtaCheck() }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
             )
         }
     }
@@ -444,10 +441,10 @@ private fun MenuRow(label: String, description: String, onClick: () -> Unit, ena
 fun DeviceInfoDialog(name: String, model: String, firmware: String, manufacturer: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("디바이스 정보") },
+        title = { Text(Loc.str(R.string.device_ui_9)) },
         text = {
             Column(modifier = Modifier.width(320.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf("기기명" to name, "모델명" to model, "펌웨어 버전" to firmware, "제조사" to manufacturer)
+                listOf(Loc.str(R.string.device_ui_26) to name, Loc.str(R.string.device_ui_27) to model, Loc.str(R.string.device_ui_28) to firmware, Loc.str(R.string.device_ui_29) to manufacturer)
                     .forEach { (k, v) ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(k, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -456,7 +453,7 @@ fun DeviceInfoDialog(name: String, model: String, firmware: String, manufacturer
                     }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("확인") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_19)) } }
     )
 }
 
@@ -475,20 +472,20 @@ fun GroupAssignDialog(
     var lastSent by remember { mutableStateOf<Int?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("그룹 배정") },
+        title = { Text(Loc.str(R.string.device_ui_14)) },
         text = {
             Column(
                 modifier = Modifier.width(380.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "그룹을 탭하면 즉시 전송됩니다. 방송을 받는 동안\n버튼을 누른 응원봉이 해당 그룹으로 저장됩니다.",
+                    Loc.str(R.string.device_ui_30),
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Column {
-                    Text("전체 그룹 수 (${groupCount}개)", style = MaterialTheme.typography.titleSmall)
+                    Text(Loc.str(R.string.device_ui_31, groupCount), style = MaterialTheme.typography.titleSmall)
                     Slider(
                         value = groupCount.toFloat(),
                         onValueChange = { onGroupCountChange(it.roundToInt()) },
@@ -513,7 +510,7 @@ fun GroupAssignDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("닫기") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_6)) } }
     )
 }
 
@@ -573,9 +570,9 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(Icons.Default.BluetoothDisabled, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Column {
-                            Text("연결된 디바이스 없음", style = MaterialTheme.typography.titleSmall)
+                            Text(Loc.str(R.string.device_ui_32), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                "검색해서 응원봉을 연결하면 관리 메뉴가 표시됩니다.",
+                                Loc.str(R.string.device_ui_33),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -589,13 +586,13 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                     ) {
                         Icon(Icons.Default.Bluetooth, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(if (connected != null) "다른 디바이스 검색 및 연결" else "디바이스 검색 및 연결")
+                        Text(if (connected != null) Loc.str(R.string.device_ui_34) else Loc.str(R.string.device_ui_35))
                     }
                     OutlinedButton(
                         onClick = { confirmDisconnect = true },
                         enabled = connected != null,
                         modifier = Modifier.weight(1f)
-                    ) { Text("연결 해제") }
+                    ) { Text(Loc.str(R.string.device_ui_7)) }
                 }
             }
         }
@@ -626,11 +623,10 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     if (confirmReconnect) {
         AlertDialog(
             onDismissRequest = { confirmReconnect = false },
-            title = { Text("연결") },
+            title = { Text(Loc.str(R.string.device_ui_36)) },
             text = {
                 Text(
-                    "현재 ${connected?.let { it.name ?: it.mac } ?: ""} 기기가 연결되어 있습니다.\n" +
-                        "이 기기의 연결을 해제 후\n새로운 기기를 연결하시겠습니까?"
+                    Loc.str(R.string.device_ui_37, connected?.let { it.name ?: it.mac } ?: "")
                 )
             },
             confirmButton = {
@@ -638,9 +634,9 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                     confirmReconnect = false
                     bleVm.disconnect()
                     popup = DevicePopup.CONNECT
-                }) { Text("확인") }
+                }) { Text(Loc.str(R.string.efx_edit_screen_19)) }
             },
-            dismissButton = { TextButton(onClick = { confirmReconnect = false }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { confirmReconnect = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 }

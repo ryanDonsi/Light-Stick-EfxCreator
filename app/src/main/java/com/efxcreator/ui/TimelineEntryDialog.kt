@@ -28,6 +28,8 @@ import com.lightstick.types.Colors
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
 import com.lightstick.efx.EfxEntry
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * ✅ 리팩토링: NumberTextField 컴포넌트 사용
@@ -54,9 +56,9 @@ fun TimelineEntryDialog(
     onDismiss: () -> Unit,
     onSave: (EfxEntry) -> Unit,
     onDelete: (() -> Unit)? = null,
-    title: String = "Effect 편집",
-    deleteTitle: String = "Effect 삭제",
-    deleteMessage: String = "이 타임라인 엔트리를 삭제하시겠습니까?",
+    title: String = Loc.str(R.string.timeline_entry_dialog_1),
+    deleteTitle: String = Loc.str(R.string.timeline_entry_dialog_2),
+    deleteMessage: String = Loc.str(R.string.efx_edit_screen_14),
     /** false 면 Timestamp 입력을 숨긴다 (시간이 없는 내 라이브러리 편집용) */
     showTimestamp: Boolean = true,
     /** false 면 Random Color / Random Delay / 그룹 마스크를 숨긴다 (라이브러리에는 저장되지 않는 값) */
@@ -203,9 +205,9 @@ fun TimelineEntryDialog(
                     value = period,
                     onValueChange = { period = it },
                     label = if (effectType in listOf(EffectType.ON, EffectType.OFF))
-                        "Transit (프레임, 0-255)"
+                        Loc.str(R.string.timeline_entry_dialog_3)
                     else
-                        "Period (프레임, 0-255)",
+                        Loc.str(R.string.timeline_entry_dialog_4),
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -233,7 +235,7 @@ fun TimelineEntryDialog(
                             Text("RGB($colorR, $colorG, $colorB)")
                         }
                         TextButton(onClick = { showFgColorPicker = true }) {
-                            Text("변경")
+                            Text(Loc.str(R.string.timeline_entry_dialog_5))
                         }
                     }
                 }
@@ -260,7 +262,7 @@ fun TimelineEntryDialog(
                             Text("RGB($bgColorR, $bgColorG, $bgColorB)")
                         }
                         TextButton(onClick = { showBgColorPicker = true }) {
-                            Text("변경")
+                            Text(Loc.str(R.string.timeline_entry_dialog_5))
                         }
                     }
                 }
@@ -273,16 +275,16 @@ fun TimelineEntryDialog(
                 NumberTextField(
                     value = spf,
                     onValueChange = { spf = it },
-                    label = "SPF (프레임/초, 0-255)",
+                    label = Loc.str(R.string.timeline_entry_dialog_6),
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
-                UnitHint(TimelineMath.frameUnitLabel(spf) + " — Period/Transit/Random Delay 의 시간 기준")
+                UnitHint(TimelineMath.frameUnitLabel(spf) + Loc.str(R.string.timeline_entry_dialog_7))
 
                 NumberTextField(
                     value = fade,
                     onValueChange = { fade = it },
-                    label = "Fade (밝기 %, 0-100)",
+                    label = Loc.str(R.string.timeline_entry_dialog_8),
                     range = 0..100,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -303,11 +305,11 @@ fun TimelineEntryDialog(
                 NumberTextField(
                     value = randomDelay,
                     onValueChange = { randomDelay = it },
-                    label = "Random Delay (프레임, 0-255)",
+                    label = Loc.str(R.string.timeline_entry_dialog_9),
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
-                UnitHint(if (randomDelay == 0) "= 없음" else "= 최대 ${TimelineMath.formatFrames(randomDelay, spf)}")
+                UnitHint(if (randomDelay == 0) Loc.str(R.string.timeline_entry_dialog_10) else Loc.str(R.string.timeline_entry_dialog_11, TimelineMath.formatFrames(randomDelay, spf)))
 
                 GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
                 }
@@ -322,7 +324,7 @@ fun TimelineEntryDialog(
                             contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("삭제")
+                        Text(Loc.str(R.string.efx_edit_screen_15))
                     }
                 }
                 TextButton(onClick = {
@@ -342,13 +344,13 @@ fun TimelineEntryDialog(
                     )
                     onSave(EfxEntry(timestampMs, payload))
                 }) {
-                    Text("저장")
+                    Text(Loc.str(R.string.efx_edit_screen_21))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text(Loc.str(R.string.efx_edit_screen_16))
             }
         }
     )
@@ -356,7 +358,7 @@ fun TimelineEntryDialog(
     // ========== Color Picker Dialogs ==========
     if (showFgColorPicker) {
         ColorPickerDialog(
-            title = "전경색 선택",
+            title = Loc.str(R.string.timeline_entry_dialog_12),
             currentColor = Color(colorR, colorG, colorB),
             onColorSelected = { color ->
                 colorR = color.r
@@ -370,7 +372,7 @@ fun TimelineEntryDialog(
 
     if (showBgColorPicker) {
         ColorPickerDialog(
-            title = "배경색 선택",
+            title = Loc.str(R.string.timeline_entry_dialog_13),
             currentColor = Color(bgColorR, bgColorG, bgColorB),
             onColorSelected = { color ->
                 bgColorR = color.r
@@ -398,12 +400,12 @@ fun TimelineEntryDialog(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("삭제")
+                    Text(Loc.str(R.string.efx_edit_screen_15))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("취소")
+                    Text(Loc.str(R.string.efx_edit_screen_16))
                 }
             }
         )
@@ -417,7 +419,7 @@ fun TimelineEntryDialog(
  */
 @Composable
 fun ColorPickerDialog(
-    title: String = "색상 선택",
+    title: String = Loc.str(R.string.timeline_entry_dialog_14),
     currentColor: Color,
     onColorSelected: (Color) -> Unit,
     onDismiss: () -> Unit
@@ -450,8 +452,8 @@ fun ColorPickerDialog(
                     onChange = { red = it.r; green = it.g; blue = it.b }
                 )
                 Text(
-                    if (deviceConnected) "● 디바이스에 색상이 실시간으로 표시됩니다."
-                    else "디바이스를 연결하면 색상이 실시간으로 표시됩니다.",
+                    if (deviceConnected) Loc.str(R.string.timeline_entry_dialog_15)
+                    else Loc.str(R.string.timeline_entry_dialog_16),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (deviceConnected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
@@ -459,7 +461,7 @@ fun ColorPickerDialog(
 
                 // ========== 프리셋 색상 ==========
                 Text(
-                    text = "프리셋",
+                    text = Loc.str(R.string.timeline_entry_dialog_17),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 4.dp)
@@ -527,12 +529,12 @@ fun ColorPickerDialog(
             TextButton(onClick = {
                 onColorSelected(selectedColor)
             }) {
-                Text("확인")
+                Text(Loc.str(R.string.efx_edit_screen_19))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text(Loc.str(R.string.efx_edit_screen_16))
             }
         }
     )

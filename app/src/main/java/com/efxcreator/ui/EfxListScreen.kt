@@ -35,6 +35,8 @@ import com.efxcreator.viewmodel.EfxListViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.viewmodel.ShowViewModel
 import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 어느 공연에도 속하지 않은 곡을 모아 보여 주는 가상 공연의 id */
 private const val UNASSIGNED_ID = "__unassigned__"
@@ -107,8 +109,8 @@ fun EfxListScreen(
             }
             is EfxListViewModel.AutoGenState.DoneBatch -> {
                 viewModel.consumeAutoGenState()
-                val msg = "${state.projectIds.size}곡을 추가했습니다." +
-                    if (state.failed > 0) " (${state.failed}곡은 실패했습니다.)" else ""
+                val msg = Loc.str(R.string.efx_list_screen_1, state.projectIds.size) +
+                    if (state.failed > 0) Loc.str(R.string.efx_list_screen_2, state.failed) else ""
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
             is EfxListViewModel.AutoGenState.Error -> {
@@ -122,9 +124,9 @@ fun EfxListScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("곡 추가") },
+            title = { Text(Loc.str(R.string.efx_list_screen_3)) },
             text = {
-                Text("\"${selectedShow?.name ?: ""}\" 공연에 곡을 추가합니다. 빈 곡에서 직접 편집하거나, 음악을 분석해 이펙트를 자동으로 생성할 수 있습니다.")
+                Text(Loc.str(R.string.efx_list_screen_4, selectedShow?.name ?: ""))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -132,7 +134,7 @@ fun EfxListScreen(
                     addTargetShowId = selectedShow?.id
                     autoMusicPicker.launch(MusicFolder.initialUri(context))
                 }) {
-                    Text("음악으로 자동 생성 (여러 곡 선택 가능)")
+                    Text(Loc.str(R.string.efx_list_screen_5))
                 }
             },
             dismissButton = {
@@ -142,7 +144,7 @@ fun EfxListScreen(
                     selectedShow?.let { showViewModel.addSong(it.id, newProjectId) }
                     onNavigateToEdit(newProjectId)
                 }) {
-                    Text("빈 곡")
+                    Text(Loc.str(R.string.efx_list_screen_6))
                 }
             }
         )
@@ -150,9 +152,9 @@ fun EfxListScreen(
 
     if (newShowDialog) {
         ShowEditDialog(
-            title = "새 공연",
+            title = Loc.str(R.string.efx_list_screen_7),
             initial = null,
-            confirmLabel = "만들기",
+            confirmLabel = Loc.str(R.string.efx_list_screen_8),
             onConfirm = { name, at, image, _ ->
                 selectedShowId = showViewModel.createShow(name, at, image)
                 newShowDialog = false
@@ -163,9 +165,9 @@ fun EfxListScreen(
 
     showNameDialog?.let { target ->
         ShowEditDialog(
-            title = "공연 정보 수정",
+            title = Loc.str(R.string.efx_list_screen_9),
             initial = target,
-            confirmLabel = "저장",
+            confirmLabel = Loc.str(R.string.efx_edit_screen_21),
             onConfirm = { name, at, image, remove ->
                 showViewModel.updateShow(target.id, name, at, image, remove)
                 showNameDialog = null
@@ -177,32 +179,32 @@ fun EfxListScreen(
     deleteShowTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteShowTarget = null },
-            title = { Text("공연 삭제") },
-            text = { Text("\"${target.name}\" 공연을 삭제합니다. 포함된 곡 ${target.songIds.size}개는 지워지지 않고 \"미분류\" 로 이동합니다.") },
+            title = { Text(Loc.str(R.string.efx_list_screen_10)) },
+            text = { Text(Loc.str(R.string.efx_list_screen_11, target.name, target.songIds.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     showViewModel.deleteShow(target.id)
                     if (selectedShowId == target.id) selectedShowId = null
                     deleteShowTarget = null
-                }) { Text("삭제", color = MaterialTheme.colorScheme.error) }
+                }) { Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { deleteShowTarget = null }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { deleteShowTarget = null }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 
     moveSongTarget?.let { song ->
         AlertDialog(
             onDismissRequest = { moveSongTarget = null },
-            title = { Text("\"${song.name}\" 이동") },
+            title = { Text(Loc.str(R.string.efx_list_screen_12, song.name)) },
             text = {
                 if (shows.isEmpty()) {
-                    Text("이동할 공연이 없습니다. 먼저 공연을 만들어 주세요.")
+                    Text(Loc.str(R.string.efx_list_screen_13))
                 } else {
                     Column {
                         shows.forEach { show ->
                             ListItem(
                                 headlineContent = { Text(show.name) },
-                                supportingContent = { Text("${show.songIds.size}곡") },
+                                supportingContent = { Text(Loc.str(R.string.efx_list_screen_14, show.songIds.size)) },
                                 colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                                 modifier = Modifier.clickable {
                                     showViewModel.moveSong(song.id, show.id)
@@ -214,15 +216,15 @@ fun EfxListScreen(
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { moveSongTarget = null }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { moveSongTarget = null }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 
     if (pendingMusicUris.isNotEmpty()) {
         val uris = pendingMusicUris
         SetSelectionDialog(
-            title = "생성할 이펙트 스타일",
-            confirmLabel = "생성",
+            title = Loc.str(R.string.efx_list_screen_15),
+            confirmLabel = Loc.str(R.string.efx_list_screen_16),
             effectSets = effectSets,
             paletteSets = paletteSets,
             initialEffectId = setsViewModel.lastEffectSetId,
@@ -247,7 +249,7 @@ fun EfxListScreen(
     (autoGenState as? EfxListViewModel.AutoGenState.Generating)?.let { generating ->
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("이펙트 자동 생성 중") },
+            title = { Text(Loc.str(R.string.efx_list_screen_17)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (generating.total > 1) {
@@ -256,7 +258,7 @@ fun EfxListScreen(
                     Text(generating.musicName, style = MaterialTheme.typography.bodyMedium)
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Text(
-                        "비트·섹션·장르를 분석하고 있습니다. 곡 길이에 따라 수십 초가 걸릴 수 있습니다.",
+                        Loc.str(R.string.efx_list_screen_18),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -264,7 +266,7 @@ fun EfxListScreen(
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.cancelAutoGeneration() }) {
-                    Text("취소")
+                    Text(Loc.str(R.string.efx_edit_screen_16))
                 }
             }
         )
@@ -287,7 +289,7 @@ fun EfxListScreen(
                     DeviceStatusButton(bleVm, onClick = { devicePopup = devicePopupFor(bleConnected) })
                     Spacer(Modifier.width(4.dp))
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "설정")
+                        Icon(Icons.Default.Settings, contentDescription = Loc.str(R.string.efx_list_screen_19))
                     }
                 }
             )
@@ -311,16 +313,16 @@ fun EfxListScreen(
                         modifier = Modifier.fillMaxWidth().height(PANEL_HEADER_HEIGHT),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("공연 목록", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Text(Loc.str(R.string.efx_list_screen_20), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         FilledTonalButton(onClick = { newShowDialog = true }) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("공연 추가")
+                            Text(Loc.str(R.string.efx_list_screen_21))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                     if (shows.isEmpty() && unassigned.isEmpty()) {
-                        EmptyHint("공연이 없습니다.\n\"공연 추가\" 로 만들어 주세요.")
+                        EmptyHint(Loc.str(R.string.efx_list_screen_22))
                     } else {
                         val showListState = rememberLazyListState()
                         Box(modifier = Modifier.fillMaxSize()) {
@@ -335,7 +337,7 @@ fun EfxListScreen(
                                     image = { ShowImage(show.imagePath, size = 64.dp) },
                                     subtitle = listOfNotNull(
                                         show.performanceAt?.let { formatShowDate(it) },
-                                        "${show.songIds.count { id -> projects.any { it.id == id } }}곡"
+                                        Loc.str(R.string.efx_list_screen_14, show.songIds.count { id -> projects.any { it.id == id } })
                                     ).joinToString(" · "),
                                     selected = show.id == selectedShowId,
                                     onClick = { selectedShowId = show.id },
@@ -347,9 +349,9 @@ fun EfxListScreen(
                             if (unassigned.isNotEmpty()) {
                                 item(key = UNASSIGNED_ID) {
                                     ShowRow(
-                                        name = "미분류",
+                                        name = Loc.str(R.string.efx_list_screen_23),
                                         image = null,
-                                        subtitle = "${unassigned.size}곡",
+                                        subtitle = Loc.str(R.string.efx_list_screen_14, unassigned.size),
                                         selected = inUnassigned,
                                         onClick = { selectedShowId = UNASSIGNED_ID },
                                         onRename = null,
@@ -384,8 +386,8 @@ fun EfxListScreen(
                             Text(
                                 text = when {
                                     selectedShow != null -> selectedShow.name
-                                    inUnassigned -> "미분류"
-                                    else -> "곡 목록"
+                                    inUnassigned -> Loc.str(R.string.efx_list_screen_23)
+                                    else -> Loc.str(R.string.efx_list_screen_24)
                                 },
                                 style = MaterialTheme.typography.titleSmall,
                                 maxLines = 1,
@@ -393,7 +395,7 @@ fun EfxListScreen(
                             )
                             if (selectedShow != null) {
                                 Text(
-                                    selectedShow.performanceAt?.let { formatShowDate(it) } ?: "공연 일시 미정",
+                                    selectedShow.performanceAt?.let { formatShowDate(it) } ?: Loc.str(R.string.efx_list_screen_25),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -403,15 +405,15 @@ fun EfxListScreen(
                         Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("곡 추가")
+                            Text(Loc.str(R.string.efx_list_screen_3))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                     when {
                         selectedShowId == null || (selectedShow == null && !inUnassigned) ->
-                            EmptyHint("왼쪽에서 공연을 선택하면\n곡을 추가할 수 있습니다.")
+                            EmptyHint(Loc.str(R.string.efx_list_screen_26))
                         songs.isEmpty() ->
-                            EmptyHint("이 공연에는 아직 곡이 없습니다.\n\"곡 추가\" 로 첫 곡을 만들어 보세요.")
+                            EmptyHint(Loc.str(R.string.efx_list_screen_27))
                         else -> {
                         val songListState = rememberLazyListState()
                         Box(modifier = Modifier.fillMaxSize()) {
@@ -516,16 +518,16 @@ private fun ShowRow(
             if (onRename != null && onDelete != null) {
                 Box {
                     IconButton(onClick = { menu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "공연 메뉴")
+                        Icon(Icons.Default.MoreVert, contentDescription = Loc.str(R.string.efx_list_screen_28))
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(
-                            text = { Text("정보 수정") },
+                            text = { Text(Loc.str(R.string.efx_list_screen_29)) },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                             onClick = { menu = false; onRename() }
                         )
                         DropdownMenuItem(
-                            text = { Text("삭제", color = MaterialTheme.colorScheme.error) },
+                            text = { Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error) },
                             leadingIcon = {
                                 Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             },
@@ -565,7 +567,7 @@ fun EfxProjectCard(
                 onFileSaved(sourceFile, it)
                 Toast.makeText(
                     context,
-                    "파일이 저장되었습니다.",
+                    Loc.str(R.string.efx_list_screen_30),
                     Toast.LENGTH_SHORT
                 ).show()
                 tempFileToSave = null
@@ -614,7 +616,7 @@ fun EfxProjectCard(
                         )
                     } else {
                         Text(
-                            text = "음악 없음",
+                            text = Loc.str(R.string.efx_edit_screen_10),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -623,7 +625,7 @@ fun EfxProjectCard(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = "타임라인: ${entryCount}개 엔트리",
+                        text = Loc.str(R.string.efx_list_screen_31, entryCount),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -636,7 +638,7 @@ fun EfxProjectCard(
                     .padding(end = 4.dp)
             ) {
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "메뉴")
+                    Icon(Icons.Default.MoreVert, contentDescription = Loc.str(R.string.efx_list_screen_32))
                 }
 
                 DropdownMenu(
@@ -645,7 +647,7 @@ fun EfxProjectCard(
                 ) {
                     // 저장하기
                     DropdownMenuItem(
-                        text = { Text("저장하기") },
+                        text = { Text(Loc.str(R.string.efx_list_screen_33)) },
                         onClick = {
                             val file = onSave(project.id, project.name)
                             tempFileToSave = file
@@ -664,7 +666,7 @@ fun EfxProjectCard(
                     // 다른 공연으로 이동
                     if (onMove != null) {
                         DropdownMenuItem(
-                            text = { Text("다른 공연으로 이동") },
+                            text = { Text(Loc.str(R.string.efx_list_screen_34)) },
                             onClick = {
                                 showMenu = false
                                 onMove()
@@ -677,7 +679,7 @@ fun EfxProjectCard(
 
                     // 공유
                     DropdownMenuItem(
-                        text = { Text("공유") },
+                        text = { Text(Loc.str(R.string.efx_list_screen_35)) },
                         onClick = {
                             val file = onShare(project.id, project.name)
                             shareEfxFile(context, file)
@@ -694,7 +696,7 @@ fun EfxProjectCard(
 
                     // 삭제
                     DropdownMenuItem(
-                        text = { Text("삭제", color = MaterialTheme.colorScheme.error) },
+                        text = { Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error) },
                         onClick = {
                             showMenu = false
                             showDeleteDialog = true
@@ -716,8 +718,8 @@ fun EfxProjectCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("프로젝트 삭제") },
-            text = { Text("정말로 \"${project.name}\"을(를) 삭제하시겠습니까?") },
+            title = { Text(Loc.str(R.string.efx_list_screen_36)) },
+            text = { Text(Loc.str(R.string.efx_list_screen_37, project.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -725,12 +727,12 @@ fun EfxProjectCard(
                         showDeleteDialog = false
                     }
                 ) {
-                    Text("삭제", color = MaterialTheme.colorScheme.error)
+                    Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("취소")
+                    Text(Loc.str(R.string.efx_edit_screen_16))
                 }
             }
         )
@@ -755,7 +757,7 @@ private fun shareEfxFile(context: android.content.Context, file: File) {
         }
 
         context.startActivity(
-            Intent.createChooser(shareIntent, "EFX 공유")
+            Intent.createChooser(shareIntent, Loc.str(R.string.efx_list_screen_38))
         )
     } catch (e: Exception) {
         android.util.Log.e("EfxListScreen", "Error sharing file", e)

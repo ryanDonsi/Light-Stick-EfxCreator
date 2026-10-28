@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 class EfxEditViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -106,8 +108,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
             redoStack.clear()
             refreshHistoryFlags()
             if (loadedEfx == null && loadedMetadata != null) {
-                _message.value = "EFX 파일을 읽을 수 없습니다. SDK 1.4.x로 만든 이전 파일은 2.0.0과 " +
-                    "형식이 달라 열 수 없습니다. 프로젝트를 삭제하고 새로 만들어 주세요."
+                _message.value = Loc.str(R.string.efx_edit_view_model_1)
             }
 
             Log.d(TAG, "Loaded project: ${loadedMetadata?.name}")
@@ -135,7 +136,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveProjectMetadata(migrated)
                 _metadata.value = migrated
             } else {
-                _message.value = "음악 파일에 접근할 수 없습니다. 음악을 다시 선택해 주세요."
+                _message.value = Loc.str(R.string.efx_edit_view_model_2)
             }
         }
         _musicFile.value = file
@@ -155,7 +156,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Analysis failed", e)
-            _message.value = e.message ?: "음악 분석에 실패했습니다."
+            _message.value = e.message ?: Loc.str(R.string.auto_efx_generator_2)
         } finally {
             _analyzing.value = false
         }
@@ -213,13 +214,13 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                     withContext(Dispatchers.IO) { repository.importMusic(currentMetadata.id, uri) }
                 } catch (e: Exception) {
                     Log.e(TAG, "Music import failed", e)
-                    _message.value = "음악 파일을 읽을 수 없습니다: ${e.message}"
+                    _message.value = Loc.str(R.string.efx_edit_view_model_3, e.message)
                     return@launch
                 }
                 val musicId = try {
                     withContext(Dispatchers.IO) { autoEfxGenerator.computeMusicId(file) }
                 } catch (e: Exception) {
-                    _message.value = e.message ?: "음악 ID를 계산할 수 없습니다."
+                    _message.value = e.message ?: Loc.str(R.string.efx_edit_view_model_4)
                     return@launch
                 }
                 repository.deleteAnalysis(currentMetadata.id)
@@ -280,20 +281,20 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val meta = _metadata.value ?: return@launch
             val currentEfx = _efx.value ?: run {
-                _message.value = "EFX 파일을 읽을 수 없어 적용할 수 없습니다."
+                _message.value = Loc.str(R.string.efx_edit_view_model_5)
                 return@launch
             }
             val analysis = _analysis.value
             if (analysis == null || analysis.engineInput == null) {
-                _message.value = if (_analyzing.value) "음악 분석 중입니다. 완료 후 다시 시도해 주세요."
-                else "음악을 선택해 분석한 뒤 적용할 수 있습니다."
+                _message.value = if (_analyzing.value) Loc.str(R.string.efx_edit_view_model_6)
+                else Loc.str(R.string.efx_tablet_editor_screen_15)
                 return@launch
             }
             val range: LongRange = if (sectionIndex == null) {
                 0L..Long.MAX_VALUE
             } else {
                 val sec = analysis.sections.getOrNull(sectionIndex) ?: run {
-                    _message.value = "선택한 섹션을 찾을 수 없습니다."
+                    _message.value = Loc.str(R.string.efx_edit_view_model_7)
                     return@launch
                 }
                 sec.startMs until sec.endMs
@@ -309,7 +310,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Apply sets failed", e)
-                _message.value = e.message ?: "세트 적용에 실패했습니다."
+                _message.value = e.message ?: Loc.str(R.string.efx_edit_view_model_8)
             } finally {
                 _applying.value = false
             }
@@ -436,13 +437,13 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 savedEfx = draft
                 _metadata.value = updatedMeta
                 refreshHistoryFlags()
-                _message.value = "저장했습니다."
+                _message.value = Loc.str(R.string.efx_edit_view_model_9)
                 onSaved()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Save failed", e)
-                _message.value = "저장에 실패했습니다: ${e.message}"
+                _message.value = Loc.str(R.string.efx_edit_view_model_10, e.message)
             } finally {
                 _saving.value = false
             }

@@ -4,6 +4,8 @@ import com.efxcreator.model.EffectPattern
 import com.efxcreator.music.effect.EffectMatchingEngine.FgEngine
 import com.efxcreator.music.effect.EffectMatchingEngineV1
 import com.lightstick.types.Color as LSColor
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** Gson 으로 저장할 수 있는 단순 RGB */
 data class RgbColor(val r: Int, val g: Int, val b: Int) {
@@ -30,7 +32,7 @@ data class PaletteSet(
     val colors: List<RgbColor> get() = listOf(main, step1, step2, step3)
 
     companion object {
-        val COLOR_ROLES = listOf("대표색", "단계색 1", "단계색 2", "단계색 3")
+        val COLOR_ROLES = listOf(Loc.str(R.string.effect_pattern_3), Loc.str(R.string.effect_sets_1), Loc.str(R.string.effect_sets_2), Loc.str(R.string.effect_sets_3))
     }
 }
 
@@ -109,42 +111,42 @@ object SetCatalog {
 
     /** 규칙을 편집할 수 있는 섹션 (CLIMAX 는 분석 단계에서 검출되지 않아 제외) */
     val EDITABLE_SECTIONS = listOf(
-        "INTRO" to "인트로",
-        "VERSE" to "벌스",
-        "CHORUS" to "코러스",
-        "BRIDGE" to "브릿지",
-        "BREAK" to "브레이크(무음)",
-        "OUTRO" to "아웃트로",
-        "END" to "엔딩"
+        "INTRO" to Loc.str(R.string.effect_sets_4),
+        "VERSE" to Loc.str(R.string.effect_sets_5),
+        "CHORUS" to Loc.str(R.string.effect_sets_6),
+        "BRIDGE" to Loc.str(R.string.effect_sets_7),
+        "BREAK" to Loc.str(R.string.effect_sets_8),
+        "OUTRO" to Loc.str(R.string.effect_sets_9),
+        "END" to Loc.str(R.string.effect_sets_10)
     )
 
     val PATTERNS = listOf(
-        PatternInfo(FgEngine.ON_PULSE, "펄스", "박자마다 짧게 켜졌다 돌아오는 강조"),
-        PatternInfo(FgEngine.BLINK, "블링크", "박자에 맞춰 깜빡임"),
-        PatternInfo(FgEngine.BREATH, "호흡", "부드럽게 밝아졌다 어두워짐"),
-        PatternInfo(FgEngine.ON_TRANSIT_ROTATE, "색 회전", "마디마다 색이 바뀌며 전환"),
-        PatternInfo(FgEngine.FREEZE, "고정", "특정 색을 켠 채 유지"),
-        PatternInfo(FgEngine.OFF_TRANSIT, "끄기", "이 섹션은 이펙트 없이 꺼 둠")
+        PatternInfo(FgEngine.ON_PULSE, Loc.str(R.string.effect_pattern_7), Loc.str(R.string.effect_sets_11)),
+        PatternInfo(FgEngine.BLINK, Loc.str(R.string.effect_pattern_11), Loc.str(R.string.effect_sets_12)),
+        PatternInfo(FgEngine.BREATH, Loc.str(R.string.effect_pattern_9), Loc.str(R.string.effect_sets_13)),
+        PatternInfo(FgEngine.ON_TRANSIT_ROTATE, Loc.str(R.string.effect_sets_14), Loc.str(R.string.effect_sets_15)),
+        PatternInfo(FgEngine.FREEZE, Loc.str(R.string.effect_pattern_17), Loc.str(R.string.effect_sets_16)),
+        PatternInfo(FgEngine.OFF_TRANSIT, Loc.str(R.string.effect_pattern_19), Loc.str(R.string.effect_sets_17))
     )
 
     fun patternLabel(engineName: String?): String =
-        PATTERNS.firstOrNull { it.engine.name == engineName }?.label ?: "자동"
+        PATTERNS.firstOrNull { it.engine.name == engineName }?.label ?: Loc.str(R.string.effect_sets_18)
 
     /** 섹션이 곡의 어디인지 설명 (이펙트 세트 편집 화면에 작게 보여 준다) */
     val SECTION_DESCRIPTIONS: Map<String, String> = mapOf(
-        "INTRO" to "곡의 시작 부분. 분위기를 여는 도입 구간",
-        "VERSE" to "노래의 본문(1절·2절). 후렴보다 차분하게 이어지는 구간",
-        "CHORUS" to "후렴. 곡에서 가장 강하고 반복되는 하이라이트 구간",
-        "BRIDGE" to "후렴 사이를 잇는 전환 구간 (브릿지, 분위기가 바뀌는 부분)",
-        "BREAK" to "소리가 거의 없는 무음 구간",
-        "OUTRO" to "곡의 마무리. 서서히 끝나는 구간",
-        "END" to "음악이 끝난 뒤 마지막 정리 구간"
+        "INTRO" to Loc.str(R.string.effect_sets_19),
+        "VERSE" to Loc.str(R.string.effect_sets_20),
+        "CHORUS" to Loc.str(R.string.effect_sets_21),
+        "BRIDGE" to Loc.str(R.string.effect_sets_22),
+        "BREAK" to Loc.str(R.string.effect_sets_23),
+        "OUTRO" to Loc.str(R.string.effect_sets_24),
+        "END" to Loc.str(R.string.effect_sets_25)
     )
 
     /** 곡 분위기(장르) 이름과 화면 표시 이름 — 값은 MusicStyleClassifier.MusicStyle 이름 */
     val GENRES: List<Pair<String, String>> = listOf(
-        "DANCE_POP" to "댄스팝", "POP" to "팝", "BALLAD" to "발라드",
-        "EDM" to "EDM", "HIPHOP_RNB" to "힙합/R&B", "ROCK" to "록"
+        "DANCE_POP" to Loc.str(R.string.effect_sets_26), "POP" to Loc.str(R.string.effect_sets_27), "BALLAD" to Loc.str(R.string.effect_sets_28),
+        "EDM" to "EDM", "HIPHOP_RNB" to Loc.str(R.string.effect_sets_29), "ROCK" to Loc.str(R.string.effect_sets_30)
     )
 
     /** 엔진이 "발라드 모드" 로 취급하는 장르 */
@@ -154,13 +156,13 @@ object SetCatalog {
 
     /** 섹션 종류별로 엔진이 "자동" 일 때 하는 동작 (이펙트 세트 편집 화면에 보여 준다) */
     val DEFAULT_BEHAVIOR: Map<String, String> = mapOf(
-        "INTRO" to "BREATH (호흡)",
-        "VERSE" to "발라드·힙합/R&B: BREATH(마디마다 색 순환). 그 외: 마디 에너지가 섹션 안에서 상위 20%(80% 이상)면 BLINK, 나머지는 ON_PULSE(2박마다)",
-        "CHORUS" to "ON_TRANSIT_ROTATE (박마다 색 회전)",
-        "BRIDGE" to "BREATH (호흡)",
-        "BREAK" to "FREEZE (한 색 고정)",
-        "OUTRO" to "OFF_TRANSIT (서서히 꺼짐)",
-        "END" to "OFF_TRANSIT (꺼짐)"
+        "INTRO" to Loc.str(R.string.effect_sets_31),
+        "VERSE" to Loc.str(R.string.effect_sets_32),
+        "CHORUS" to Loc.str(R.string.effect_sets_33),
+        "BRIDGE" to Loc.str(R.string.effect_sets_31),
+        "BREAK" to Loc.str(R.string.effect_sets_34),
+        "OUTRO" to Loc.str(R.string.effect_sets_35),
+        "END" to Loc.str(R.string.effect_sets_36)
     )
 
     /** 벌스의 기본 동작을 조건부 규칙으로 옮긴 것 (에너지에 따라 BLINK / ON_PULSE) */
@@ -183,13 +185,13 @@ object SetCatalog {
 
     val BUILT_IN_RULE_SETS: List<EffectRuleSet> = listOf(
         EffectRuleSet(
-            "builtin_energy", "에너지 반응 (벌스 블링크·펄스)",
+            "builtin_energy", Loc.str(R.string.effect_sets_37),
             DEFAULT_RULES - "VERSE",
             builtIn = true,
             cases = mapOf("VERSE" to DEFAULT_VERSE_CASES)
         ),
         EffectRuleSet(
-            "builtin_calm", "차분 (호흡 위주)",
+            "builtin_calm", Loc.str(R.string.effect_sets_38),
             DEFAULT_RULES + mapOf(
                 "VERSE" to FgEngine.BREATH.name,
                 "CHORUS" to FgEngine.BREATH.name
@@ -197,7 +199,7 @@ object SetCatalog {
             builtIn = true
         ),
         EffectRuleSet(
-            "builtin_power", "파워 (펄스·회전 위주)",
+            "builtin_power", Loc.str(R.string.effect_sets_39),
             DEFAULT_RULES + mapOf(
                 "INTRO" to FgEngine.ON_PULSE.name,
                 "BRIDGE" to FgEngine.ON_PULSE.name,
@@ -224,11 +226,11 @@ object SetCatalog {
     }
 
     private fun familyDisplayName(name: String) = when (name) {
-        "PURPLE" -> "퍼플 계열"
-        "RED" -> "레드 계열"
-        "ORANGE_GOLD" -> "오렌지·골드 계열"
-        "TEAL" -> "틸·그린 계열"
-        "BLUE" -> "블루 계열"
+        "PURPLE" -> Loc.str(R.string.effect_sets_40)
+        "RED" -> Loc.str(R.string.effect_sets_41)
+        "ORANGE_GOLD" -> Loc.str(R.string.effect_sets_42)
+        "TEAL" -> Loc.str(R.string.effect_sets_43)
+        "BLUE" -> Loc.str(R.string.effect_sets_44)
         else -> name
     }
 }

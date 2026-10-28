@@ -31,6 +31,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * 응원봉 실기기 연동 — 스캔/연결과 편집 중인 타임라인의 재생 동기화(SDK Timeline API).
@@ -132,13 +134,13 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startScan() {
         if (!hasPermissions()) {
-            _message.value = "블루투스 권한이 필요합니다."
+            _message.value = Loc.str(R.string.device_ui_2)
             return
         }
         // 시스템 설정 때문에 스캔이 조용히 실패하는 경우를 먼저 알려 준다
         val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         if (btManager?.adapter?.isEnabled != true) {
-            _message.value = "블루투스가 꺼져 있습니다. 켠 뒤 다시 검색해 주세요."
+            _message.value = Loc.str(R.string.ble_view_model_1)
             return
         }
         // Android 11 이하는 위치 서비스가 꺼져 있으면 BLE 스캔 결과가 오지 않는다
@@ -146,7 +148,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             val locationOn = lm != null && (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || lm.isLocationEnabled)
             if (!locationOn) {
-                _message.value = "위치 서비스가 꺼져 있습니다. 켠 뒤 다시 검색해 주세요."
+                _message.value = Loc.str(R.string.ble_view_model_2)
                 return
             }
         }
@@ -164,7 +166,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             Log.e(TAG, "startScan failed", e)
             _scanning.value = false
-            _message.value = "스캔을 시작할 수 없습니다: ${e.message}"
+            _message.value = Loc.str(R.string.ble_view_model_3, e.message)
             return
         }
         scanJob?.cancel()
@@ -182,7 +184,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun connect(device: Device) {
         if (!hasPermissions()) {
-            _message.value = "블루투스 권한이 필요합니다."
+            _message.value = Loc.str(R.string.device_ui_2)
             return
         }
         stopScan()
@@ -192,11 +194,11 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 _connectingMac.value = null
                 _connected.value = device
                 startMonitoring(device)
-                _message.value = "${device.name ?: device.mac} 연결됨"
+                _message.value = Loc.str(R.string.ble_view_model_4, device.name ?: device.mac)
             },
             onFailed = { e ->
                 _connectingMac.value = null
-                _message.value = "연결 실패: ${e.message}"
+                _message.value = Loc.str(R.string.ble_view_model_5, e.message)
             }
         )
     }
@@ -235,7 +237,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 elapsed += 5_000L
                 if (!hasPermissions() || !device.isConnected()) {
                     if (_connected.value?.mac == device.mac) {
-                        _message.value = "${device.name ?: device.mac} 연결이 끊어졌습니다."
+                        _message.value = Loc.str(R.string.ble_view_model_6, device.name ?: device.mac)
                         clearConnectionState()
                     }
                     break
@@ -337,7 +339,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun startPatternTest(steps: List<Pair<LSEffectPayload, Long>>, loop: Boolean) {
         val device = connectedOrNull()
         if (device == null) {
-            _message.value = "디바이스를 연결한 뒤 테스트할 수 있습니다."
+            _message.value = Loc.str(R.string.ble_view_model_7)
             return
         }
         if (steps.isEmpty()) return
@@ -382,10 +384,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun sendGroupSetting(groupId: Int) {
         val device = connectedOrNull() ?: return
         if (!_groupAllowed.value) {
-            _message.value = "BLE Only 모드에서는 그룹 배정을 지원하지 않습니다."
+            _message.value = Loc.str(R.string.ble_view_model_8)
             return
         }
-        if (!device.sendGroupSetting(groupId)) _message.value = "그룹 배정 전송에 실패했습니다."
+        if (!device.sendGroupSetting(groupId)) _message.value = Loc.str(R.string.ble_view_model_9)
     }
 
     // ── 기기 관리: OTA ───────────────────────────────────────────
@@ -397,7 +399,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
             }
             if (bytes == null) {
-                _message.value = "펌웨어 파일을 읽을 수 없습니다."
+                _message.value = Loc.str(R.string.ble_view_model_10)
                 return@launch
             }
             val deviceVersion = _info.value?.firmwareRevision.orEmpty().trim()
@@ -426,14 +428,14 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             onProgress = { _otaProgress.value = it },
             onResult = { r ->
                 _otaProgress.value = null
-                _message.value = if (r.isSuccess) "펌웨어 업데이트가 완료되었습니다."
-                else "펌웨어 업데이트에 실패했습니다: ${r.exceptionOrNull()?.message}"
+                _message.value = if (r.isSuccess) Loc.str(R.string.ble_view_model_11)
+                else Loc.str(R.string.ble_view_model_12, r.exceptionOrNull()?.message)
                 refreshInfo()
             }
         )
         if (!ok) {
             _otaProgress.value = null
-            _message.value = "펌웨어 업데이트를 시작할 수 없습니다."
+            _message.value = Loc.str(R.string.ble_view_model_13)
         }
     }
 
@@ -471,7 +473,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         if (!device.isConnected()) {
             // 연결이 끊겼다
             clearConnectionState()
-            _message.value = "${device.name ?: device.mac} 연결이 끊어졌습니다."
+            _message.value = Loc.str(R.string.ble_view_model_6, device.name ?: device.mac)
             return null
         }
         return device

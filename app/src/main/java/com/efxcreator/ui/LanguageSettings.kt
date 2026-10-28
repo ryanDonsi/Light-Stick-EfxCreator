@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.efxcreator.core.AppLanguage
 import com.efxcreator.core.LocaleHelper
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 설정 > 언어 설정: 자동(시스템 언어) / 한국어 / English / 日本語 / 简体中文 */
 @Composable
@@ -41,7 +43,7 @@ fun LanguageSettingsContent(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
-            "표시 언어를 고르세요. \"자동\"은 기기의 시스템 언어를 따르며, 지원하지 않는 언어는 영어로 표시됩니다.",
+            Loc.str(R.string.language_settings_1),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -69,9 +71,9 @@ fun LanguageSettingsContent(modifier: Modifier = Modifier) {
     pending?.let { lang ->
         AlertDialog(
             onDismissRequest = { pending = null },
-            title = { Text("언어 변경") },
+            title = { Text(Loc.str(R.string.language_settings_2)) },
             text = {
-                Text("표시 언어를 ${languageLabel(lang)}(으)로 바꾸면 앱이 다시 시작되고, 연결된 디바이스의 연결이 해제됩니다. 계속할까요?")
+                Text(Loc.str(R.string.language_settings_3, languageLabel(lang)))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -80,13 +82,13 @@ fun LanguageSettingsContent(modifier: Modifier = Modifier) {
                     while (c is ContextWrapper && c !is Activity) c = c.baseContext
                     (c as? Activity)?.let { LocaleHelper.restartApp(it) }
                     pending = null
-                }) { Text("변경") }
+                }) { Text(Loc.str(R.string.timeline_entry_dialog_5)) }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { pending = null }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 }
 
 /** "자동 (시스템 언어: 日本語)" / "한국어" … */
 private fun languageLabel(lang: AppLanguage): String =
-    if (lang == AppLanguage.AUTO) "자동 (시스템 언어: ${AppLanguage.system().nativeName})" else lang.nativeName
+    if (lang == AppLanguage.AUTO) Loc.str(R.string.language_settings_4, AppLanguage.system().nativeName) else lang.nativeName

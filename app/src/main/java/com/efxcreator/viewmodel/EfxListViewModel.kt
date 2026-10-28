@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 class EfxListViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -153,7 +155,7 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
             }
 
             _autoGenState.value = when {
-                created.isEmpty() -> AutoGenState.Error(lastError ?: "자동 생성에 실패했습니다.")
+                created.isEmpty() -> AutoGenState.Error(lastError ?: Loc.str(R.string.efx_list_view_model_1))
                 uris.size == 1 -> AutoGenState.Done(created[0])
                 else -> AutoGenState.DoneBatch(created, failed)
             }

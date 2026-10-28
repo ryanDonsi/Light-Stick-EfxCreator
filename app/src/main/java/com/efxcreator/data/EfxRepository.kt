@@ -17,6 +17,8 @@ import com.lightstick.types.Color
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
 import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 class EfxRepository(private val context: Context) {
 
@@ -365,7 +367,7 @@ class EfxRepository(private val context: Context) {
         // 임시 파일로 먼저 복사해, 실패하거나 원본이 기존 사본인 경우에도 기존 음악을 잃지 않는다
         val temp = File(musicDir, "$projectId.$ext.tmp")
         val input = context.contentResolver.openInputStream(uri)
-            ?: throw java.io.IOException("음악 파일을 열 수 없습니다.")
+            ?: throw java.io.IOException(Loc.str(R.string.efx_repository_1))
         try {
             input.use { src -> temp.outputStream().use { dst -> src.copyTo(dst) } }
         } catch (e: Exception) {
@@ -551,7 +553,7 @@ class EfxRepository(private val context: Context) {
         }
     } catch (e: Exception) {
         Log.e(TAG, "Error describing tree uri", e)
-        DocumentFile.fromTreeUri(context, Uri.parse(uriString))?.name ?: "알 수 없는 위치"
+        DocumentFile.fromTreeUri(context, Uri.parse(uriString))?.name ?: Loc.str(R.string.efx_repository_2)
     }
 
     fun getEfxStorageInfo(): String {
@@ -559,13 +561,13 @@ class EfxRepository(private val context: Context) {
 
         return when {
             path == "default_internal" || path.isEmpty() -> {
-                "기본: ${context.filesDir.absolutePath}"
+                Loc.str(R.string.efx_repository_3, context.filesDir.absolutePath)
             }
             path.startsWith("content://") -> {
-                "사용자 지정: ${describeTreeUri(path)}"
+                Loc.str(R.string.efx_repository_4, describeTreeUri(path))
             }
             else -> {
-                "사용자 지정: ${friendlyPath(path)}"
+                Loc.str(R.string.efx_repository_4, friendlyPath(path))
             }
         }
     }
@@ -578,13 +580,13 @@ class EfxRepository(private val context: Context) {
 
         return when {
             path == "default_music" || path.isEmpty() -> {
-                "기본: ${friendlyPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath)}"
+                Loc.str(R.string.efx_repository_3, friendlyPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath))
             }
             path.startsWith("content://") -> {
-                "사용자 지정: ${describeTreeUri(path)}"
+                Loc.str(R.string.efx_repository_4, describeTreeUri(path))
             }
             else -> {
-                "사용자 지정: ${friendlyPath(path)}"
+                Loc.str(R.string.efx_repository_4, friendlyPath(path))
             }
         }
     }

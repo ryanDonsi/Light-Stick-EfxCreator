@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.efxcreator.music.sets.RgbColor
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 private data class Hsv(val h: Float, val s: Float, val v: Float)
 
@@ -55,7 +57,7 @@ fun HsvColorPicker(color: RgbColor, onChange: (RgbColor) -> Unit, modifier: Modi
                 .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.small)
         )
 
-        SliderBlock("색상 조절") {
+        SliderBlock(Loc.str(R.string.hsv_color_picker_1)) {
             CustomSlider(
                 value = 360f - hsv.h,
                 onValueChange = { update(hsv.copy(h = 360f - it)) },
@@ -73,7 +75,7 @@ fun HsvColorPicker(color: RgbColor, onChange: (RgbColor) -> Unit, modifier: Modi
             )
         }
 
-        SliderBlock("선명도 조절") {
+        SliderBlock(Loc.str(R.string.hsv_color_picker_2)) {
             val gradient = remember(hsv.h, hsv.v) {
                 Brush.horizontalGradient(listOf(hsvToColor(hsv.h, 0f, hsv.v), hsvToColor(hsv.h, 1f, hsv.v)))
             }
@@ -89,7 +91,7 @@ fun HsvColorPicker(color: RgbColor, onChange: (RgbColor) -> Unit, modifier: Modi
             )
         }
 
-        SliderBlock("밝기 조절") {
+        SliderBlock(Loc.str(R.string.hsv_color_picker_3)) {
             val gradient = remember(hsv.h, hsv.s) {
                 Brush.horizontalGradient(listOf(hsvToColor(hsv.h, hsv.s, 0f), hsvToColor(hsv.h, hsv.s, 1f)))
             }
@@ -106,7 +108,7 @@ fun HsvColorPicker(color: RgbColor, onChange: (RgbColor) -> Unit, modifier: Modi
         }
 
         // RGB 직접 입력
-        SliderBlock("RGB 값 입력 (0-255)") {
+        SliderBlock(Loc.str(R.string.hsv_color_picker_4)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 NumberTextField(
                     value = color.r, onValueChange = { onChange(color.copy(r = it)) },

@@ -13,6 +13,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.coroutineContext
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * 음악 파일 → 자동 분석 → [Efx] + [MusicAnalysis].
@@ -42,7 +44,7 @@ class AutoEfxGenerator {
 
         val entries = framesToEntries(r.frames)
         if (entries.isEmpty()) {
-            throw GenerationException("비트를 감지하지 못했습니다. 다른 음악 파일을 선택해 주세요.")
+            throw GenerationException(Loc.str(R.string.auto_efx_generator_1))
         }
         Log.d(TAG, "Generated ${entries.size} entries, musicId=0x${musicId.toUInt().toString(16)}")
 
@@ -52,13 +54,13 @@ class AutoEfxGenerator {
     /** 이펙트는 만들지 않고 파형/섹션/비트 분석 결과만 필요할 때 사용한다. */
     suspend fun analyze(musicFile: File): MusicAnalysis = withContext(Dispatchers.Default) {
         val r = runPipeline(musicFile, computeMusicId(musicFile))
-        r.analysis ?: throw GenerationException("음악 분석에 실패했습니다.")
+        r.analysis ?: throw GenerationException(Loc.str(R.string.auto_efx_generator_2))
     }
 
     fun computeMusicId(musicFile: File): Int = try {
         MusicId.fromFile(musicFile)
     } catch (e: Exception) {
-        throw GenerationException("음악 ID를 계산할 수 없습니다: ${e.message}", e)
+        throw GenerationException(Loc.str(R.string.auto_efx_generator_3, e.message), e)
     }
 
     /**
@@ -69,11 +71,11 @@ class AutoEfxGenerator {
         analysis: MusicAnalysis, musicId: Int, options: GenerationOptions
     ): List<EfxEntry> = withContext(Dispatchers.Default) {
         val input = analysis.engineInput
-            ?: throw GenerationException("이 프로젝트는 분석 데이터가 없어 세트를 적용할 수 없습니다.")
+            ?: throw GenerationException(Loc.str(R.string.auto_efx_generator_4))
         val r = try {
             AutoTimelineGeneratorBeat().render(input, musicId, options)
         } catch (e: Exception) {
-            throw GenerationException("이펙트 생성에 실패했습니다: ${e.message}", e)
+            throw GenerationException(Loc.str(R.string.auto_efx_generator_5, e.message), e)
         }
         framesToEntries(r.frames)
     }
@@ -90,7 +92,7 @@ class AutoEfxGenerator {
                 options = options
             )
         } catch (e: Exception) {
-            throw GenerationException("음악 분석에 실패했습니다: ${e.message}", e)
+            throw GenerationException(Loc.str(R.string.auto_efx_generator_6, e.message), e)
         }
     }
 

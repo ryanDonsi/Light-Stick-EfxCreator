@@ -79,6 +79,8 @@ import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.music.sets.PaletteSet
 import com.lightstick.types.EffectType
 import java.util.Locale
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 private val STEP_TYPES = listOf("ON", "OFF", "BLINK", "BREATH", "STROBE")
 private fun isTwoColor(type: String) = type == "BLINK" || type == "BREATH" || type == "STROBE"
@@ -96,7 +98,7 @@ fun PatternStep.summary(index: Int): String {
         else -> " · ${PatternColors.label(fg)}"
     }
     val frame = if (frames > 0) " · ${if (type == "ON" || type == "OFF") "Transit" else "Period"} ${frames}f" else ""
-    return "${index + 1}. $type ${"%.1f".format(Locale.US, beats)}박$colors$frame"
+    return Loc.str(R.string.pattern_panel_1, index + 1, type, "%.1f".format(Locale.US, beats), colors, frame)
 }
 
 private fun formatBeats(tenths: Int) = "%.1f".format(Locale.US, tenths / 10f)
@@ -124,11 +126,11 @@ fun EffectPatternsPanel(
 
     Column(modifier = modifier) {
         Row(modifier = Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("이펙트 라이브러리", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(Loc.str(R.string.settings_screen_17), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Button(onClick = { editing = newPattern() to true }) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("이펙트 추가")
+                Text(Loc.str(R.string.pattern_panel_2))
             }
         }
         Box(modifier = Modifier.fillMaxSize()) {
@@ -143,12 +145,10 @@ fun EffectPatternsPanel(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("이펙트 묶음 만들기", style = MaterialTheme.typography.titleSmall)
+                            Text(Loc.str(R.string.pattern_panel_3), style = MaterialTheme.typography.titleSmall)
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "예) 펄스 = ① ON 0.3박(대표색) → ② ON 1.7박(검정, Transit 3). " +
-                                    "길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. " +
-                                    "기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.",
+                                Loc.str(R.string.pattern_panel_4),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -158,7 +158,7 @@ fun EffectPatternsPanel(
                 if (patterns.none { !it.builtIn }) {
                     item {
                         Text(
-                            "아직 직접 만든 이펙트가 없습니다. \"이펙트 추가\" 로 만들어 보세요.",
+                            Loc.str(R.string.pattern_panel_5),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(8.dp)
@@ -173,7 +173,7 @@ fun EffectPatternsPanel(
                                     Text(pattern.name, style = MaterialTheme.typography.titleSmall)
                                     if (pattern.builtIn) {
                                         Spacer(Modifier.width(8.dp))
-                                        Text("기본 제공", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                        Text(Loc.str(R.string.pattern_panel_6), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
                                 if (pattern.description.isNotEmpty()) {
@@ -184,7 +184,7 @@ fun EffectPatternsPanel(
                                     )
                                 }
                                 Text(
-                                    "${pattern.steps.size}단계 · 총 ${formatBeats(pattern.totalBeatsTenths)}박",
+                                    Loc.str(R.string.pattern_panel_7, pattern.steps.size, formatBeats(pattern.totalBeatsTenths)),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -197,19 +197,19 @@ fun EffectPatternsPanel(
                                 }
                             }
                             IconButton(onClick = { testing = pattern }) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "디바이스 테스트")
+                                Icon(Icons.Default.PlayArrow, contentDescription = Loc.str(R.string.pattern_panel_8))
                             }
                             if (!pattern.builtIn) {
                                 IconButton(onClick = { editing = pattern to false }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "수정")
+                                    Icon(Icons.Default.Edit, contentDescription = Loc.str(R.string.pattern_panel_9))
                                 }
                             }
                             IconButton(onClick = {
-                                editing = pattern.copy(id = patternsVm.newId(), name = "${pattern.name} 복사본", builtIn = false) to true
-                            }) { Icon(Icons.Default.ContentCopy, contentDescription = "복제") }
+                                editing = pattern.copy(id = patternsVm.newId(), name = Loc.str(R.string.pattern_panel_10, pattern.name), builtIn = false) to true
+                            }) { Icon(Icons.Default.ContentCopy, contentDescription = Loc.str(R.string.pattern_panel_11)) }
                             if (!pattern.builtIn) {
                                 IconButton(onClick = { deleting = pattern }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "삭제")
+                                    Icon(Icons.Default.Delete, contentDescription = Loc.str(R.string.efx_edit_screen_15))
                                 }
                             }
                         }
@@ -236,7 +236,7 @@ fun EffectPatternsPanel(
     testing?.let { pattern ->
         AlertDialog(
             onDismissRequest = { testing = null },
-            title = { Text("테스트 · ${pattern.name}") },
+            title = { Text(Loc.str(R.string.pattern_panel_12, pattern.name)) },
             text = {
                 Column(
                     modifier = Modifier.width(480.dp).verticalScroll(rememberScrollState()),
@@ -249,25 +249,24 @@ fun EffectPatternsPanel(
                     PatternTester(pattern.steps, paletteSets, bleVm)
                 }
             },
-            confirmButton = { TextButton(onClick = { testing = null }) { Text("닫기") } }
+            confirmButton = { TextButton(onClick = { testing = null }) { Text(Loc.str(R.string.efx_edit_screen_6)) } }
         )
     }
     deleting?.let { pattern ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("이펙트 삭제") },
+            title = { Text(Loc.str(R.string.pattern_panel_13)) },
             text = {
                 Text(
-                    "'${pattern.name}' 을(를) 삭제할까요? 내 라이브러리에 연결된 칸은 타임라인에 넣을 수 없게 됩니다(칸에서 연결을 바꿔 주세요). " +
-                        "이미 타임라인에 넣은 이펙트에는 영향이 없습니다."
+                    Loc.str(R.string.pattern_panel_14, pattern.name)
                 )
             },
             confirmButton = {
                 TextButton(onClick = { patternsVm.delete(pattern.id); deleting = null }) {
-                    Text("삭제", color = MaterialTheme.colorScheme.error)
+                    Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 }
@@ -288,7 +287,7 @@ fun PatternEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "이펙트 추가" else "이펙트 수정") },
+        title = { Text(if (isNew) Loc.str(R.string.pattern_panel_2) else Loc.str(R.string.pattern_panel_15)) },
         text = {
             Column(
                 modifier = Modifier.width(600.dp).verticalScroll(rememberScrollState()),
@@ -297,12 +296,12 @@ fun PatternEditorDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("이름 (예: 펄스)") },
+                    label = { Text(Loc.str(R.string.pattern_panel_16)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "단계 ${steps.size}개 · 총 ${formatBeats(total)}박",
+                    Loc.str(R.string.pattern_panel_17, steps.size, formatBeats(total)),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -325,10 +324,10 @@ fun PatternEditorDialog(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("단계 추가")
+                    Text(Loc.str(R.string.pattern_panel_18))
                 }
                 HorizontalDivider()
-                Text("디바이스 테스트", style = MaterialTheme.typography.titleSmall)
+                Text(Loc.str(R.string.pattern_panel_8), style = MaterialTheme.typography.titleSmall)
                 PatternTester(steps.toList(), paletteSets, bleVm)
             }
         },
@@ -336,9 +335,9 @@ fun PatternEditorDialog(
             TextButton(
                 enabled = name.isNotBlank() && steps.isNotEmpty(),
                 onClick = { onSave(initial.copy(name = name.trim(), steps = steps.toList())) }
-            ) { Text("저장") }
+            ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
     )
 }
 
@@ -354,15 +353,15 @@ private fun StepEditor(
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${index + 1}단계", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Text(Loc.str(R.string.pattern_panel_19, index + 1), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 IconButton(onClick = { onMove(-1) }, enabled = index > 0) {
-                    Icon(Icons.Default.ArrowUpward, contentDescription = "위로")
+                    Icon(Icons.Default.ArrowUpward, contentDescription = Loc.str(R.string.pattern_panel_20))
                 }
                 IconButton(onClick = { onMove(1) }, enabled = index < count - 1) {
-                    Icon(Icons.Default.ArrowDownward, contentDescription = "아래로")
+                    Icon(Icons.Default.ArrowDownward, contentDescription = Loc.str(R.string.pattern_panel_21))
                 }
                 IconButton(onClick = onDelete, enabled = count > 1) {
-                    Icon(Icons.Default.Delete, contentDescription = "단계 삭제")
+                    Icon(Icons.Default.Delete, contentDescription = Loc.str(R.string.pattern_panel_22))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -375,21 +374,21 @@ private fun StepEditor(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("길이", style = MaterialTheme.typography.labelLarge)
+                Text(Loc.str(R.string.pattern_panel_23), style = MaterialTheme.typography.labelLarge)
                 IconButton(onClick = { onChange(step.copy(beatsTenths = (step.beatsTenths - 1).coerceAtLeast(1))) }) {
-                    Icon(Icons.Default.Remove, contentDescription = "0.1박 줄이기")
+                    Icon(Icons.Default.Remove, contentDescription = Loc.str(R.string.pattern_panel_24))
                 }
                 BeatsField(step.beatsTenths) { onChange(step.copy(beatsTenths = it)) }
                 IconButton(onClick = { onChange(step.copy(beatsTenths = (step.beatsTenths + 1).coerceAtMost(MAX_BEATS_TENTHS))) }) {
-                    Icon(Icons.Default.Add, contentDescription = "0.1박 늘리기")
+                    Icon(Icons.Default.Add, contentDescription = Loc.str(R.string.pattern_panel_25))
                 }
-                Text("박 (0.1 단위)", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(Loc.str(R.string.pattern_panel_26), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (step.type != "OFF") {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ColorRefDropdown("색 (FG)", step.fg) { onChange(step.copy(fg = it)) }
+                    ColorRefDropdown(Loc.str(R.string.pattern_panel_27), step.fg) { onChange(step.copy(fg = it)) }
                     if (isTwoColor(step.type)) {
-                        ColorRefDropdown("배경 (BG)", step.bg) { onChange(step.copy(bg = it)) }
+                        ColorRefDropdown(Loc.str(R.string.efx_tablet_editor_screen_40), step.bg) { onChange(step.copy(bg = it)) }
                     }
                 }
             }
@@ -397,7 +396,7 @@ private fun StepEditor(
                 NumberTextField(
                     value = step.frames,
                     onValueChange = { onChange(step.copy(frames = it)) },
-                    label = if (step.type == "ON" || step.type == "OFF") "Transit (프레임)" else "Period (프레임)",
+                    label = if (step.type == "ON" || step.type == "OFF") Loc.str(R.string.pattern_panel_28) else Loc.str(R.string.pattern_panel_29),
                     range = 0..255,
                     modifier = Modifier.weight(1f)
                 )
@@ -411,7 +410,7 @@ private fun StepEditor(
                 NumberTextField(
                     value = step.fade,
                     onValueChange = { onChange(step.copy(fade = it)) },
-                    label = "Fade (밝기 %)",
+                    label = Loc.str(R.string.pattern_panel_30),
                     range = 0..100,
                     modifier = Modifier.weight(1f)
                 )
@@ -485,8 +484,8 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SetDropdown(
-            label = "팔레트 세트",
-            autoLabel = "기본 팔레트 (내장 첫 번째)",
+            label = Loc.str(R.string.settings_screen_21),
+            autoLabel = Loc.str(R.string.pattern_panel_31),
             items = paletteSets,
             selectedId = paletteId,
             idOf = { it.id },
@@ -511,7 +510,7 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
         }
         // 이 팔레트에서 각 단계 색이 어떻게 풀리는지 미리 보여 준다
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("색 미리보기", style = MaterialTheme.typography.labelMedium)
+            Text(Loc.str(R.string.pattern_panel_32), style = MaterialTheme.typography.labelMedium)
             steps.forEach { s ->
                 val fg = PatternColors.resolve(s.fg, palette)
                 Box(
@@ -530,10 +529,10 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
             )
             NumberTextField(
                 value = beatMs, onValueChange = { beatMs = it },
-                label = "1박 (ms)", range = MIN_BEAT_MS..MAX_BEAT_MS, modifier = Modifier.width(120.dp)
+                label = Loc.str(R.string.pattern_panel_33), range = MIN_BEAT_MS..MAX_BEAT_MS, modifier = Modifier.width(120.dp)
             )
             Checkbox(checked = loop, onCheckedChange = { loop = it })
-            Text("반복", style = MaterialTheme.typography.labelLarge)
+            Text(Loc.str(R.string.pattern_panel_34), style = MaterialTheme.typography.labelLarge)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (testing) {
@@ -546,7 +545,7 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
                 ) {
                     Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("정지")
+                    Text(Loc.str(R.string.pattern_panel_35))
                 }
             } else {
                 Button(
@@ -560,12 +559,12 @@ fun PatternTester(steps: List<PatternStep>, paletteSets: List<PaletteSet>, bleVm
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("디바이스에서 테스트")
+                    Text(Loc.str(R.string.pattern_panel_36))
                 }
             }
             if (connected == null) {
                 Text(
-                    "디바이스를 연결하면 테스트할 수 있습니다.",
+                    Loc.str(R.string.pattern_panel_37),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

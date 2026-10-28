@@ -117,6 +117,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.max
 import kotlin.math.roundToInt
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 private val PREVIEW_ICON_SIZE = 84.dp
 
@@ -286,7 +288,7 @@ fun EfxTabletEditorScreen(
         preset.patternId?.let { id ->
             val pattern = patterns.firstOrNull { it.id == id }
             if (pattern == null) {
-                Toast.makeText(context, "연결된 이펙트를 찾을 수 없습니다. 설정의 이펙트 라이브러리를 확인해 주세요.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, Loc.str(R.string.efx_tablet_editor_screen_1), Toast.LENGTH_SHORT).show()
                 return
             }
             // 색 역할은 마지막으로 쓴 팔레트 세트로 풀어 넣는다 (선택한 적이 없으면 기본 팔레트)
@@ -337,7 +339,7 @@ fun EfxTabletEditorScreen(
             EditorTopBar(
                 name = metadata?.name ?: "",
                 musicUriString = musicFile?.let { android.net.Uri.fromFile(it).toString() },
-                musicLabel = if (musicFile != null) "음악 변경" else "음악 선택",
+                musicLabel = if (musicFile != null) Loc.str(R.string.efx_tablet_editor_screen_2) else Loc.str(R.string.efx_edit_screen_25),
                 analyzing = analyzing,
                 applying = applying,
                 entryCount = entries.size,
@@ -414,9 +416,9 @@ fun EfxTabletEditorScreen(
                             followPlayhead = followPlayhead,
                             isPlaying = isPlaying,
                             emptyHint = when {
-                                analyzing -> "음악 분석 중… (파형·섹션·비트)"
-                                musicFile == null -> "음악을 선택하면 파형과 섹션이 표시됩니다"
-                                else -> "분석 결과가 없습니다"
+                                analyzing -> Loc.str(R.string.efx_tablet_editor_screen_3)
+                                musicFile == null -> Loc.str(R.string.efx_tablet_editor_screen_4)
+                                else -> Loc.str(R.string.efx_tablet_editor_screen_5)
                             },
                             onSeek = { seek(it) },
                             onEntryClick = { selectedIndex = it },
@@ -534,21 +536,21 @@ fun EfxTabletEditorScreen(
     if (showLeaveDialog) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
-            title = { Text("저장하지 않은 변경") },
-            text = { Text("타임라인에 저장하지 않은 편집이 있습니다. 저장하고 나갈까요?") },
+            title = { Text(Loc.str(R.string.efx_tablet_editor_screen_6)) },
+            text = { Text(Loc.str(R.string.efx_tablet_editor_screen_7)) },
             confirmButton = {
                 TextButton(onClick = {
                     showLeaveDialog = false
                     editVm.save(onSaved = onNavigateBack)
-                }) { Text("저장하고 나가기") }
+                }) { Text(Loc.str(R.string.efx_tablet_editor_screen_8)) }
             },
             dismissButton = {
                 Row {
                     TextButton(onClick = {
                         showLeaveDialog = false
                         onNavigateBack()
-                    }) { Text("저장 안 함", color = MaterialTheme.colorScheme.error) }
-                    TextButton(onClick = { showLeaveDialog = false }) { Text("취소") }
+                    }) { Text(Loc.str(R.string.efx_tablet_editor_screen_9), color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = { showLeaveDialog = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) }
                 }
             }
         )
@@ -558,7 +560,7 @@ fun EfxTabletEditorScreen(
         var text by remember { mutableStateOf(metadata?.name ?: "") }
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            title = { Text("프로젝트 이름") },
+            title = { Text(Loc.str(R.string.efx_tablet_editor_screen_10)) },
             text = {
                 OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true)
             },
@@ -569,9 +571,9 @@ fun EfxTabletEditorScreen(
                         editVm.updateProjectName(text.trim())
                         showNameDialog = false
                     }
-                ) { Text("저장") }
+                ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
             },
-            dismissButton = { TextButton(onClick = { showNameDialog = false }) { Text("취소") } }
+            dismissButton = { TextButton(onClick = { showNameDialog = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 
@@ -585,8 +587,8 @@ fun EfxTabletEditorScreen(
         val ready = analysis?.engineInput != null
 
         SetSelectionDialog(
-            title = "이펙트 세트 적용",
-            confirmLabel = "적용",
+            title = Loc.str(R.string.efx_tablet_editor_screen_11),
+            confirmLabel = Loc.str(R.string.efx_edit_screen_5),
             effectSets = effectSets,
             paletteSets = paletteSets,
             initialEffectId = setsVm.lastEffectSetId,
@@ -604,8 +606,8 @@ fun EfxTabletEditorScreen(
             onDismiss = { showApplyDialog = false },
             extraContent = {
                 SetDropdown(
-                    label = "적용 범위",
-                    autoLabel = "곡 전체",
+                    label = Loc.str(R.string.efx_tablet_editor_screen_12),
+                    autoLabel = Loc.str(R.string.efx_tablet_editor_screen_13),
                     items = sections.withIndex().toList(),
                     selectedId = if (scopeIndex < 0) "" else scopeIndex.toString(),
                     idOf = { it.index.toString() },
@@ -616,10 +618,10 @@ fun EfxTabletEditorScreen(
                 )
                 Text(
                     when {
-                        !ready && analyzing -> "음악 분석 중입니다. 끝나면 적용할 수 있습니다."
-                        !ready -> "음악을 선택해 분석한 뒤 적용할 수 있습니다."
-                        replaceCount > 0 -> "범위 안의 기존 엔트리 ${replaceCount}개가 새로 만든 이펙트로 교체됩니다."
-                        else -> "범위 안에 기존 엔트리가 없어 새로 추가됩니다."
+                        !ready && analyzing -> Loc.str(R.string.efx_tablet_editor_screen_14)
+                        !ready -> Loc.str(R.string.efx_tablet_editor_screen_15)
+                        replaceCount > 0 -> Loc.str(R.string.efx_tablet_editor_screen_16, replaceCount)
+                        else -> Loc.str(R.string.efx_tablet_editor_screen_17)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (ready && replaceCount > 0) MaterialTheme.colorScheme.error
@@ -677,7 +679,7 @@ private fun EditorTopBar(
         ),
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Loc.str(R.string.efx_edit_screen_2))
             }
         },
         title = {
@@ -709,7 +711,7 @@ private fun EditorTopBar(
                         shrinkHorizontally(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
                 ) {
                     Text(
-                        "저장 안 됨",
+                        Loc.str(R.string.efx_tablet_editor_screen_18),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.padding(start = 8.dp)
@@ -722,7 +724,7 @@ private fun EditorTopBar(
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "분석 중…",
+                    Loc.str(R.string.efx_tablet_editor_screen_19),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -730,10 +732,10 @@ private fun EditorTopBar(
             }
             // 실행 취소 / 다시 실행: Material Symbols 의 Undo / Redo
             FilledTonalIconButton(onClick = onUndo, enabled = canUndo) {
-                Icon(HistoryIcons.Undo, contentDescription = "실행 취소", modifier = Modifier.size(22.dp))
+                Icon(HistoryIcons.Undo, contentDescription = Loc.str(R.string.efx_tablet_editor_screen_20), modifier = Modifier.size(22.dp))
             }
             FilledTonalIconButton(onClick = onRedo, enabled = canRedo) {
-                Icon(HistoryIcons.Redo, contentDescription = "다시 실행", modifier = Modifier.size(22.dp))
+                Icon(HistoryIcons.Redo, contentDescription = Loc.str(R.string.efx_tablet_editor_screen_21), modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(8.dp))
             Button(onClick = onSave, enabled = dirty && !saving) {
@@ -743,7 +745,7 @@ private fun EditorTopBar(
                     Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(6.dp))
-                Text("저장")
+                Text(Loc.str(R.string.efx_edit_screen_21))
             }
             Spacer(Modifier.width(8.dp))
             FilledTonalButton(onClick = onApplySets, enabled = !applying) {
@@ -753,7 +755,7 @@ private fun EditorTopBar(
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.width(6.dp))
-                Text(if (applying) "적용 중…" else "세트 적용")
+                Text(if (applying) Loc.str(R.string.efx_tablet_editor_screen_22) else Loc.str(R.string.efx_tablet_editor_screen_23))
             }
             Spacer(Modifier.width(8.dp))
             FilledTonalButton(onClick = onPickMusic) {
@@ -769,7 +771,7 @@ private fun EditorTopBar(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(6.dp))
-                Text(if (deviceConnected) "기기 연결됨" else "기기 연결")
+                Text(if (deviceConnected) Loc.str(R.string.efx_tablet_editor_screen_24) else Loc.str(R.string.efx_tablet_editor_screen_25))
             }
             Spacer(Modifier.width(12.dp))
         }
@@ -789,17 +791,17 @@ private fun TimelineToolbar(
     onFit: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("타임라인", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text(Loc.str(R.string.efx_tablet_editor_screen_26), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.weight(1f))
-        FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text("비트 표시") })
+        FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_27)) })
         Spacer(Modifier.width(8.dp))
-        FilterChip(selected = snapToBeats, onClick = { onSnapChange(!snapToBeats) }, label = { Text("비트 스냅") })
+        FilterChip(selected = snapToBeats, onClick = { onSnapChange(!snapToBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_28)) })
         Spacer(Modifier.width(8.dp))
-        FilterChip(selected = followPlayhead, onClick = { onFollowChange(!followPlayhead) }, label = { Text("따라가기") })
+        FilterChip(selected = followPlayhead, onClick = { onFollowChange(!followPlayhead) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_29)) })
         Spacer(Modifier.width(4.dp))
-        IconButton(onClick = onZoomOut) { Icon(Icons.Default.ZoomOut, contentDescription = "축소") }
-        IconButton(onClick = onZoomIn) { Icon(Icons.Default.ZoomIn, contentDescription = "확대") }
-        TextButton(onClick = onFit) { Text("전체 보기") }
+        IconButton(onClick = onZoomOut) { Icon(Icons.Default.ZoomOut, contentDescription = Loc.str(R.string.efx_tablet_editor_screen_30)) }
+        IconButton(onClick = onZoomIn) { Icon(Icons.Default.ZoomIn, contentDescription = Loc.str(R.string.efx_tablet_editor_screen_31)) }
+        TextButton(onClick = onFit) { Text(Loc.str(R.string.efx_tablet_editor_screen_32)) }
     }
 }
 
@@ -863,7 +865,7 @@ private fun PreviewPanel(
                 Text("Preview", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.weight(1f))
                 if (deviceConnected) {
-                    Text("● 실기기 동기화", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                    Text(Loc.str(R.string.efx_tablet_editor_screen_33), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -879,7 +881,7 @@ private fun PreviewPanel(
             )
             if (!canPlay) {
                 Text(
-                    "음악을 선택하면 재생할 수 있습니다",
+                    Loc.str(R.string.efx_tablet_editor_screen_34),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -902,11 +904,11 @@ private fun SelectedEntryPanel(
             .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
             .padding(12.dp)
     ) {
-        Text("선택한 이펙트", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text(Loc.str(R.string.efx_tablet_editor_screen_35), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
         if (entry == null) {
             Text(
-                "타임라인의 블록을 탭하면 속성을 볼 수 있습니다.\n블록을 끌면 시간을 옮길 수 있습니다.",
+                Loc.str(R.string.efx_tablet_editor_screen_36),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -915,22 +917,22 @@ private fun SelectedEntryPanel(
         val p = entry.payload
         // (라벨, 값, 값 옆에 보여줄 색 견본)
         val rows: List<Triple<String, String, Color?>> = listOf(
-            Triple("시각", TimelineMath.formatTime(entry.timestampMs, withTenths = true), null),
-            Triple("종류", p.effectType.name, null),
-            Triple("색상 (FG)", "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})", Color(p.color.r, p.color.g, p.color.b)),
+            Triple(Loc.str(R.string.efx_tablet_editor_screen_37), TimelineMath.formatTime(entry.timestampMs, withTenths = true), null),
+            Triple(Loc.str(R.string.efx_tablet_editor_screen_38), p.effectType.name, null),
+            Triple(Loc.str(R.string.efx_tablet_editor_screen_39), "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})", Color(p.color.r, p.color.g, p.color.b)),
             Triple(
-                "배경 (BG)",
+                Loc.str(R.string.efx_tablet_editor_screen_40),
                 "RGB(${p.backgroundColor.r}, ${p.backgroundColor.g}, ${p.backgroundColor.b})",
                 Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b)
             ),
             // 같은 패킷 필드: ON/OFF 는 Transit, BLINK/STROBE/BREATH 는 Period. 숫자는 프레임 수이고 1프레임 길이는 SPF 가 정한다
             Triple(TimelineMath.periodLabel(p.effectType), TimelineMath.formatFrames(p.period, p.spf), null),
             Triple("SPF", "${p.spf}  (${TimelineMath.frameUnitLabel(p.spf).substringBefore(" (")})", null),
-            Triple("Fade (밝기)", TimelineMath.formatFade(p.fade), null),
-            Triple("그룹 마스크", TimelineMath.formatGroupMask(p.groupMask), null),
+            Triple(Loc.str(R.string.efx_tablet_editor_screen_41), TimelineMath.formatFade(p.fade), null),
+            Triple(Loc.str(R.string.group_mask_picker_1), TimelineMath.formatGroupMask(p.groupMask), null),
             Triple(
                 "Random Delay",
-                if (p.randomDelay == 0) "0f  (없음)" else "최대 " + TimelineMath.formatFrames(p.randomDelay, p.spf),
+                if (p.randomDelay == 0) Loc.str(R.string.efx_tablet_editor_screen_42) else Loc.str(R.string.efx_tablet_editor_screen_43) + TimelineMath.formatFrames(p.randomDelay, p.spf),
                 null
             ),
             Triple("Random Color", if (p.randomColor != 0) "ON" else "OFF", null),
@@ -969,12 +971,12 @@ private fun SelectedEntryPanel(
             Button(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("편집")
+                Text(Loc.str(R.string.efx_edit_screen_8))
             }
             OutlinedButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("삭제")
+                Text(Loc.str(R.string.efx_edit_screen_15))
             }
         }
     }

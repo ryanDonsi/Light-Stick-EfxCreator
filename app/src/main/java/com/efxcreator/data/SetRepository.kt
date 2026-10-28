@@ -8,6 +8,8 @@ import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.music.sets.SetCatalog
 import com.google.gson.Gson
 import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * 사용자 정의 이펙트 세트/팔레트 세트 저장소 (filesDir/user_sets.json).
@@ -72,7 +74,7 @@ class SetRepository(context: Context) {
 
     @Synchronized
     fun upsertEffectSet(set: EffectRuleSet) {
-        require(!set.builtIn) { "내장 세트는 수정할 수 없습니다." }
+        require(!set.builtIn) { Loc.str(R.string.set_repository_1) }
         val store = load()
         val list = store.effectSets.toMutableList()
         val i = list.indexOfFirst { it.id == set.id }
@@ -88,7 +90,7 @@ class SetRepository(context: Context) {
 
     @Synchronized
     fun upsertPaletteSet(set: PaletteSet) {
-        require(!set.builtIn) { "내장 세트는 수정할 수 없습니다." }
+        require(!set.builtIn) { Loc.str(R.string.set_repository_1) }
         val store = load()
         val list = store.paletteSets.toMutableList()
         val i = list.indexOfFirst { it.id == set.id }

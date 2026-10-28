@@ -47,6 +47,8 @@ import com.efxcreator.ui.editor.SlimVerticalScrollBar
 import com.efxcreator.ui.activityViewModel
 import com.efxcreator.viewmodel.PatternsViewModel
 import com.efxcreator.viewmodel.SetsViewModel
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 편집 중인 세트 (isNew 이면 "추가" 제목) */
 private data class Editing<T>(val value: T, val isNew: Boolean)
@@ -62,7 +64,7 @@ private fun SetPanelHeader(title: String, onAdd: () -> Unit) {
         Button(onClick = onAdd) {
             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("세트 추가")
+            Text(Loc.str(R.string.set_manager_screen_1))
         }
     }
 }
@@ -86,7 +88,7 @@ fun EffectSetsPanel(
     fun newSet() = EffectRuleSet(viewModel.newEffectSetId(), "", SetCatalog.DEFAULT_RULES)
 
     Column(modifier = modifier) {
-        SetPanelHeader("이펙트 세트") { editing = Editing(newSet(), true) }
+        SetPanelHeader(Loc.str(R.string.settings_screen_19)) { editing = Editing(newSet(), true) }
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
@@ -95,8 +97,8 @@ fun EffectSetsPanel(
             ) {
                 item {
                     InfoCard(
-                        "자동 (기본 규칙)",
-                        "세트를 고르지 않으면 곡의 섹션·에너지·장르에 따라 기본 규칙으로 패턴을 고릅니다."
+                        Loc.str(R.string.set_manager_screen_2),
+                        Loc.str(R.string.set_manager_screen_3)
                     )
                 }
                 items(effectSets, key = { it.id }) { set ->
@@ -106,7 +108,7 @@ fun EffectSetsPanel(
                         onEdit = { editing = Editing(set, false) },
                         onCopy = {
                             editing = Editing(
-                                set.copy(id = viewModel.newEffectSetId(), name = "${set.name} 복사본", builtIn = false),
+                                set.copy(id = viewModel.newEffectSetId(), name = Loc.str(R.string.pattern_panel_10, set.name), builtIn = false),
                                 true
                             )
                         },
@@ -158,7 +160,7 @@ fun PaletteSetsPanel(viewModel: SetsViewModel = viewModel(), modifier: Modifier 
     )
 
     Column(modifier = modifier) {
-        SetPanelHeader("팔레트 세트") { editing = Editing(newSet(), true) }
+        SetPanelHeader(Loc.str(R.string.settings_screen_21)) { editing = Editing(newSet(), true) }
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
@@ -167,8 +169,8 @@ fun PaletteSetsPanel(viewModel: SetsViewModel = viewModel(), modifier: Modifier 
             ) {
                 item {
                     InfoCard(
-                        "자동 (장르·곡 기반)",
-                        "세트를 고르지 않으면 장르에 어울리는 색 계열을 곡마다 자동으로 고릅니다."
+                        Loc.str(R.string.set_manager_screen_4),
+                        Loc.str(R.string.set_manager_screen_5)
                     )
                 }
                 items(paletteSets, key = { it.id }) { set ->
@@ -178,7 +180,7 @@ fun PaletteSetsPanel(viewModel: SetsViewModel = viewModel(), modifier: Modifier 
                         onEdit = { editing = Editing(set, false) },
                         onCopy = {
                             editing = Editing(
-                                set.copy(id = viewModel.newPaletteSetId(), name = "${set.name} 복사본", builtIn = false),
+                                set.copy(id = viewModel.newPaletteSetId(), name = Loc.str(R.string.pattern_panel_10, set.name), builtIn = false),
                                 true
                             )
                         },
@@ -244,18 +246,18 @@ private fun SetCard(
                     Text(title, style = MaterialTheme.typography.titleSmall)
                     if (builtIn) {
                         Spacer(Modifier.width(8.dp))
-                        Text("내장", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(Loc.str(R.string.set_manager_screen_6), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 Spacer(Modifier.height(6.dp))
                 content()
             }
             if (!builtIn) {
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "수정") }
+                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = Loc.str(R.string.pattern_panel_9)) }
             }
-            IconButton(onClick = onCopy) { Icon(Icons.Default.ContentCopy, contentDescription = "복제") }
+            IconButton(onClick = onCopy) { Icon(Icons.Default.ContentCopy, contentDescription = Loc.str(R.string.pattern_panel_11)) }
             if (!builtIn) {
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "삭제") }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = Loc.str(R.string.efx_edit_screen_15)) }
             }
         }
     }
@@ -265,9 +267,9 @@ private fun SetCard(
 private fun ConfirmDelete(name: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("세트 삭제") },
-        text = { Text("'$name' 세트를 삭제할까요? 이미 만든 EFX 에는 영향이 없습니다.") },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("삭제") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+        title = { Text(Loc.str(R.string.set_manager_screen_7)) },
+        text = { Text(Loc.str(R.string.set_manager_screen_8, name)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(Loc.str(R.string.efx_edit_screen_15)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
     )
 }

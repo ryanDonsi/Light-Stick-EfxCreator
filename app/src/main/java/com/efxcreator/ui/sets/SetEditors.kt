@@ -67,6 +67,8 @@ import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.music.sets.RgbColor
 import com.efxcreator.music.sets.SetCatalog
 import kotlin.math.roundToInt
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 색 빠른 선택용 (Light-Stick-Music 팔레트 색 계열) */
 private val QUICK_COLORS = listOf(
@@ -99,7 +101,7 @@ fun PaletteSetEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "팔레트 세트 추가" else "팔레트 세트 수정") },
+        title = { Text(if (isNew) Loc.str(R.string.set_editors_1) else Loc.str(R.string.set_editors_2)) },
         text = {
             Column(
                 modifier = Modifier
@@ -110,12 +112,12 @@ fun PaletteSetEditorDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("이름") },
+                    label = { Text(Loc.str(R.string.set_editors_3)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text("색 슬롯 (눌러서 선택)", style = MaterialTheme.typography.labelMedium)
+                Text(Loc.str(R.string.set_editors_4), style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     colors.forEachIndexed { i, c ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -142,14 +144,14 @@ fun PaletteSetEditorDialog(
                 )
                 HsvColorPicker(color = current, onChange = { colors[selectedSlot] = it })
                 Text(
-                    if (deviceConnected) "● 디바이스에 색상이 실시간으로 표시됩니다."
-                    else "디바이스를 연결하면 색상이 실시간으로 표시됩니다.",
+                    if (deviceConnected) Loc.str(R.string.timeline_entry_dialog_15)
+                    else Loc.str(R.string.timeline_entry_dialog_16),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (deviceConnected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Text("빠른 선택", style = MaterialTheme.typography.labelMedium)
+                Text(Loc.str(R.string.set_editors_5), style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     QUICK_COLORS.forEach { q ->
                         Box(
@@ -162,8 +164,7 @@ fun PaletteSetEditorDialog(
                     }
                 }
                 Text(
-                    "대표색은 곡 전체의 기준색이고, 단계색 3개는 마디·섹션이 바뀔 때 번갈아 쓰입니다. " +
-                        "어두운 톤은 대표색에서 자동으로 만들어집니다.",
+                    Loc.str(R.string.set_editors_6),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -181,9 +182,9 @@ fun PaletteSetEditorDialog(
                         )
                     )
                 }
-            ) { Text("저장") }
+            ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
     )
 }
 
@@ -229,7 +230,7 @@ fun EffectSetEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isNew) "이펙트 세트 추가" else "이펙트 세트 수정") },
+        title = { Text(if (isNew) Loc.str(R.string.set_editors_7) else Loc.str(R.string.set_editors_8)) },
         text = {
             Column(
                 modifier = Modifier
@@ -240,13 +241,12 @@ fun EffectSetEditorDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("이름") },
+                    label = { Text(Loc.str(R.string.set_editors_3)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "섹션마다 \"자동\"(아래에 표시된 기본 동작) 또는 직접 정한 규칙을 씁니다. " +
-                        "규칙은 마디/섹션 에너지 같은 조건에 따라 이펙트를 고르며, 이펙트 라이브러리에서 만든 이펙트도 쓸 수 있습니다.",
+                    Loc.str(R.string.set_editors_9),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -275,9 +275,9 @@ fun EffectSetEditorDialog(
                     }
                     onSave(initial.copy(name = name.trim(), rules = rules, cases = cases.ifEmpty { null }, builtIn = false))
                 }
-            ) { Text("저장") }
+            ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
     )
 }
 
@@ -297,7 +297,7 @@ private fun SectionRuleCard(
                 FilterChip(
                     selected = cases.isEmpty(),
                     onClick = { onChange(emptyList()) },
-                    label = { Text("자동") }
+                    label = { Text(Loc.str(R.string.effect_sets_18)) }
                 )
                 Spacer(Modifier.width(8.dp))
                 FilterChip(
@@ -308,7 +308,7 @@ private fun SectionRuleCard(
                             onChange(listOf(RuleCase(start)))
                         }
                     },
-                    label = { Text("직접 지정") }
+                    label = { Text(Loc.str(R.string.set_editors_10)) }
                 )
             }
             // 이 섹션이 곡의 어디인지
@@ -317,7 +317,7 @@ private fun SectionRuleCard(
             }
             // 자동일 때 엔진이 실제로 하는 동작
             Text(
-                "자동: " + (SetCatalog.DEFAULT_BEHAVIOR[sectionKey] ?: "-"),
+                Loc.str(R.string.set_editors_11) + (SetCatalog.DEFAULT_BEHAVIOR[sectionKey] ?: "-"),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -342,14 +342,14 @@ private fun SectionRuleCard(
                     OutlinedButton(onClick = { onChange(cases + RuleCase(FgEngine.BREATH.name)) }) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("규칙 추가")
+                        Text(Loc.str(R.string.set_editors_12))
                     }
                     if (sectionKey == "VERSE") {
-                        TextButton(onClick = { onChange(SetCatalog.DEFAULT_VERSE_CASES) }) { Text("기본 동작으로 채우기") }
+                        TextButton(onClick = { onChange(SetCatalog.DEFAULT_VERSE_CASES) }) { Text(Loc.str(R.string.set_editors_13)) }
                     }
                 }
                 Text(
-                    "위에서부터 조건이 맞는 첫 규칙이 쓰입니다. 조건이 없는 규칙은 \"그 외 모두\"이고, 맞는 규칙이 없으면 자동 동작을 따릅니다.",
+                    Loc.str(R.string.set_editors_14),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -376,25 +376,25 @@ private fun CaseEditor(
     ) {
         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("규칙 ${index + 1}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                Text(Loc.str(R.string.set_editors_15, index + 1), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
                 IconButton(onClick = { onMove(-1) }, enabled = index > 0) {
-                    Icon(Icons.Default.ArrowUpward, contentDescription = "위로")
+                    Icon(Icons.Default.ArrowUpward, contentDescription = Loc.str(R.string.pattern_panel_20))
                 }
                 IconButton(onClick = { onMove(1) }, enabled = index < count - 1) {
-                    Icon(Icons.Default.ArrowDownward, contentDescription = "아래로")
+                    Icon(Icons.Default.ArrowDownward, contentDescription = Loc.str(R.string.pattern_panel_21))
                 }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "규칙 삭제") }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = Loc.str(R.string.set_editors_16)) }
             }
             EffectChoice(case.effect, patterns) { onChange(case.copy(effect = it)) }
 
             // 조건: 곡 분위기(장르). 아무것도 고르지 않은 "전체" 가 기본(그 외 모두)이고, 여러 장르를 함께 고를 수 있다.
             // 칩이 한 줄에 다 들어가지 않으므로 줄바꿈이 되는 FlowRow 를 쓴다.
-            Text("곡 분위기", style = MaterialTheme.typography.labelMedium)
+            Text(Loc.str(R.string.set_editors_17), style = MaterialTheme.typography.labelMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 FilterChip(
                     selected = case.genres == null,
                     onClick = { onChange(case.copy(genres = null, mood = null)) },
-                    label = { Text("전체") }
+                    label = { Text(Loc.str(R.string.set_editors_18)) }
                 )
                 SetCatalog.GENRES.forEach { (key, label) ->
                     val selected = case.genres?.contains(key) == true
@@ -410,14 +410,14 @@ private fun CaseEditor(
             }
             // 조건: 마디 에너지 / 섹션 에너지
             EnergyCondition(
-                label = "마디 에너지",
-                hint = "섹션 안에서의 순위 (100% = 가장 센 마디)",
+                label = Loc.str(R.string.set_editors_19),
+                hint = Loc.str(R.string.set_editors_20),
                 min = case.minBarEnergy, max = case.maxBarEnergy,
                 onChange = { mn, mx -> onChange(case.copy(minBarEnergy = mn, maxBarEnergy = mx)) }
             )
             EnergyCondition(
-                label = "섹션 에너지",
-                hint = "곡 전체 섹션 중 상대 에너지 (100% = 가장 센 섹션)",
+                label = Loc.str(R.string.set_editors_21),
+                hint = Loc.str(R.string.set_editors_22),
                 min = case.minSectionEnergy, max = case.maxSectionEnergy,
                 onChange = { mn, mx -> onChange(case.copy(minSectionEnergy = mn, maxSectionEnergy = mx)) }
             )
@@ -449,12 +449,12 @@ private fun EnergyCondition(label: String, hint: String, min: Int?, max: Int?, o
             ) {
                 NumberTextField(
                     value = min ?: 0, onValueChange = { onChange(it, max) },
-                    label = "이상 (%)", range = 0..100, modifier = Modifier.width(110.dp)
+                    label = Loc.str(R.string.set_editors_23), range = 0..100, modifier = Modifier.width(110.dp)
                 )
                 Text("~", style = MaterialTheme.typography.bodyMedium)
                 NumberTextField(
                     value = max ?: 100, onValueChange = { onChange(min, it) },
-                    label = "이하 (%)", range = 0..100, modifier = Modifier.width(110.dp)
+                    label = Loc.str(R.string.set_editors_24), range = 0..100, modifier = Modifier.width(110.dp)
                 )
             }
         }
@@ -472,7 +472,7 @@ private fun EffectChoice(effect: String, patterns: List<EffectPattern>, onSelect
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             Text(
-                "엔진 기본 패턴", style = MaterialTheme.typography.labelSmall,
+                Loc.str(R.string.set_editors_25), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
             SetCatalog.PATTERNS.forEach { info ->
@@ -484,12 +484,12 @@ private fun EffectChoice(effect: String, patterns: List<EffectPattern>, onSelect
             if (patterns.isNotEmpty()) {
                 HorizontalDivider()
                 Text(
-                    "이펙트 라이브러리", style = MaterialTheme.typography.labelSmall,
+                    Loc.str(R.string.settings_screen_17), style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
                 patterns.forEach { p ->
                     DropdownMenuItem(
-                        text = { Column { Text(p.name); Text("${p.steps.size}단계 · ${formatBeatsLabel(p.totalBeatsTenths)}", style = MaterialTheme.typography.labelSmall) } },
+                        text = { Column { Text(p.name); Text(Loc.str(R.string.set_editors_26, p.steps.size, formatBeatsLabel(p.totalBeatsTenths)), style = MaterialTheme.typography.labelSmall) } },
                         onClick = { onSelect(RuleCase.library(p.id)); expanded = false }
                     )
                 }
@@ -501,7 +501,7 @@ private fun EffectChoice(effect: String, patterns: List<EffectPattern>, onSelect
 private fun effectLabel(effect: String, patterns: List<EffectPattern>): String {
     if (effect.startsWith(RuleCase.PATTERN_PREFIX)) {
         val id = effect.removePrefix(RuleCase.PATTERN_PREFIX)
-        return patterns.firstOrNull { it.id == id }?.let { "라이브러리 · ${it.name}" } ?: "(삭제된 이펙트)"
+        return patterns.firstOrNull { it.id == id }?.let { Loc.str(R.string.set_editors_27, it.name) } ?: Loc.str(R.string.set_editors_28)
     }
     return SetCatalog.patternLabel(effect)
 }
@@ -509,19 +509,19 @@ private fun effectLabel(effect: String, patterns: List<EffectPattern>): String {
 /** "마디 에너지 80% 이상 · 비발라드 → BLINK" */
 fun RuleCase.describe(patterns: List<EffectPattern>): String {
     val conds = buildList {
-        if (minBarEnergy != null || maxBarEnergy != null) add("마디 에너지 ${rangeText(minBarEnergy, maxBarEnergy)}")
-        if (minSectionEnergy != null || maxSectionEnergy != null) add("섹션 에너지 ${rangeText(minSectionEnergy, maxSectionEnergy)}")
+        if (minBarEnergy != null || maxBarEnergy != null) add(Loc.str(R.string.set_editors_29, rangeText(minBarEnergy, maxBarEnergy)))
+        if (minSectionEnergy != null || maxSectionEnergy != null) add(Loc.str(R.string.set_editors_30, rangeText(minSectionEnergy, maxSectionEnergy)))
         genres?.let { add(it.joinToString("/") { g -> SetCatalog.genreLabel(g) }) }
-        when (mood) { "BALLAD" -> add("발라드·힙합/R&B"); "NON_BALLAD" -> add("발라드 외") }
+        when (mood) { "BALLAD" -> add(Loc.str(R.string.set_editors_31)); "NON_BALLAD" -> add(Loc.str(R.string.set_editors_32)) }
     }
     val target = effectLabel(effect, patterns)
-    return if (conds.isEmpty()) "그 외 모두 → $target" else conds.joinToString(" · ") + " → $target"
+    return if (conds.isEmpty()) Loc.str(R.string.set_editors_33, target) else conds.joinToString(" · ") + " → $target"
 }
 
 private fun rangeText(min: Int?, max: Int?): String = when {
     min != null && max != null -> "$min~$max%"
-    min != null -> "$min% 이상"
-    else -> "$max% 이하"
+    min != null -> Loc.str(R.string.set_editors_34, min)
+    else -> Loc.str(R.string.set_editors_35, max)
 }
 
 /** 이전 버전의 "발라드 / 발라드 외" 조건을 장르 선택으로 바꿔 편집할 수 있게 한다 */

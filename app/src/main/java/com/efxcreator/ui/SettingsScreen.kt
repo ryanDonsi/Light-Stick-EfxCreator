@@ -32,6 +32,8 @@ import com.efxcreator.ui.sets.EffectPatternsPanel
 import com.efxcreator.ui.sets.EffectSetsPanel
 import com.efxcreator.ui.sets.PaletteSetsPanel
 import com.efxcreator.viewmodel.SettingsViewModel
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,13 +63,13 @@ fun SettingsScreen(
                 viewModel.changeEfxStoragePathFromUri(it)
                 Toast.makeText(
                     context,
-                    "EFX 저장 위치가 변경되었습니다.",
+                    Loc.str(R.string.settings_screen_1),
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
                 Toast.makeText(
                     context,
-                    "폴더 권한을 얻을 수 없습니다.",
+                    Loc.str(R.string.settings_screen_2),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -88,13 +90,13 @@ fun SettingsScreen(
                 viewModel.changeMusicLoadPathFromUri(it)
                 Toast.makeText(
                     context,
-                    "음악 불러오기 위치가 변경되었습니다.",
+                    Loc.str(R.string.settings_screen_3),
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
                 Toast.makeText(
                     context,
-                    "폴더 권한을 얻을 수 없습니다.",
+                    Loc.str(R.string.settings_screen_2),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -106,10 +108,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("설정") },
+                title = { Text(Loc.str(R.string.efx_list_screen_19)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Loc.str(R.string.efx_edit_screen_2))
                     }
                 }
             )
@@ -133,7 +135,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth().height(64.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("설정 메뉴", style = MaterialTheme.typography.titleMedium)
+                        Text(Loc.str(R.string.settings_screen_4), style = MaterialTheme.typography.titleMedium)
                     }
                     Spacer(Modifier.height(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -162,7 +164,7 @@ fun SettingsScreen(
                                     modifier = Modifier.fillMaxWidth().height(64.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("저장소 관리", style = MaterialTheme.typography.titleMedium)
+                                    Text(Loc.str(R.string.settings_screen_5), style = MaterialTheme.typography.titleMedium)
                                 }
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     Column(
@@ -174,7 +176,7 @@ fun SettingsScreen(
                                     ) {
             // EFX 저장 위치 섹션
             Text(
-                text = "EFX 파일 저장",
+                text = Loc.str(R.string.settings_screen_6),
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -194,7 +196,7 @@ fun SettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "현재 저장 위치",
+                                text = Loc.str(R.string.settings_screen_7),
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -206,7 +208,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         FilledTonalIconButton(onClick = { efxFolderPicker.launch(null) }) {
-                            Icon(Icons.Default.FolderOpen, contentDescription = "폴더 선택")
+                            Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
                 }
@@ -216,7 +218,7 @@ fun SettingsScreen(
 
             // 음악 불러오기 위치 섹션
             Text(
-                text = "음악 파일 불러오기",
+                text = Loc.str(R.string.settings_screen_9),
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -236,7 +238,7 @@ fun SettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "현재 불러오기 위치",
+                                text = Loc.str(R.string.settings_screen_10),
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -248,7 +250,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         FilledTonalIconButton(onClick = { musicFolderPicker.launch(null) }) {
-                            Icon(Icons.Default.FolderOpen, contentDescription = "폴더 선택")
+                            Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
                 }
@@ -265,14 +267,12 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "ℹ️ 폴더 설정 안내",
+                        text = Loc.str(R.string.settings_screen_11),
                         style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "• 폴더 아이콘을 눌러 원하는 폴더를 선택하세요\n" +
-                                "• 선택한 폴더는 앱 재시작 후에도 유지됩니다\n" +
-                                "• 폴더 권한은 자동으로 관리됩니다",
+                        text = Loc.str(R.string.settings_screen_12),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -289,7 +289,7 @@ fun SettingsScreen(
                                     modifier = Modifier.fillMaxWidth().height(64.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("디바이스 관리", style = MaterialTheme.typography.titleMedium)
+                                    Text(Loc.str(R.string.settings_screen_13), style = MaterialTheme.typography.titleMedium)
                                 }
                                 DeviceSettingsContent(activityBleViewModel(), Modifier.fillMaxSize())
                             }
@@ -303,7 +303,7 @@ fun SettingsScreen(
                                     modifier = Modifier.fillMaxWidth().height(64.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("언어 설정", style = MaterialTheme.typography.titleMedium)
+                                    Text(Loc.str(R.string.settings_screen_14), style = MaterialTheme.typography.titleMedium)
                                 }
                                 LanguageSettingsContent(Modifier.fillMaxSize())
                             }
@@ -317,12 +317,12 @@ fun SettingsScreen(
 
 /** 설정 화면의 왼쪽 메뉴 항목 */
 enum class SettingsSection(val route: String, val label: String, val subtitle: String, val icon: ImageVector) {
-    STORAGE("storage", "저장소 관리", "EFX 저장 위치 · 음악 불러오기 위치", Icons.Default.FolderOpen),
-    DEVICE("device", "디바이스 관리", "응원봉 검색 · 연결 · 관리", Icons.Default.Bluetooth),
-    EFFECT_LIBRARY("library", "이펙트 라이브러리", "박자 단위 이펙트 묶음 만들기", Icons.Default.Layers),
-    EFFECT_SETS("effect", "이펙트 세트", "섹션별 이펙트 규칙", Icons.Default.AutoAwesome),
-    PALETTE_SETS("palette", "팔레트 세트", "자동 생성에 쓰는 색 조합", Icons.Default.Palette),
-    LANGUAGE("language", "언어 설정", "자동 · 한국어 · English · 日本語 · 简体中文", Icons.Default.Language);
+    STORAGE("storage", Loc.str(R.string.settings_screen_5), Loc.str(R.string.settings_screen_15), Icons.Default.FolderOpen),
+    DEVICE("device", Loc.str(R.string.settings_screen_13), Loc.str(R.string.settings_screen_16), Icons.Default.Bluetooth),
+    EFFECT_LIBRARY("library", Loc.str(R.string.settings_screen_17), Loc.str(R.string.settings_screen_18), Icons.Default.Layers),
+    EFFECT_SETS("effect", Loc.str(R.string.settings_screen_19), Loc.str(R.string.settings_screen_20), Icons.Default.AutoAwesome),
+    PALETTE_SETS("palette", Loc.str(R.string.settings_screen_21), Loc.str(R.string.settings_screen_22), Icons.Default.Palette),
+    LANGUAGE("language", Loc.str(R.string.settings_screen_14), Loc.str(R.string.settings_screen_23), Icons.Default.Language);
 
     companion object {
         fun from(route: String?): SettingsSection = entries.firstOrNull { it.route == route } ?: STORAGE

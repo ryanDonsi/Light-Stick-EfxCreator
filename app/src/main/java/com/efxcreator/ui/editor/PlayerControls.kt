@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** Light-Stick-Music 재생 바와 같은 색 (그라데이션 채움, 트랙, 시간 글자) */
 private val SEEK_GRADIENT_START = Color(0xFF9D79BC)
@@ -171,18 +172,18 @@ fun PlayerButtons(
         PlayerIconButton(
             onClick = onPrev, enabled = enabled,
             normalIcon = R.drawable.ic_player_back_n, pressedIcon = R.drawable.ic_player_back_p,
-            contentDescription = "이전", size = (48 * scale).dp
+            contentDescription = Loc.str(R.string.player_controls_1), size = (48 * scale).dp
         )
         PlayerIconButton(
             onClick = onPlayPause, enabled = enabled,
             normalIcon = if (isPlaying) R.drawable.ic_player_pause_n else R.drawable.ic_player_play_n,
             pressedIcon = if (isPlaying) R.drawable.ic_player_pause_p else R.drawable.ic_player_play_p,
-            contentDescription = if (isPlaying) "일시정지" else "재생", size = (64 * scale).dp
+            contentDescription = if (isPlaying) Loc.str(R.string.player_controls_2) else Loc.str(R.string.player_controls_3), size = (64 * scale).dp
         )
         PlayerIconButton(
             onClick = onNext, enabled = enabled,
             normalIcon = R.drawable.ic_player_forward_n, pressedIcon = R.drawable.ic_player_forward_p,
-            contentDescription = "다음", size = (48 * scale).dp
+            contentDescription = Loc.str(R.string.show_widgets_10), size = (48 * scale).dp
         )
     }
 }

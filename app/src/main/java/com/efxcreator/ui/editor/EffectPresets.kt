@@ -8,6 +8,8 @@ import com.lightstick.efx.EfxEntry
 import com.lightstick.types.Color
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 라이브러리 카드 한 장 = 드래그&드롭/탭으로 타임라인에 넣을 수 있는 이펙트 프리셋 */
 data class EffectPreset(
@@ -27,7 +29,7 @@ data class EffectPreset(
     val subLabel: String? = null
 ) {
     enum class Category(val label: String) {
-        USER("내 라이브러리"), ON("ON"), OFF("OFF"), BLINK("BLINK"), BREATH("BREATH"), STROBE("STROBE")
+        USER(Loc.str(R.string.effect_presets_1)), ON("ON"), OFF("OFF"), BLINK("BLINK"), BREATH("BREATH"), STROBE("STROBE")
     }
 
     /** 전경(FG)·배경(BG) 두 색을 쓰는 이펙트인가 */
@@ -89,7 +91,7 @@ object EffectPresets {
         }
         // OFF
         add(EffectPreset("off", "OFF", EffectPreset.Category.OFF, EffectType.OFF, BLACK))
-        add(EffectPreset("off_fade", "OFF (1초 페이드)", EffectPreset.Category.OFF, EffectType.OFF, BLACK, period = FADE_OFF_PERIOD))
+        add(EffectPreset("off_fade", Loc.str(R.string.effect_presets_2), EffectPreset.Category.OFF, EffectType.OFF, BLACK, period = FADE_OFF_PERIOD))
         // BLINK / BREATH / STROBE — FG + BG 2색
         for ((label, fg, bg) in PAIRS) {
             add(EffectPreset("blink_$label", "$label", EffectPreset.Category.BLINK, EffectType.BLINK, fg, bg, period = BLINK_PERIOD))
@@ -140,4 +142,4 @@ fun EffectPattern.toPreset(): EffectPreset {
 
 /** 박자 길이를 "1비트", "1.5비트" 로 (소수점 한 자리, 정수면 소수점 생략) */
 fun formatBeatsLabel(tenths: Int): String =
-    if (tenths % 10 == 0) "${tenths / 10}비트" else "%.1f비트".format(java.util.Locale.US, tenths / 10f)
+    if (tenths % 10 == 0) Loc.str(R.string.effect_presets_3, tenths / 10) else Loc.str(R.string.effect_presets_4).format(java.util.Locale.US, tenths / 10f)

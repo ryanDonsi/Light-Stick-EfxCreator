@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.efxcreator.ui.editor.TimelineMath
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /** 그룹 마스크 상수 (SDK Group 과 같은 값) */
 object GroupMasks {
@@ -43,11 +45,11 @@ fun GroupMaskPicker(
 ) {
     val columns = 8
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("그룹 마스크", style = MaterialTheme.typography.labelLarge)
+        Text(Loc.str(R.string.group_mask_picker_1), style = MaterialTheme.typography.labelLarge)
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onChange(GroupMasks.MASTER) }) { Text("마스터 (0)") }
-            OutlinedButton(onClick = { onChange(GroupMasks.ALL_GROUPS) }) { Text("전체 선택") }
+            OutlinedButton(onClick = { onChange(GroupMasks.MASTER) }) { Text(Loc.str(R.string.group_mask_picker_2)) }
+            OutlinedButton(onClick = { onChange(GroupMasks.ALL_GROUPS) }) { Text(Loc.str(R.string.group_mask_picker_3)) }
         }
 
         for (row in 0 until GroupMasks.GROUP_COUNT / columns) {
@@ -73,7 +75,7 @@ fun GroupMaskPicker(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "아무것도 선택하지 않으면 마스터(0) — 모든 그룹에 적용됩니다.",
+            Loc.str(R.string.group_mask_picker_4),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -25,6 +25,8 @@ import com.efxcreator.viewmodel.EfxEditViewModel
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.Color
 import com.lightstick.types.EffectType
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,10 +75,10 @@ fun EfxEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("EFX 편집") },
+                title = { Text(Loc.str(R.string.efx_edit_screen_1)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Loc.str(R.string.efx_edit_screen_2))
                     }
                 }
             )
@@ -85,7 +87,7 @@ fun EfxEditScreen(
             FloatingActionButton(
                 onClick = { showAddDialog = true }
             ) {
-                Icon(Icons.Default.Add, contentDescription = "타임라인 추가")
+                Icon(Icons.Default.Add, contentDescription = Loc.str(R.string.efx_edit_screen_3))
             }
         }
     ) { padding ->
@@ -116,7 +118,7 @@ fun EfxEditScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "💡 프로젝트 이름 제안",
+                                        text = Loc.str(R.string.efx_edit_screen_4),
                                         style = MaterialTheme.typography.titleSmall
                                     )
                                     Text(
@@ -127,10 +129,10 @@ fun EfxEditScreen(
                                 }
                                 Row {
                                     TextButton(onClick = { viewModel.applySuggestedName() }) {
-                                        Text("적용")
+                                        Text(Loc.str(R.string.efx_edit_screen_5))
                                     }
                                     IconButton(onClick = { viewModel.dismissSuggestion() }) {
-                                        Icon(Icons.Default.Close, "닫기")
+                                        Icon(Icons.Default.Close, Loc.str(R.string.efx_edit_screen_6))
                                     }
                                 }
                             }
@@ -161,7 +163,7 @@ fun EfxEditScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "EFX 이름",
+                                        text = Loc.str(R.string.efx_edit_screen_7),
                                         style = MaterialTheme.typography.labelMedium
                                     )
                                     Text(
@@ -171,7 +173,7 @@ fun EfxEditScreen(
                                 }
 
                                 TextButton(onClick = { showNameDialog = true }) {
-                                    Text("편집")
+                                    Text(Loc.str(R.string.efx_edit_screen_8))
                                 }
                             }
 
@@ -183,21 +185,21 @@ fun EfxEditScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "음악 파일",
+                                        text = Loc.str(R.string.efx_edit_screen_9),
                                         style = MaterialTheme.typography.labelMedium
                                     )
                                     Text(
                                         text = if (currentEfx.header.musicId != 0) {
                                             "Music ID: 0x${currentEfx.header.musicId.toUInt().toString(16).uppercase()}"
                                         } else {
-                                            "음악 없음"
+                                            Loc.str(R.string.efx_edit_screen_10)
                                         },
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
 
                                 TextButton(onClick = { showMusicDialog = true }) {
-                                    Text("편집")
+                                    Text(Loc.str(R.string.efx_edit_screen_8))
                                 }
                             }
                         }
@@ -206,7 +208,7 @@ fun EfxEditScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "타임라인 (${currentEfx.body.entries.size})",
+                        text = Loc.str(R.string.efx_edit_screen_11, currentEfx.body.entries.size),
                         style = MaterialTheme.typography.titleMedium
                     )
 
@@ -218,7 +220,7 @@ fun EfxEditScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "타임라인 엔트리가 없습니다.\n+ 버튼을 눌러 추가하세요!",
+                                text = Loc.str(R.string.efx_edit_screen_12),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -306,8 +308,8 @@ fun EfxEditScreen(
     deleteTargetIndex?.let { index ->
         AlertDialog(
             onDismissRequest = { deleteTargetIndex = null },
-            title = { Text("Entry 삭제") },
-            text = { Text("이 타임라인 엔트리를 삭제하시겠습니까?") },
+            title = { Text(Loc.str(R.string.efx_edit_screen_13)) },
+            text = { Text(Loc.str(R.string.efx_edit_screen_14)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -315,12 +317,12 @@ fun EfxEditScreen(
                         deleteTargetIndex = null
                     }
                 ) {
-                    Text("삭제", color = MaterialTheme.colorScheme.error)
+                    Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deleteTargetIndex = null }) {
-                    Text("취소")
+                    Text(Loc.str(R.string.efx_edit_screen_16))
                 }
             }
         )
@@ -330,16 +332,15 @@ fun EfxEditScreen(
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
-            title = { Text("저장소 권한") },
+            title = { Text(Loc.str(R.string.efx_edit_screen_17)) },
             text = {
                 Text(
-                    "파일 선택기를 통해 저장소 권한 없이도 음악 파일에 접근할 수 있습니다. " +
-                            "권한은 Android 13+ 에서 더 나은 사용자 경험을 위해서만 요청됩니다."
+                    Loc.str(R.string.efx_edit_screen_18)
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showPermissionDialog = false }) {
-                    Text("확인")
+                    Text(Loc.str(R.string.efx_edit_screen_19))
                 }
             }
         )
@@ -464,7 +465,7 @@ fun TimelineEntryCard(
             ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "삭제",
+                    contentDescription = Loc.str(R.string.efx_edit_screen_15),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(18.dp)
                 )
@@ -518,12 +519,12 @@ fun EditNameDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("EFX 이름 편집") },
+        title = { Text(Loc.str(R.string.efx_edit_screen_20)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("EFX 이름") },
+                label = { Text(Loc.str(R.string.efx_edit_screen_7)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -533,12 +534,12 @@ fun EditNameDialog(
                 onClick = { if (name.isNotBlank()) onSave(name) },
                 enabled = name.isNotBlank()
             ) {
-                Text("저장")
+                Text(Loc.str(R.string.efx_edit_screen_21))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text(Loc.str(R.string.efx_edit_screen_16))
             }
         }
     )
@@ -556,7 +557,7 @@ fun MusicEditDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("음악 파일 편집") },
+        title = { Text(Loc.str(R.string.efx_edit_screen_22)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -564,12 +565,12 @@ fun MusicEditDialog(
             ) {
                 if (currentMusicId != 0) {
                     Text(
-                        text = "현재 Music ID: 0x${currentMusicId.toUInt().toString(16).uppercase()}",
+                        text = Loc.str(R.string.efx_edit_screen_23, currentMusicId.toUInt().toString(16).uppercase()),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else {
                     Text(
-                        text = "음악 파일이 설정되지 않았습니다.",
+                        text = Loc.str(R.string.efx_edit_screen_24),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -585,17 +586,17 @@ fun MusicEditDialog(
                             contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("삭제")
+                        Text(Loc.str(R.string.efx_edit_screen_15))
                     }
                 }
                 TextButton(onClick = onSelectMusic) {
-                    Text("음악 선택")
+                    Text(Loc.str(R.string.efx_edit_screen_25))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text(Loc.str(R.string.efx_edit_screen_16))
             }
         }
     )

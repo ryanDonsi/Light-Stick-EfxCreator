@@ -6,6 +6,8 @@ import com.efxcreator.music.sets.SetCatalog
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * 이펙트 라이브러리의 패턴 한 단계.
@@ -50,8 +52,8 @@ object PatternColors {
 
     /** (저장 값, 화면 이름) */
     val OPTIONS = listOf(
-        WHITE to "화이트", BLACK to "검정",
-        MAIN to "대표색", SUB1 to "보조색1", SUB2 to "보조색2", SUB3 to "보조색3"
+        WHITE to Loc.str(R.string.effect_pattern_1), BLACK to Loc.str(R.string.effect_pattern_2),
+        MAIN to Loc.str(R.string.effect_pattern_3), SUB1 to Loc.str(R.string.effect_pattern_4), SUB2 to Loc.str(R.string.effect_pattern_5), SUB3 to Loc.str(R.string.effect_pattern_6)
     )
 
     fun label(ref: String): String = OPTIONS.firstOrNull { it.first == ref }?.second ?: ref
@@ -117,8 +119,8 @@ object BuiltInPatterns {
     val ALL: List<EffectPattern> = listOf(
         // 엔진의 ON_PULSE 는 2박마다 한 번 울린다: 대표색을 짧게(0.3박) 켰다가, 나머지 1.7박 동안 검정으로 Transit 3 만에 꺼진 채 유지
         EffectPattern(
-            id = "builtin_on_pulse", name = "펄스", builtIn = true,
-            description = "2박에 걸쳐 짧게 켜졌다 꺼지는 강조 (ON_PULSE)",
+            id = "builtin_on_pulse", name = Loc.str(R.string.effect_pattern_7), builtIn = true,
+            description = Loc.str(R.string.effect_pattern_8),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 3, fg = PatternColors.MAIN, frames = 0),
                 PatternStep(type = "ON", beatsTenths = 17, fg = PatternColors.BLACK, frames = 3)
@@ -126,24 +128,24 @@ object BuiltInPatterns {
         ),
         // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 2.5초 한 사이클 @SPF 100)
         EffectPattern(
-            id = "builtin_breath", name = "호흡", builtIn = true,
-            description = "부드럽게 밝아졌다 어두워짐 (BREATH)",
+            id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true,
+            description = Loc.str(R.string.effect_pattern_10),
             steps = listOf(
                 PatternStep(type = "BREATH", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 25)
             )
         ),
         // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 0.5초 한 사이클 @SPF 100)
         EffectPattern(
-            id = "builtin_blink", name = "블링크", builtIn = true,
-            description = "박자에 맞춰 깜빡임 (BLINK)",
+            id = "builtin_blink", name = Loc.str(R.string.effect_pattern_11), builtIn = true,
+            description = Loc.str(R.string.effect_pattern_12),
             steps = listOf(
                 PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5)
             )
         ),
         // 박자마다 대표색 → 보조색1 → 2 → 3 으로 즉시 바뀐다 (Transit 0)
         EffectPattern(
-            id = "builtin_on_rotate", name = "색 회전 (비트 강조)", builtIn = true,
-            description = "박자마다 색이 즉시 바뀜 (ON_ROTATE, Transit 0)",
+            id = "builtin_on_rotate", name = Loc.str(R.string.effect_pattern_13), builtIn = true,
+            description = Loc.str(R.string.effect_pattern_14),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0),
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, frames = 0),
@@ -153,8 +155,8 @@ object BuiltInPatterns {
         ),
         // 같은 색 순서이지만 Transit 2 로 부드럽게 넘어가는 전환
         EffectPattern(
-            id = "builtin_on_transit_rotate", name = "색 회전 (부드러움)", builtIn = true,
-            description = "박자마다 색이 부드럽게 바뀜 (ON_TRANSIT_ROTATE, Transit 2)",
+            id = "builtin_on_transit_rotate", name = Loc.str(R.string.effect_pattern_15), builtIn = true,
+            description = Loc.str(R.string.effect_pattern_16),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 2),
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, frames = 2),
@@ -164,16 +166,16 @@ object BuiltInPatterns {
         ),
         // 대표색을 켠 채 그대로 유지
         EffectPattern(
-            id = "builtin_freeze", name = "고정", builtIn = true,
-            description = "특정 색을 켠 채 유지 (FREEZE)",
+            id = "builtin_freeze", name = Loc.str(R.string.effect_pattern_17), builtIn = true,
+            description = Loc.str(R.string.effect_pattern_18),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0)
             )
         ),
         // 이펙트 없이 꺼 둠 (Transit 2 로 부드럽게)
         EffectPattern(
-            id = "builtin_off", name = "끄기", builtIn = true,
-            description = "이펙트 없이 꺼 둠 (OFF_TRANSIT)",
+            id = "builtin_off", name = Loc.str(R.string.effect_pattern_19), builtIn = true,
+            description = Loc.str(R.string.effect_pattern_20),
             steps = listOf(
                 PatternStep(type = "OFF", beatsTenths = 10, frames = 2)
             )
