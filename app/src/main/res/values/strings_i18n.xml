@@ -19,9 +19,9 @@
     <string name="effect_pattern_11">블링크</string>
     <string name="effect_pattern_12">박자에 맞춰 깜빡임 (BLINK)</string>
     <string name="effect_pattern_13">색 회전 (비트 강조)</string>
-    <string name="effect_pattern_14">박자마다 색이 즉시 바뀜 (ON_ROTATE, Transit 0)</string>
+    <string name="effect_pattern_14">박자마다 색이 즉시 바뀜 (ON_ROTATE, 트랜짓 0)</string>
     <string name="effect_pattern_15">색 회전 (부드러움)</string>
-    <string name="effect_pattern_16">박자마다 색이 부드럽게 바뀜 (ON_TRANSIT_ROTATE, Transit 2)</string>
+    <string name="effect_pattern_16">박자마다 색이 부드럽게 바뀜 (ON_TRANSIT_ROTATE, 트랜짓 2)</string>
     <string name="effect_pattern_17">고정</string>
     <string name="effect_pattern_18">특정 색을 켠 채 유지 (FREEZE)</string>
     <string name="effect_pattern_19">끄기</string>
@@ -180,13 +180,13 @@
     <string name="show_widgets_12">앨범 이미지</string>
     <string name="timeline_entry_dialog_1">Effect 편집</string>
     <string name="timeline_entry_dialog_2">Effect 삭제</string>
-    <string name="timeline_entry_dialog_3">Transit (프레임, 0-255)</string>
-    <string name="timeline_entry_dialog_4">Period (프레임, 0-255)</string>
+    <string name="timeline_entry_dialog_3">트랜짓 (프레임, 0-255)</string>
+    <string name="timeline_entry_dialog_4">주기 (프레임, 0-255)</string>
     <string name="timeline_entry_dialog_5">변경</string>
-    <string name="timeline_entry_dialog_6">SPF (프레임/초, 0-255)</string>
-    <string name="timeline_entry_dialog_7">" — Period/Transit/Random Delay 의 시간 기준"</string>
-    <string name="timeline_entry_dialog_8" formatted="false">Fade (밝기 %, 0-100)</string>
-    <string name="timeline_entry_dialog_9">Random Delay (프레임, 0-255)</string>
+    <string name="timeline_entry_dialog_6">SPF (프레임당 ms, 0-255)</string>
+    <string name="timeline_entry_dialog_7">" — 주기/트랜짓/랜덤 딜레이 의 시간 기준"</string>
+    <string name="timeline_entry_dialog_8" formatted="false">페이드 (밝기 %, 0-100)</string>
+    <string name="timeline_entry_dialog_9">랜덤 딜레이 (프레임, 0-255)</string>
     <string name="timeline_entry_dialog_10">= 없음</string>
     <string name="timeline_entry_dialog_11">= 최대 %1$s</string>
     <string name="timeline_entry_dialog_12">전경색 선택</string>
@@ -284,7 +284,7 @@
     <string name="efx_tablet_editor_screen_38">종류</string>
     <string name="efx_tablet_editor_screen_39">색상 (FG)</string>
     <string name="efx_tablet_editor_screen_40">배경 (BG)</string>
-    <string name="efx_tablet_editor_screen_41">Fade (밝기)</string>
+    <string name="efx_tablet_editor_screen_41">페이드 (밝기)</string>
     <string name="efx_tablet_editor_screen_42">0f  (없음)</string>
     <string name="efx_tablet_editor_screen_43">"최대 "</string>
     <string name="music_player_controller_1">음악을 재생할 수 없습니다.</string>
@@ -298,7 +298,7 @@
     <string name="pattern_panel_1">%1$s. %2$s %3$s박%4$s%5$s</string>
     <string name="pattern_panel_2">이펙트 추가</string>
     <string name="pattern_panel_3">이펙트 묶음 만들기</string>
-    <string name="pattern_panel_4">예) 펄스 = ① ON 0.3박(대표색) → ② ON 1.7박(검정, Transit 3). 길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. 기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.</string>
+    <string name="pattern_panel_4">예) 펄스 = ① ON 0.3박(대표색) → ② ON 1.7박(검정, 트랜짓 3). 길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. 기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.</string>
     <string name="pattern_panel_5">아직 직접 만든 이펙트가 없습니다. \"이펙트 추가\" 로 만들어 보세요.</string>
     <string name="pattern_panel_6">기본 제공</string>
     <string name="pattern_panel_7">%1$s단계 · 총 %2$s박</string>
@@ -322,9 +322,9 @@
     <string name="pattern_panel_25">0.1박 늘리기</string>
     <string name="pattern_panel_26">박 (0.1 단위)</string>
     <string name="pattern_panel_27">색 (FG)</string>
-    <string name="pattern_panel_28">Transit (프레임)</string>
-    <string name="pattern_panel_29">Period (프레임)</string>
-    <string name="pattern_panel_30" formatted="false">Fade (밝기 %)</string>
+    <string name="pattern_panel_28">트랜짓 (프레임)</string>
+    <string name="pattern_panel_29">주기 (프레임)</string>
+    <string name="pattern_panel_30" formatted="false">페이드 (밝기 %)</string>
     <string name="pattern_panel_31">기본 팔레트 (내장 첫 번째)</string>
     <string name="pattern_panel_32">색 미리보기</string>
     <string name="pattern_panel_33">1박 (ms)</string>
@@ -407,4 +407,19 @@
     <string name="language_settings_2">언어 변경</string>
     <string name="language_settings_3">표시 언어를 %1$s(으)로 바꾸면 앱이 다시 시작되고, 연결된 디바이스의 연결이 해제됩니다. 계속할까요?</string>
     <string name="language_settings_4">자동 (시스템 언어: %1$s)</string>
+    <string name="label_timestamp">타임 스탬프</string>
+    <string name="label_minutes">분</string>
+    <string name="label_seconds">초</string>
+    <string name="label_millis">밀리초</string>
+    <string name="label_effect_type">이펙트 종류</string>
+    <string name="label_foreground_color">전경색</string>
+    <string name="label_background_color">배경색</string>
+    <string name="label_advanced_params">고급 파라미터</string>
+    <string name="label_random_color">랜덤 색상</string>
+    <string name="label_random_delay">랜덤 딜레이</string>
+    <string name="label_preview">미리보기</string>
+    <string name="label_index">인덱스</string>
+    <string name="label_broadcasting">브로드캐스팅 모드</string>
+    <string name="label_transit">트랜짓</string>
+    <string name="label_period">주기</string>
 </resources>

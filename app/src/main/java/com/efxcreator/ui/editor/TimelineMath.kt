@@ -90,7 +90,7 @@ object TimelineMath {
     }
 
     fun periodLabel(type: EffectType): String =
-        if (type == EffectType.ON || type == EffectType.OFF) "Transit" else "Period"
+        if (type == EffectType.ON || type == EffectType.OFF) Loc.str(R.string.label_transit) else Loc.str(R.string.label_period)
 
     /**
      * 그룹 마스크 표시:

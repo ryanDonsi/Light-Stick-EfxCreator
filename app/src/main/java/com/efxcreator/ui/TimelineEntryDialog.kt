@@ -124,7 +124,7 @@ fun TimelineEntryDialog(
                 topContent?.invoke(this)
 
                 // ========== Timestamp ==========
-                if (showTimestamp) Text("Timestamp", style = MaterialTheme.typography.labelMedium)
+                if (showTimestamp) Text(Loc.str(R.string.label_timestamp), style = MaterialTheme.typography.labelMedium)
                 if (showTimestamp) Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -133,14 +133,14 @@ fun TimelineEntryDialog(
                     NumberTextField(
                         value = minutes,
                         onValueChange = { minutes = it },
-                        label = "min",
+                        label = Loc.str(R.string.label_minutes),
                         modifier = Modifier.weight(1f)
                     )
 
                     NumberTextField(
                         value = seconds,
                         onValueChange = { seconds = it },
-                        label = "sec",
+                        label = Loc.str(R.string.label_seconds),
                         range = 0..59,
                         modifier = Modifier.weight(1f)
                     )
@@ -148,14 +148,14 @@ fun TimelineEntryDialog(
                     NumberTextField(
                         value = millis,
                         onValueChange = { millis = it },
-                        label = "ms",
+                        label = Loc.str(R.string.label_millis),
                         range = 0..999,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 // ========== Effect Type ==========
-                Text("Effect Type", style = MaterialTheme.typography.labelMedium)
+                Text(Loc.str(R.string.label_effect_type), style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -215,7 +215,7 @@ fun TimelineEntryDialog(
 
                 // ========== Foreground Color ==========
                 if (effectType != EffectType.OFF) {
-                    Text("Foreground Color", style = MaterialTheme.typography.labelMedium)
+                    Text(Loc.str(R.string.label_foreground_color), style = MaterialTheme.typography.labelMedium)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -242,7 +242,7 @@ fun TimelineEntryDialog(
 
                 // ========== Background Color ==========
                 if (effectType in listOf(EffectType.BLINK, EffectType.STROBE, EffectType.BREATH)) {
-                    Text("Background Color", style = MaterialTheme.typography.labelMedium)
+                    Text(Loc.str(R.string.label_background_color), style = MaterialTheme.typography.labelMedium)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -270,7 +270,7 @@ fun TimelineEntryDialog(
                 HorizontalDivider()
 
                 // ========== Advanced Parameters ==========
-                Text("Advanced Parameters", style = MaterialTheme.typography.titleSmall)
+                Text(Loc.str(R.string.label_advanced_params), style = MaterialTheme.typography.titleSmall)
 
                 NumberTextField(
                     value = spf,
@@ -295,7 +295,7 @@ fun TimelineEntryDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Random Color")
+                    Text(Loc.str(R.string.label_random_color))
                     Switch(
                         checked = randomColor != 0,
                         onCheckedChange = { randomColor = if (it) 1 else 0 }

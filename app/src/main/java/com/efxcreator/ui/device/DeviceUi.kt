@@ -327,7 +327,7 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
         )
         HorizontalDivider()
         ListItem(
-            headlineContent = { Text("Broadcasting Mode", style = MaterialTheme.typography.titleSmall) },
+            headlineContent = { Text(Loc.str(R.string.label_broadcasting), style = MaterialTheme.typography.titleSmall) },
             supportingContent = {
                 Text(Loc.str(R.string.device_ui_11), style = MaterialTheme.typography.bodySmall)
             },

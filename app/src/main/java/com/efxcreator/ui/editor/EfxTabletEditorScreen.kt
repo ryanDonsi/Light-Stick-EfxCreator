@@ -862,7 +862,7 @@ private fun PreviewPanel(
         // 오른쪽: 컨트롤 패널
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Preview", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(Loc.str(R.string.label_preview), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.weight(1f))
                 if (deviceConnected) {
                     Text(Loc.str(R.string.efx_tablet_editor_screen_33), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
@@ -931,12 +931,12 @@ private fun SelectedEntryPanel(
             Triple(Loc.str(R.string.efx_tablet_editor_screen_41), TimelineMath.formatFade(p.fade), null),
             Triple(Loc.str(R.string.group_mask_picker_1), TimelineMath.formatGroupMask(p.groupMask), null),
             Triple(
-                "Random Delay",
+                Loc.str(R.string.label_random_delay),
                 if (p.randomDelay == 0) Loc.str(R.string.efx_tablet_editor_screen_42) else Loc.str(R.string.efx_tablet_editor_screen_43) + TimelineMath.formatFrames(p.randomDelay, p.spf),
                 null
             ),
-            Triple("Random Color", if (p.randomColor != 0) "ON" else "OFF", null),
-            Triple("Index", p.effectIndex.toString(), null)
+            Triple(Loc.str(R.string.label_random_color), if (p.randomColor != 0) "ON" else "OFF", null),
+            Triple(Loc.str(R.string.label_index), p.effectIndex.toString(), null)
         )
         Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
             rows.forEach { (k, v, swatch) ->
@@ -960,7 +960,7 @@ private fun SelectedEntryPanel(
                     Text(
                         v,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (k == "Random Color" && p.randomColor != 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
+                        color = if (k == Loc.str(R.string.label_random_color) && p.randomColor != 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                 }

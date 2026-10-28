@@ -407,4 +407,19 @@
     <string name="language_settings_2">Change language</string>
     <string name="language_settings_3">Changing the display language to %1$s restarts the app and disconnects the connected device. Continue?</string>
     <string name="language_settings_4">Auto (system language: %1$s)</string>
+    <string name="label_timestamp">Timestamp</string>
+    <string name="label_minutes">min</string>
+    <string name="label_seconds">sec</string>
+    <string name="label_millis">ms</string>
+    <string name="label_effect_type">Effect type</string>
+    <string name="label_foreground_color">Foreground color</string>
+    <string name="label_background_color">Background color</string>
+    <string name="label_advanced_params">Advanced parameters</string>
+    <string name="label_random_color">Random color</string>
+    <string name="label_random_delay">Random delay</string>
+    <string name="label_preview">Preview</string>
+    <string name="label_index">Index</string>
+    <string name="label_broadcasting">Broadcasting mode</string>
+    <string name="label_transit">Transit</string>
+    <string name="label_period">Period</string>
 </resources>

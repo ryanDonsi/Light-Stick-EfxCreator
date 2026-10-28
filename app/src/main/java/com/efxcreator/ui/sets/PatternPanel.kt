@@ -97,7 +97,7 @@ fun PatternStep.summary(index: Int): String {
         isTwoColor(type) -> " · ${PatternColors.label(fg)} / ${PatternColors.label(bg)}"
         else -> " · ${PatternColors.label(fg)}"
     }
-    val frame = if (frames > 0) " · ${if (type == "ON" || type == "OFF") "Transit" else "Period"} ${frames}f" else ""
+    val frame = if (frames > 0) " · ${if (type == "ON" || type == "OFF") Loc.str(R.string.label_transit) else Loc.str(R.string.label_period)} ${frames}f" else ""
     return Loc.str(R.string.pattern_panel_1, index + 1, type, "%.1f".format(Locale.US, beats), colors, frame)
 }
 

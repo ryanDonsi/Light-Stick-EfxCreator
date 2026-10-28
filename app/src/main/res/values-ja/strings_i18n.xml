@@ -19,9 +19,9 @@
     <string name="effect_pattern_11">ブリンク</string>
     <string name="effect_pattern_12">拍に合わせて点滅 (BLINK)</string>
     <string name="effect_pattern_13">カラー回転 (ビート強調)</string>
-    <string name="effect_pattern_14">拍ごとに色が即座に切り替わる (ON_ROTATE, Transit 0)</string>
+    <string name="effect_pattern_14">拍ごとに色が即座に切り替わる (ON_ROTATE, トランジット 0)</string>
     <string name="effect_pattern_15">カラー回転 (なめらか)</string>
-    <string name="effect_pattern_16">拍ごとに色がなめらかに切り替わる (ON_TRANSIT_ROTATE, Transit 2)</string>
+    <string name="effect_pattern_16">拍ごとに色がなめらかに切り替わる (ON_TRANSIT_ROTATE, トランジット 2)</string>
     <string name="effect_pattern_17">固定</string>
     <string name="effect_pattern_18">特定の色を点灯したまま維持 (FREEZE)</string>
     <string name="effect_pattern_19">消灯</string>
@@ -180,13 +180,13 @@
     <string name="show_widgets_12">アルバム画像</string>
     <string name="timeline_entry_dialog_1">エフェクトを編集</string>
     <string name="timeline_entry_dialog_2">エフェクトを削除</string>
-    <string name="timeline_entry_dialog_3">Transit (フレーム, 0-255)</string>
-    <string name="timeline_entry_dialog_4">Period (フレーム, 0-255)</string>
+    <string name="timeline_entry_dialog_3">トランジット (フレーム, 0-255)</string>
+    <string name="timeline_entry_dialog_4">周期 (フレーム, 0-255)</string>
     <string name="timeline_entry_dialog_5">変更</string>
     <string name="timeline_entry_dialog_6">SPF (1フレームのms, 0-255)</string>
-    <string name="timeline_entry_dialog_7">" — Period/Transit/Random Delayの時間基準"</string>
-    <string name="timeline_entry_dialog_8" formatted="false">Fade (明るさ %, 0-100)</string>
-    <string name="timeline_entry_dialog_9">Random Delay (フレーム, 0-255)</string>
+    <string name="timeline_entry_dialog_7">" — 周期/トランジット/ランダムディレイの時間基準"</string>
+    <string name="timeline_entry_dialog_8" formatted="false">フェード (明るさ %, 0-100)</string>
+    <string name="timeline_entry_dialog_9">ランダムディレイ (フレーム, 0-255)</string>
     <string name="timeline_entry_dialog_10">= なし</string>
     <string name="timeline_entry_dialog_11">= 最大 %1$s</string>
     <string name="timeline_entry_dialog_12">前景色を選択</string>
@@ -284,7 +284,7 @@
     <string name="efx_tablet_editor_screen_38">種類</string>
     <string name="efx_tablet_editor_screen_39">色 (FG)</string>
     <string name="efx_tablet_editor_screen_40">背景 (BG)</string>
-    <string name="efx_tablet_editor_screen_41">Fade (明るさ)</string>
+    <string name="efx_tablet_editor_screen_41">フェード (明るさ)</string>
     <string name="efx_tablet_editor_screen_42">0f  (なし)</string>
     <string name="efx_tablet_editor_screen_43">"最大 "</string>
     <string name="music_player_controller_1">音楽を再生できません。</string>
@@ -298,7 +298,7 @@
     <string name="pattern_panel_1">%1$s. %2$s %3$s拍%4$s%5$s</string>
     <string name="pattern_panel_2">エフェクトを追加</string>
     <string name="pattern_panel_3">エフェクトの組み合わせを作る</string>
-    <string name="pattern_panel_4">例) パルス = ① ON 0.3拍(メインカラー) → ② ON 1.7拍(ブラック, Transit 3)。長さは拍単位(小数点以下1桁)で、色はパレットセットの役割で指定するため、パレットごとに違う色で使えます。内蔵エフェクトは複製して編集でき、すべてのエフェクトはエディターのマイライブラリに表示されます。</string>
+    <string name="pattern_panel_4">例) パルス = ① ON 0.3拍(メインカラー) → ② ON 1.7拍(ブラック, トランジット 3)。長さは拍単位(小数点以下1桁)で、色はパレットセットの役割で指定するため、パレットごとに違う色で使えます。内蔵エフェクトは複製して編集でき、すべてのエフェクトはエディターのマイライブラリに表示されます。</string>
     <string name="pattern_panel_5">まだ自分で作ったエフェクトがありません。「エフェクトを追加」で作ってみましょう。</string>
     <string name="pattern_panel_6">内蔵</string>
     <string name="pattern_panel_7">%1$sステップ · 合計%2$s拍</string>
@@ -322,9 +322,9 @@
     <string name="pattern_panel_25">0.1拍長くする</string>
     <string name="pattern_panel_26">拍 (0.1単位)</string>
     <string name="pattern_panel_27">色 (FG)</string>
-    <string name="pattern_panel_28">Transit (フレーム)</string>
-    <string name="pattern_panel_29">Period (フレーム)</string>
-    <string name="pattern_panel_30" formatted="false">Fade (明るさ %)</string>
+    <string name="pattern_panel_28">トランジット (フレーム)</string>
+    <string name="pattern_panel_29">周期 (フレーム)</string>
+    <string name="pattern_panel_30" formatted="false">フェード (明るさ %)</string>
     <string name="pattern_panel_31">デフォルトパレット (内蔵の最初)</string>
     <string name="pattern_panel_32">色のプレビュー</string>
     <string name="pattern_panel_33">1拍 (ms)</string>
@@ -407,4 +407,19 @@
     <string name="language_settings_2">言語を変更</string>
     <string name="language_settings_3">表示言語を%1$sに変更するとアプリが再起動し、接続中のデバイスの接続が解除されます。続行しますか?</string>
     <string name="language_settings_4">自動 (システム言語: %1$s)</string>
+    <string name="label_timestamp">タイムスタンプ</string>
+    <string name="label_minutes">分</string>
+    <string name="label_seconds">秒</string>
+    <string name="label_millis">ミリ秒</string>
+    <string name="label_effect_type">エフェクトの種類</string>
+    <string name="label_foreground_color">前景色</string>
+    <string name="label_background_color">背景色</string>
+    <string name="label_advanced_params">詳細パラメータ</string>
+    <string name="label_random_color">ランダムカラー</string>
+    <string name="label_random_delay">ランダムディレイ</string>
+    <string name="label_preview">プレビュー</string>
+    <string name="label_index">インデックス</string>
+    <string name="label_broadcasting">ブロードキャストモード</string>
+    <string name="label_transit">トランジット</string>
+    <string name="label_period">周期</string>
 </resources>
