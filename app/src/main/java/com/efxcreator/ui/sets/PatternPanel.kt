@@ -176,6 +176,13 @@ fun EffectPatternsPanel(
                                         Text("기본 제공", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
+                                if (pattern.description.isNotEmpty()) {
+                                    Text(
+                                        pattern.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Text(
                                     "${pattern.steps.size}단계 · 총 ${formatBeats(pattern.totalBeatsTenths)}박",
                                     style = MaterialTheme.typography.labelMedium,

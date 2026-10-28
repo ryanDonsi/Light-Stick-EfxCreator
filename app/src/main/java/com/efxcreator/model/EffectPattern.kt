@@ -32,7 +32,9 @@ data class EffectPattern(
     val name: String,
     val steps: List<PatternStep>,
     /** 기본 제공 이펙트: 수정/삭제할 수 없고, 복제해서 고쳐 쓸 수 있다 */
-    val builtIn: Boolean = false
+    val builtIn: Boolean = false,
+    /** 한 줄 설명 (기본 제공 이펙트에 쓴다) */
+    val description: String = ""
 ) {
     val totalBeatsTenths: Int get() = steps.sumOf { it.beatsTenths }
 }
@@ -115,29 +117,33 @@ object BuiltInPatterns {
     val ALL: List<EffectPattern> = listOf(
         // 박자 시작에 대표색을 짧게(0.3박) 켰다가, 나머지 0.7박 동안 검정으로 Transit 3 만에 꺼지며 강조
         EffectPattern(
-            id = "builtin_on_pulse", name = "ON_PULSE", builtIn = true,
+            id = "builtin_on_pulse", name = "펄스", builtIn = true,
+            description = "박자마다 짧게 켜졌다 돌아오는 강조 (ON_PULSE)",
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 3, fg = PatternColors.MAIN, frames = 0),
                 PatternStep(type = "ON", beatsTenths = 7, fg = PatternColors.BLACK, frames = 3)
             )
         ),
-        // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 50ms 한 사이클 @SPF 100)
+        // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 2.5초 한 사이클 @SPF 100)
         EffectPattern(
-            id = "builtin_blink", name = "BLINK", builtIn = true,
-            steps = listOf(
-                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5)
-            )
-        ),
-        // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 250ms 한 사이클 @SPF 100)
-        EffectPattern(
-            id = "builtin_breath", name = "BREATH", builtIn = true,
+            id = "builtin_breath", name = "호흡", builtIn = true,
+            description = "부드럽게 밝아졌다 어두워짐 (BREATH)",
             steps = listOf(
                 PatternStep(type = "BREATH", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 25)
             )
         ),
-        // 박자마다 대표색 → 보조색1 → 2 → 3 으로 색이 바뀐다. Transit 0 = 즉시 바뀌는 ON_ROTATE
+        // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 0.5초 한 사이클 @SPF 100)
         EffectPattern(
-            id = "builtin_on_rotate", name = "ON_ROTATE", builtIn = true,
+            id = "builtin_blink", name = "블링크", builtIn = true,
+            description = "박자에 맞춰 깜빡임 (BLINK)",
+            steps = listOf(
+                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5)
+            )
+        ),
+        // 박자마다 대표색 → 보조색1 → 2 → 3 으로 즉시 바뀐다 (Transit 0)
+        EffectPattern(
+            id = "builtin_on_rotate", name = "색 회전 (비트 강조)", builtIn = true,
+            description = "박자마다 색이 즉시 바뀜 (ON_ROTATE, Transit 0)",
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0),
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, frames = 0),
@@ -147,12 +153,29 @@ object BuiltInPatterns {
         ),
         // 같은 색 순서이지만 Transit 2 로 부드럽게 넘어가는 전환
         EffectPattern(
-            id = "builtin_on_transit_rotate", name = "ON_TRANSIT_ROTATE", builtIn = true,
+            id = "builtin_on_transit_rotate", name = "색 회전 (부드러움)", builtIn = true,
+            description = "박자마다 색이 부드럽게 바뀜 (ON_TRANSIT_ROTATE, Transit 2)",
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 2),
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, frames = 2),
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB2, frames = 2),
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB3, frames = 2)
+            )
+        ),
+        // 대표색을 켠 채 그대로 유지
+        EffectPattern(
+            id = "builtin_freeze", name = "고정", builtIn = true,
+            description = "특정 색을 켠 채 유지 (FREEZE)",
+            steps = listOf(
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0)
+            )
+        ),
+        // 이펙트 없이 꺼 둠 (Transit 2 로 부드럽게)
+        EffectPattern(
+            id = "builtin_off", name = "끄기", builtIn = true,
+            description = "이펙트 없이 꺼 둠 (OFF_TRANSIT)",
+            steps = listOf(
+                PatternStep(type = "OFF", beatsTenths = 10, frames = 2)
             )
         )
     )
