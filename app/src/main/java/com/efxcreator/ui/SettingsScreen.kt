@@ -269,7 +269,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "• 폴더 선택 버튼을 눌러 원하는 폴더를 선택하세요\n" +
+                        text = "• 폴더 아이콘을 눌러 원하는 폴더를 선택하세요\n" +
                                 "• 선택한 폴더는 앱 재시작 후에도 유지됩니다\n" +
                                 "• 폴더 권한은 자동으로 관리됩니다",
                         style = MaterialTheme.typography.bodySmall
