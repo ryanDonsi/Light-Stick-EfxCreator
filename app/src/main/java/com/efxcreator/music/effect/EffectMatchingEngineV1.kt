@@ -321,7 +321,8 @@ class EffectMatchingEngineV1(
         downbeatMs: Long,
         beatsPerBar: Int,
         fullEnv: List<Float>,
-        hopMs: Long
+        hopMs: Long,
+        musicStyle: String
     ): List<Pair<Long, ByteArray>> {
         if (sectionGroups.isEmpty()) return emptyList()
 
@@ -334,7 +335,7 @@ class EffectMatchingEngineV1(
 
         // 엔진 할당된 섹션으로부터 프레임 빌드
         return buildFramesFromSections(palette, resolvedSections, beatTimesMs, durationMs, isBalladMode, finalOffMs,
-            downbeatMs, beatsPerBar, fullEnv, effectiveHopMs)
+            downbeatMs, beatsPerBar, fullEnv, effectiveHopMs, musicStyle)
     }
 
     private fun convertToResolvedSections(
@@ -395,7 +396,8 @@ class EffectMatchingEngineV1(
         downbeatMs: Long,
         beatsPerBar: Int,
         fullEnv: List<Float>,
-        hopMs: Long
+        hopMs: Long,
+        musicStyle: String = ""
     ): List<Pair<Long, ByteArray>> {
         val frameMap = LinkedHashMap<Long, ByteArray>(beatTimesMs.size * 4 + sections.size + 8)
 
@@ -476,7 +478,7 @@ class EffectMatchingEngineV1(
 
                 var caseEngine: EffectMatchingEngine.FgEngine? = null
                 if (cases.isNotEmpty()) {
-                    val matched = cases.firstOrNull { it.matches(barRankPct(barIdx), sectionEnergyPct, isBalladMode) }
+                    val matched = cases.firstOrNull { it.matches(barRankPct(barIdx), sectionEnergyPct, isBalladMode, musicStyle) }
                     val pattern = matched?.patternId?.let { id -> patterns.firstOrNull { it.id == id } }
                     if (pattern != null) {
                         // 이펙트 라이브러리의 이펙트: 이 박에서 시작해 단계들을 박자 길이에 맞춰 넣는다.

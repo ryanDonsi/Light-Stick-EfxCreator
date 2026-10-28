@@ -69,21 +69,24 @@ data class RuleCase(
     val maxBarEnergy: Int? = null,
     val minSectionEnergy: Int? = null,
     val maxSectionEnergy: Int? = null,
-    /** null = 모든 곡, "BALLAD" = 발라드 계열만, "NON_BALLAD" = 그 외 */
-    val mood: String? = null
+    /** (이전 버전 호환) null = 모든 곡, "BALLAD" = 발라드 계열만, "NON_BALLAD" = 그 외. 새로 만드는 규칙은 [genres] 를 쓴다 */
+    val mood: String? = null,
+    /** 이 장르(곡 분위기)일 때만 적용. [MusicStyleClassifier.MusicStyle] 이름 목록, null = 모든 장르 */
+    val genres: List<String>? = null
 ) {
     val patternId: String? get() = effect.removePrefix(PATTERN_PREFIX).takeIf { effect.startsWith(PATTERN_PREFIX) }
     val engine: FgEngine? get() = if (patternId != null) null else runCatching { FgEngine.valueOf(effect) }.getOrNull()
     val hasCondition: Boolean
         get() = minBarEnergy != null || maxBarEnergy != null || minSectionEnergy != null ||
-            maxSectionEnergy != null || mood != null
+            maxSectionEnergy != null || mood != null || genres != null
 
-    fun matches(barEnergyPct: Int, sectionEnergyPct: Int, ballad: Boolean): Boolean =
+    fun matches(barEnergyPct: Int, sectionEnergyPct: Int, ballad: Boolean, musicStyle: String = ""): Boolean =
         (minBarEnergy == null || barEnergyPct >= minBarEnergy) &&
             (maxBarEnergy == null || barEnergyPct <= maxBarEnergy) &&
             (minSectionEnergy == null || sectionEnergyPct >= minSectionEnergy) &&
             (maxSectionEnergy == null || sectionEnergyPct <= maxSectionEnergy) &&
-            (mood == null || (mood == "BALLAD") == ballad)
+            (mood == null || (mood == "BALLAD") == ballad) &&
+            (genres == null || musicStyle in genres)
 
     companion object {
         const val PATTERN_PREFIX = "pattern:"
@@ -127,6 +130,17 @@ object SetCatalog {
     fun patternLabel(engineName: String?): String =
         PATTERNS.firstOrNull { it.engine.name == engineName }?.label ?: "자동"
 
+    /** 곡 분위기(장르) 이름과 화면 표시 이름 — 값은 MusicStyleClassifier.MusicStyle 이름 */
+    val GENRES: List<Pair<String, String>> = listOf(
+        "EDM" to "EDM", "DANCE_POP" to "댄스팝", "HIPHOP_RNB" to "힙합/R&B",
+        "BALLAD" to "발라드", "ROCK" to "록", "POP" to "팝"
+    )
+
+    /** 엔진이 "발라드 모드" 로 취급하는 장르 */
+    val BALLAD_LIKE_GENRES = listOf("BALLAD", "HIPHOP_RNB")
+
+    fun genreLabel(name: String): String = GENRES.firstOrNull { it.first == name }?.second ?: name
+
     /** 섹션 종류별로 엔진이 "자동" 일 때 하는 동작 (이펙트 세트 편집 화면에 보여 준다) */
     val DEFAULT_BEHAVIOR: Map<String, String> = mapOf(
         "INTRO" to "BREATH (호흡)",
@@ -140,7 +154,7 @@ object SetCatalog {
 
     /** 벌스의 기본 동작을 조건부 규칙으로 옮긴 것 (에너지에 따라 BLINK / ON_PULSE) */
     val DEFAULT_VERSE_CASES: List<RuleCase> = listOf(
-        RuleCase(FgEngine.BREATH.name, mood = "BALLAD"),
+        RuleCase(FgEngine.BREATH.name, genres = BALLAD_LIKE_GENRES),
         RuleCase(FgEngine.BLINK.name, minBarEnergy = 80),
         RuleCase(FgEngine.ON_PULSE.name)
     )

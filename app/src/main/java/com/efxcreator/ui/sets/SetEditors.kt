@@ -217,7 +217,7 @@ fun EffectSetEditorDialog(
     val sections = remember {
         mutableStateMapOf<String, List<RuleCase>>().apply {
             SetCatalog.EDITABLE_SECTIONS.forEach { (key, _) ->
-                val list = initial.casesFor(key).ifEmpty {
+                val list = initial.casesFor(key).map { legacyMoodToGenres(it) }.ifEmpty {
                     initial.rules[key]?.let { listOf(RuleCase(it)) }.orEmpty()
                 }
                 if (list.isNotEmpty()) put(key, list)
@@ -380,11 +380,24 @@ private fun CaseEditor(
             }
             EffectChoice(case.effect, patterns) { onChange(case.copy(effect = it)) }
 
-            // 조건: 곡 분위기
+            // 조건: 곡 분위기(장르). 아무것도 고르지 않은 "전체" 가 기본(그 외 모두)이고, 여러 장르를 함께 고를 수 있다
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("곡 분위기", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(76.dp))
-                listOf(null to "전체", "BALLAD" to "발라드·힙합/R&B", "NON_BALLAD" to "그 외").forEach { (key, label) ->
-                    FilterChip(selected = case.mood == key, onClick = { onChange(case.copy(mood = key)) }, label = { Text(label) })
+                FilterChip(
+                    selected = case.genres == null,
+                    onClick = { onChange(case.copy(genres = null, mood = null)) },
+                    label = { Text("전체") }
+                )
+                SetCatalog.GENRES.forEach { (key, label) ->
+                    val selected = case.genres?.contains(key) == true
+                    FilterChip(
+                        selected = selected,
+                        onClick = {
+                            val next = (case.genres.orEmpty()).let { if (selected) it - key else it + key }
+                            onChange(case.copy(genres = next.ifEmpty { null }, mood = null))
+                        },
+                        label = { Text(label) }
+                    )
                 }
             }
             // 조건: 마디 에너지 / 섹션 에너지
@@ -490,6 +503,7 @@ fun RuleCase.describe(patterns: List<EffectPattern>): String {
     val conds = buildList {
         if (minBarEnergy != null || maxBarEnergy != null) add("마디 에너지 ${rangeText(minBarEnergy, maxBarEnergy)}")
         if (minSectionEnergy != null || maxSectionEnergy != null) add("섹션 에너지 ${rangeText(minSectionEnergy, maxSectionEnergy)}")
+        genres?.let { add(it.joinToString("/") { g -> SetCatalog.genreLabel(g) }) }
         when (mood) { "BALLAD" -> add("발라드·힙합/R&B"); "NON_BALLAD" -> add("발라드 외") }
     }
     val target = effectLabel(effect, patterns)
@@ -500,4 +514,11 @@ private fun rangeText(min: Int?, max: Int?): String = when {
     min != null && max != null -> "$min~$max%"
     min != null -> "$min% 이상"
     else -> "$max% 이하"
+}
+
+/** 이전 버전의 "발라드 / 발라드 외" 조건을 장르 선택으로 바꿔 편집할 수 있게 한다 */
+private fun legacyMoodToGenres(case: RuleCase): RuleCase = when (case.mood) {
+    "BALLAD" -> case.copy(mood = null, genres = SetCatalog.BALLAD_LIKE_GENRES)
+    "NON_BALLAD" -> case.copy(mood = null, genres = SetCatalog.GENRES.map { it.first } - SetCatalog.BALLAD_LIKE_GENRES.toSet())
+    else -> case
 }

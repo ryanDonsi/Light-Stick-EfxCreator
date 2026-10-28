@@ -202,7 +202,8 @@ class AutoTimelineGeneratorBeat {
             downbeatMs = input.downbeatMs,
             beatsPerBar = input.beatsPerBar,
             fullEnv = input.fullEnv,
-            hopMs = input.hopMs
+            hopMs = input.hopMs,
+            musicStyle = musicStyle.name
         )
 
         // 섹션 메타 생성
