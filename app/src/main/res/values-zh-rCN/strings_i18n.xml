@@ -19,9 +19,9 @@
     <string name="effect_pattern_11">闪烁</string>
     <string name="effect_pattern_12">随节拍闪烁 (BLINK)</string>
     <string name="effect_pattern_13">颜色轮换（强调节拍）</string>
-    <string name="effect_pattern_14">每拍颜色立即切换 (ON_ROTATE, 过渡 0)</string>
+    <string name="effect_pattern_14">每拍颜色立即切换 (ON_ROTATE, 过渡时间 0)</string>
     <string name="effect_pattern_15">颜色轮换（平滑）</string>
-    <string name="effect_pattern_16">每拍颜色平滑切换 (ON_TRANSIT_ROTATE, 过渡 2)</string>
+    <string name="effect_pattern_16">每拍颜色平滑切换 (ON_TRANSIT_ROTATE, 过渡时间 2)</string>
     <string name="effect_pattern_17">固定</string>
     <string name="effect_pattern_18">保持某种颜色常亮 (FREEZE)</string>
     <string name="effect_pattern_19">关闭</string>
@@ -180,12 +180,12 @@
     <string name="show_widgets_12">专辑图片</string>
     <string name="timeline_entry_dialog_1">编辑效果</string>
     <string name="timeline_entry_dialog_2">删除效果</string>
-    <string name="timeline_entry_dialog_3">过渡（帧，0-255）</string>
+    <string name="timeline_entry_dialog_3">过渡时间（帧，0-255）</string>
     <string name="timeline_entry_dialog_4">周期（帧，0-255）</string>
     <string name="timeline_entry_dialog_5">更改</string>
     <string name="timeline_entry_dialog_6">SPF（每帧毫秒数，0-255）</string>
-    <string name="timeline_entry_dialog_7">" — 周期/过渡/随机延迟的时间基准"</string>
-    <string name="timeline_entry_dialog_8" formatted="false">淡变（亮度 %，0-100）</string>
+    <string name="timeline_entry_dialog_7">" — 周期/过渡时间/随机延迟的时间基准"</string>
+    <string name="timeline_entry_dialog_8" formatted="false">亮度（%，0-100）</string>
     <string name="timeline_entry_dialog_9">随机延迟（帧，0-255）</string>
     <string name="timeline_entry_dialog_10">= 无</string>
     <string name="timeline_entry_dialog_11">= 最多 %1$s</string>
@@ -284,7 +284,7 @@
     <string name="efx_tablet_editor_screen_38">类型</string>
     <string name="efx_tablet_editor_screen_39">颜色 (FG)</string>
     <string name="efx_tablet_editor_screen_40">背景 (BG)</string>
-    <string name="efx_tablet_editor_screen_41">淡变（亮度）</string>
+    <string name="efx_tablet_editor_screen_41">亮度</string>
     <string name="efx_tablet_editor_screen_42">0f  (无)</string>
     <string name="efx_tablet_editor_screen_43">"最多 "</string>
     <string name="music_player_controller_1">无法播放音乐。</string>
@@ -298,7 +298,7 @@
     <string name="pattern_panel_1">%1$s. %2$s %3$s拍%4$s%5$s</string>
     <string name="pattern_panel_2">添加效果</string>
     <string name="pattern_panel_3">制作效果组合</string>
-    <string name="pattern_panel_4">例）脉冲 = ① ON 0.3拍（主色）→ ② ON 1.7拍（黑色，过渡 3）。长度以拍为单位（保留一位小数），颜色按调色板集的角色指定，因此同一效果可随调色板使用不同颜色。内置效果可以复制后修改，所有效果都会显示在编辑器的“我的库”中。</string>
+    <string name="pattern_panel_4">例）脉冲 = ① ON 0.3拍（主色）→ ② ON 1.7拍（黑色，过渡时间 3）。长度以拍为单位（保留一位小数），颜色按调色板集的角色指定，因此同一效果可随调色板使用不同颜色。内置效果可以复制后修改，所有效果都会显示在编辑器的“我的库”中。</string>
     <string name="pattern_panel_5">还没有自己创建的效果。请通过“添加效果”创建。</string>
     <string name="pattern_panel_6">内置</string>
     <string name="pattern_panel_7">%1$s个步骤 · 共%2$s拍</string>
@@ -322,9 +322,9 @@
     <string name="pattern_panel_25">延长0.1拍</string>
     <string name="pattern_panel_26">拍（0.1为单位）</string>
     <string name="pattern_panel_27">颜色 (FG)</string>
-    <string name="pattern_panel_28">过渡（帧）</string>
+    <string name="pattern_panel_28">过渡时间（帧）</string>
     <string name="pattern_panel_29">周期（帧）</string>
-    <string name="pattern_panel_30" formatted="false">淡变（亮度 %）</string>
+    <string name="pattern_panel_30" formatted="false">亮度（%）</string>
     <string name="pattern_panel_31">默认调色板（第一个内置）</string>
     <string name="pattern_panel_32">颜色预览</string>
     <string name="pattern_panel_33">1拍 (ms)</string>
@@ -420,6 +420,6 @@
     <string name="label_preview">预览</string>
     <string name="label_index">索引</string>
     <string name="label_broadcasting">广播模式</string>
-    <string name="label_transit">过渡</string>
+    <string name="label_transit">过渡时间</string>
     <string name="label_period">周期</string>
 </resources>

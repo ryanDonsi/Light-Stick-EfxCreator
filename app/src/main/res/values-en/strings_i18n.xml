@@ -185,7 +185,7 @@
     <string name="timeline_entry_dialog_5">Change</string>
     <string name="timeline_entry_dialog_6">SPF (ms per frame, 0-255)</string>
     <string name="timeline_entry_dialog_7">" — time base of Period/Transit/Random Delay"</string>
-    <string name="timeline_entry_dialog_8" formatted="false">Fade (brightness %, 0-100)</string>
+    <string name="timeline_entry_dialog_8" formatted="false">Brightness (%, 0-100)</string>
     <string name="timeline_entry_dialog_9">Random Delay (frames, 0-255)</string>
     <string name="timeline_entry_dialog_10">= none</string>
     <string name="timeline_entry_dialog_11">= up to %1$s</string>
@@ -284,7 +284,7 @@
     <string name="efx_tablet_editor_screen_38">Type</string>
     <string name="efx_tablet_editor_screen_39">Color (FG)</string>
     <string name="efx_tablet_editor_screen_40">Background (BG)</string>
-    <string name="efx_tablet_editor_screen_41">Fade (brightness)</string>
+    <string name="efx_tablet_editor_screen_41">Brightness</string>
     <string name="efx_tablet_editor_screen_42">0f  (none)</string>
     <string name="efx_tablet_editor_screen_43">"up to "</string>
     <string name="music_player_controller_1">Cannot play the music.</string>
@@ -324,7 +324,7 @@
     <string name="pattern_panel_27">Color (FG)</string>
     <string name="pattern_panel_28">Transit (frames)</string>
     <string name="pattern_panel_29">Period (frames)</string>
-    <string name="pattern_panel_30" formatted="false">Fade (brightness %)</string>
+    <string name="pattern_panel_30" formatted="false">Brightness (%)</string>
     <string name="pattern_panel_31">Default palette (first built-in)</string>
     <string name="pattern_panel_32">Color preview</string>
     <string name="pattern_panel_33">1 beat (ms)</string>
@@ -420,6 +420,6 @@
     <string name="label_preview">Preview</string>
     <string name="label_index">Index</string>
     <string name="label_broadcasting">Broadcasting mode</string>
-    <string name="label_transit">Transit</string>
+    <string name="label_transit">Transition time</string>
     <string name="label_period">Period</string>
 </resources>

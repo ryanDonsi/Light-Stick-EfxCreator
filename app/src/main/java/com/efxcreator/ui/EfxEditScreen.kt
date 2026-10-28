@@ -443,7 +443,7 @@ fun TimelineEntryCard(
 
                     val advancedParams = mutableListOf<String>()
                     if (entry.payload.spf != 0) advancedParams.add("SPF: ${entry.payload.spf}")
-                    if (entry.payload.fade != 0) advancedParams.add("Fade: ${entry.payload.fade}")
+                    if (entry.payload.fade != 0) advancedParams.add("밝기: ${entry.payload.fade}")
                     if (entry.payload.randomColor != 0) advancedParams.add("RandColor")
                     if (entry.payload.randomDelay != 0) advancedParams.add("RandDelay: ${entry.payload.randomDelay}")
 
