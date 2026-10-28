@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -352,6 +354,7 @@ private fun SectionRuleCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CaseEditor(
     index: Int,
@@ -380,9 +383,10 @@ private fun CaseEditor(
             }
             EffectChoice(case.effect, patterns) { onChange(case.copy(effect = it)) }
 
-            // 조건: 곡 분위기(장르). 아무것도 고르지 않은 "전체" 가 기본(그 외 모두)이고, 여러 장르를 함께 고를 수 있다
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("곡 분위기", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(76.dp))
+            // 조건: 곡 분위기(장르). 아무것도 고르지 않은 "전체" 가 기본(그 외 모두)이고, 여러 장르를 함께 고를 수 있다.
+            // 칩이 한 줄에 다 들어가지 않으므로 줄바꿈이 되는 FlowRow 를 쓴다.
+            Text("곡 분위기", style = MaterialTheme.typography.labelMedium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 FilterChip(
                     selected = case.genres == null,
                     onClick = { onChange(case.copy(genres = null, mood = null)) },
