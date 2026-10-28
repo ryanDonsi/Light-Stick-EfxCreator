@@ -64,8 +64,12 @@ object TimelineMath {
     /** "100%" */
     fun formatFade(fade: Int): String = "${fadePercent(fade)}%"
 
-    /** 1프레임의 길이(ms). SPF 100 이면 10ms, SPF 50 이면 20ms (= 1000 / SPF) */
-    fun frameMs(spf: Int): Float = 1000f / spf.coerceAtLeast(1)
+    /**
+     * 1프레임의 길이(ms) = 10000 / SPF. SPF 100(기본값) 이면 100ms, SPF 50 이면 200ms.
+     * Light-Stick-Music 이 실제 기기에서 확인한 값과 같다 (Music 은 Period/Transit 1단위를 0.1초로 표시하고,
+     * BLINK Period 를 `박자(ms) ÷ 100` 으로 계산한다).
+     */
+    fun frameMs(spf: Int): Float = 10000f / spf.coerceAtLeast(1)
 
     /** [frames] 프레임이 실제로 몇 ms 인가 */
     fun framesToMs(frames: Int, spf: Int): Long = Math.round(frames * frameMs(spf).toDouble())
@@ -76,7 +80,7 @@ object TimelineMath {
     /** "50f (500ms)" 처럼 프레임 수와 실제 시간을 함께 */
     fun formatFrames(frames: Int, spf: Int): String = "${frames}f (${formatMsShort(framesToMs(frames, spf))})"
 
-    /** "1프레임 = 10ms (SPF 100)" */
+    /** "1프레임 = 100ms (SPF 100)" */
     fun frameUnitLabel(spf: Int): String {
         val ms = frameMs(spf)
         val text = if (ms == ms.toLong().toFloat()) "${ms.toLong()}ms" else "%.1fms".format(ms)

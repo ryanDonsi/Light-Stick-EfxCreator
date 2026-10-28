@@ -14,7 +14,7 @@ data class UserEffect(
     val effectType: String,
     val fg: RgbColor,
     val bg: RgbColor,
-    /** 프레임 수 (ON/OFF 는 전환 시간, 그 외는 이펙트 주기). 1프레임 = 1000/[spf] ms */
+    /** 프레임 수 (ON/OFF 는 전환 시간, 그 외는 이펙트 주기). 1프레임 = 10000/[spf] ms (SPF 100 → 100ms) */
     val period: Int,
     val spf: Int,
     val fade: Int,
