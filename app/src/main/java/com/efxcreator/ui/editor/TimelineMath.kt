@@ -65,11 +65,11 @@ object TimelineMath {
     fun formatFade(fade: Int): String = "${fadePercent(fade)}%"
 
     /**
-     * 1프레임의 길이(ms) = 10000 / SPF. SPF 100(기본값) 이면 100ms, SPF 50 이면 200ms.
+     * 1프레임의 길이(ms) = SPF. SPF 100(기본값) 이면 100ms, SPF 10 이면 10ms 이다.
      * Light-Stick-Music 이 실제 기기에서 확인한 값과 같다 (Music 은 Period/Transit 1단위를 0.1초로 표시하고,
      * BLINK Period 를 `박자(ms) ÷ 100` 으로 계산한다).
      */
-    fun frameMs(spf: Int): Float = 10000f / spf.coerceAtLeast(1)
+    fun frameMs(spf: Int): Float = spf.coerceAtLeast(1).toFloat()
 
     /** [frames] 프레임이 실제로 몇 ms 인가 */
     fun framesToMs(frames: Int, spf: Int): Long = Math.round(frames * frameMs(spf).toDouble())

@@ -11,7 +11,7 @@ import com.lightstick.types.LSEffectPayload
  * 이펙트 라이브러리의 패턴 한 단계.
  * [beatsTenths] 는 길이를 박자의 1/10 단위로 센 값이다 (3 = 0.3박, 10 = 1박) — 소수점 한 자리를 오차 없이 다루기 위해 정수로 저장한다.
  * [fg]/[bg] 는 색 자체가 아니라 "화이트", "보조색1" 같은 **역할**이라서, 팔레트 세트를 바꿔 같은 패턴을 다른 색으로 쓸 수 있다.
- * [frames] 는 ON/OFF 에서는 Transit, 그 외에는 Period (프레임 수, 1프레임 = 10000/[spf] ms (SPF 100 → 100ms)).
+ * [frames] 는 ON/OFF 에서는 Transit, 그 외에는 Period (프레임 수, 1프레임 = [spf] ms (SPF 100 → 100ms, SPF 10 → 10ms)).
  */
 data class PatternStep(
     val type: String = "ON",
