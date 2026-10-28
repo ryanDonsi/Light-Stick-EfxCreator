@@ -32,7 +32,7 @@ data class PaletteSet(
     val colors: List<RgbColor> get() = listOf(main, step1, step2, step3)
 
     companion object {
-        val COLOR_ROLES = listOf(Loc.str(R.string.effect_pattern_3), Loc.str(R.string.effect_sets_1), Loc.str(R.string.effect_sets_2), Loc.str(R.string.effect_sets_3))
+        val COLOR_ROLES get() = listOf(Loc.str(R.string.effect_pattern_3), Loc.str(R.string.effect_sets_1), Loc.str(R.string.effect_sets_2), Loc.str(R.string.effect_sets_3))
     }
 }
 
@@ -110,7 +110,7 @@ data class PatternInfo(val engine: FgEngine, val label: String, val description:
 object SetCatalog {
 
     /** 규칙을 편집할 수 있는 섹션 (CLIMAX 는 분석 단계에서 검출되지 않아 제외) */
-    val EDITABLE_SECTIONS = listOf(
+    val EDITABLE_SECTIONS get() = listOf(
         "INTRO" to Loc.str(R.string.effect_sets_4),
         "VERSE" to Loc.str(R.string.effect_sets_5),
         "CHORUS" to Loc.str(R.string.effect_sets_6),
@@ -120,7 +120,7 @@ object SetCatalog {
         "END" to Loc.str(R.string.effect_sets_10)
     )
 
-    val PATTERNS = listOf(
+    val PATTERNS get() = listOf(
         PatternInfo(FgEngine.ON_PULSE, Loc.str(R.string.effect_pattern_7), Loc.str(R.string.effect_sets_11)),
         PatternInfo(FgEngine.BLINK, Loc.str(R.string.effect_pattern_11), Loc.str(R.string.effect_sets_12)),
         PatternInfo(FgEngine.BREATH, Loc.str(R.string.effect_pattern_9), Loc.str(R.string.effect_sets_13)),
@@ -133,7 +133,7 @@ object SetCatalog {
         PATTERNS.firstOrNull { it.engine.name == engineName }?.label ?: Loc.str(R.string.effect_sets_18)
 
     /** 섹션이 곡의 어디인지 설명 (이펙트 세트 편집 화면에 작게 보여 준다) */
-    val SECTION_DESCRIPTIONS: Map<String, String> = mapOf(
+    val SECTION_DESCRIPTIONS: Map<String, String> get() = mapOf(
         "INTRO" to Loc.str(R.string.effect_sets_19),
         "VERSE" to Loc.str(R.string.effect_sets_20),
         "CHORUS" to Loc.str(R.string.effect_sets_21),
@@ -144,7 +144,7 @@ object SetCatalog {
     )
 
     /** 곡 분위기(장르) 이름과 화면 표시 이름 — 값은 MusicStyleClassifier.MusicStyle 이름 */
-    val GENRES: List<Pair<String, String>> = listOf(
+    val GENRES: List<Pair<String, String>> get() = listOf(
         "DANCE_POP" to Loc.str(R.string.effect_sets_26), "POP" to Loc.str(R.string.effect_sets_27), "BALLAD" to Loc.str(R.string.effect_sets_28),
         "EDM" to "EDM", "HIPHOP_RNB" to Loc.str(R.string.effect_sets_29), "ROCK" to Loc.str(R.string.effect_sets_30)
     )
@@ -155,7 +155,7 @@ object SetCatalog {
     fun genreLabel(name: String): String = GENRES.firstOrNull { it.first == name }?.second ?: name
 
     /** 섹션 종류별로 엔진이 "자동" 일 때 하는 동작 (이펙트 세트 편집 화면에 보여 준다) */
-    val DEFAULT_BEHAVIOR: Map<String, String> = mapOf(
+    val DEFAULT_BEHAVIOR: Map<String, String> get() = mapOf(
         "INTRO" to Loc.str(R.string.effect_sets_31),
         "VERSE" to Loc.str(R.string.effect_sets_32),
         "CHORUS" to Loc.str(R.string.effect_sets_33),
@@ -166,14 +166,14 @@ object SetCatalog {
     )
 
     /** 벌스의 기본 동작을 조건부 규칙으로 옮긴 것 (에너지에 따라 BLINK / ON_PULSE) */
-    val DEFAULT_VERSE_CASES: List<RuleCase> = listOf(
+    val DEFAULT_VERSE_CASES: List<RuleCase> get() = listOf(
         RuleCase(FgEngine.BREATH.name, genres = BALLAD_LIKE_GENRES),
         RuleCase(FgEngine.BLINK.name, minBarEnergy = 80),
         RuleCase(FgEngine.ON_PULSE.name)
     )
 
     /** 엔진의 기본 동작과 같은 규칙 (새 세트를 만들 때의 출발점) */
-    val DEFAULT_RULES: Map<String, String> = mapOf(
+    val DEFAULT_RULES: Map<String, String> get() = mapOf(
         "INTRO" to FgEngine.BREATH.name,
         "VERSE" to FgEngine.ON_PULSE.name,
         "CHORUS" to FgEngine.ON_TRANSIT_ROTATE.name,
@@ -183,7 +183,7 @@ object SetCatalog {
         "END" to FgEngine.OFF_TRANSIT.name
     )
 
-    val BUILT_IN_RULE_SETS: List<EffectRuleSet> = listOf(
+    val BUILT_IN_RULE_SETS: List<EffectRuleSet> get() = listOf(
         EffectRuleSet(
             "builtin_energy", Loc.str(R.string.effect_sets_37),
             DEFAULT_RULES - "VERSE",
@@ -211,7 +211,7 @@ object SetCatalog {
     )
 
     /** 엔진에 내장된 색 계열을 읽기 전용 팔레트 세트로 노출 */
-    val BUILT_IN_PALETTE_SETS: List<PaletteSet> by lazy {
+    val BUILT_IN_PALETTE_SETS: List<PaletteSet> get() = run {
         EffectMatchingEngineV1.familyColors().map { (name, colors) ->
             PaletteSet(
                 id = "builtin_${name.lowercase()}",

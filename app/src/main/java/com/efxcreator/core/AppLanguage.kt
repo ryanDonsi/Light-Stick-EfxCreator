@@ -77,17 +77,11 @@ object LocaleHelper {
     fun restartApp(activity: Activity) {
         val intent = activity.packageManager.getLaunchIntentForPackage(activity.packageName)
             ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) ?: return
-        val pending = android.app.PendingIntent.getActivity(
-            activity, 0, intent,
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-        )
-        // 프로세스를 끝내면 같은 프로세스에서 막 띄운 새 화면도 함께 죽으므로,
-        // 새 프로세스에서 앱을 다시 열 예약(알람)을 먼저 걸고 이 프로세스를 끝낸다.
-        // 이렇게 해야 언어에 따라 만들어 둔 정적 값(목록 등)도 모두 새로 만들어진다.
-        val alarm = activity.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-        alarm.set(android.app.AlarmManager.RTC, System.currentTimeMillis() + 300L, pending)
+        // 프로세스는 그대로 두고, Loc 의 문자열 컨텍스트만 새 언어로 바꾼 뒤 화면을 처음부터 다시 연다.
+        // (언어에 따라 만든 목록은 getter 로 매번 새로 만들어지므로 프로세스를 끝낼 필요가 없다)
+        Loc.init(wrap(activity.applicationContext))
+        activity.startActivity(intent)
         activity.finishAffinity()
-        Handler(Looper.getMainLooper()).postDelayed({ Runtime.getRuntime().exit(0) }, 100L)
     }
 }
 

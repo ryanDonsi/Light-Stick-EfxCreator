@@ -84,7 +84,7 @@ object EffectPresets {
     private const val STROBE_PERIOD = 8    // 80ms
     private const val FADE_OFF_PERIOD = 100 // 1s 페이드 아웃
 
-    val all: List<EffectPreset> = buildList {
+    val all: List<EffectPreset> get() = buildList {
         // ON — 단색
         for ((name, c) in COLORS) {
             add(EffectPreset("on_$name", "$name ON", EffectPreset.Category.ON, EffectType.ON, c))

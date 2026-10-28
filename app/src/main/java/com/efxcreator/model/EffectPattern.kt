@@ -51,7 +51,7 @@ object PatternColors {
     const val SUB3 = "P3"
 
     /** (저장 값, 화면 이름) */
-    val OPTIONS = listOf(
+    val OPTIONS get() = listOf(
         WHITE to Loc.str(R.string.effect_pattern_1), BLACK to Loc.str(R.string.effect_pattern_2),
         MAIN to Loc.str(R.string.effect_pattern_3), SUB1 to Loc.str(R.string.effect_pattern_4), SUB2 to Loc.str(R.string.effect_pattern_5), SUB3 to Loc.str(R.string.effect_pattern_6)
     )
@@ -116,7 +116,7 @@ object PatternResolver {
  * 엔진은 곡의 BPM 에 맞춰 Period 를 계산하지만 여기서는 120BPM(1박 500ms) 기준 값을 쓴다.
  */
 object BuiltInPatterns {
-    val ALL: List<EffectPattern> = listOf(
+    val ALL: List<EffectPattern> get() = listOf(
         // 엔진의 ON_PULSE 는 2박마다 한 번 울린다: 대표색을 짧게(0.3박) 켰다가, 나머지 1.7박 동안 검정으로 Transit 3 만에 꺼진 채 유지
         EffectPattern(
             id = "builtin_on_pulse", name = Loc.str(R.string.effect_pattern_7), builtIn = true,
