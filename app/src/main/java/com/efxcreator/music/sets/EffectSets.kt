@@ -132,8 +132,8 @@ object SetCatalog {
 
     /** 곡 분위기(장르) 이름과 화면 표시 이름 — 값은 MusicStyleClassifier.MusicStyle 이름 */
     val GENRES: List<Pair<String, String>> = listOf(
-        "EDM" to "EDM", "DANCE_POP" to "댄스팝", "HIPHOP_RNB" to "힙합/R&B",
-        "BALLAD" to "발라드", "ROCK" to "록", "POP" to "팝"
+        "DANCE_POP" to "댄스팝", "POP" to "팝", "BALLAD" to "발라드",
+        "EDM" to "EDM", "HIPHOP_RNB" to "힙합/R&B", "ROCK" to "록"
     )
 
     /** 엔진이 "발라드 모드" 로 취급하는 장르 */
