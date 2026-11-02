@@ -5,7 +5,6 @@ package com.efxcreator.ui.editor
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -29,7 +28,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -41,11 +39,7 @@ import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.AlertDialog
@@ -72,11 +66,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -95,7 +89,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.music.MusicAnalysis
-import com.efxcreator.model.UserEffect
 import com.efxcreator.ui.MusicFolder
 import com.efxcreator.ui.activityViewModel
 import com.efxcreator.ui.device.DevicePopup
@@ -114,7 +107,6 @@ import com.efxcreator.viewmodel.PatternsViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.model.PatternResolver
 import com.lightstick.efx.EfxEntry
-import com.lightstick.types.EffectType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.max
@@ -484,7 +476,8 @@ fun EfxTabletEditorScreen(
                 // 선택 이펙트 패널 하단을 좌측 라이브러리 하단과 맞추기 위해, 남는 높이를 패널 최소 높이로 준다
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 var previewHeightPx by remember { mutableStateOf(0) }
-                val selectedMinHeight = with(density) { (maxHeight - previewHeightPx.toDp() - 8.dp).coerceAtLeast(0.dp) }
+                val panelMaxHeight = maxHeight   // BoxWithConstraints 범위를 직접 사용 (린트가 with 블록 안의 사용을 인식하지 못함)
+    val selectedMinHeight = with(density) { (panelMaxHeight - previewHeightPx.toDp() - 8.dp).coerceAtLeast(0.dp) }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
