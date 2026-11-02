@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -472,12 +471,12 @@ fun EfxTabletEditorScreen(
                 }
 
                 // 우측: Preview + 재생 + 선택 이펙트
-                androidx.compose.foundation.layout.BoxWithConstraints(modifier = Modifier.width(320.dp).fillMaxHeight()) {
+                var rightHeightPx by remember { mutableStateOf(0) }
+                Box(modifier = Modifier.width(320.dp).fillMaxHeight().onSizeChanged { rightHeightPx = it.height }) {
                 // 선택 이펙트 패널 하단을 좌측 라이브러리 하단과 맞추기 위해, 남는 높이를 패널 최소 높이로 준다
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 var previewHeightPx by remember { mutableStateOf(0) }
-                val panelMaxHeight = maxHeight   // BoxWithConstraints 범위를 직접 사용 (린트가 with 블록 안의 사용을 인식하지 못함)
-    val selectedMinHeight = with(density) { (panelMaxHeight - previewHeightPx.toDp() - 8.dp).coerceAtLeast(0.dp) }
+                val selectedMinHeight = with(density) { ((rightHeightPx - previewHeightPx).toDp() - 8.dp).coerceAtLeast(0.dp) }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
