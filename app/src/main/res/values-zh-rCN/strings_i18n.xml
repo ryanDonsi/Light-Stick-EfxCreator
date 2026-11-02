@@ -428,4 +428,7 @@
     <string name="song_info_auto">自动</string>
     <string name="song_preview_play">播放</string>
     <string name="song_preview_pause">暂停</string>
+    <string name="add_songs_selected">已选择 %1$d 首歌曲</string>
+    <string name="add_songs_more">另外 %1$d 首</string>
+    <string name="add_songs_add_more">继续添加歌曲</string>
 </resources>

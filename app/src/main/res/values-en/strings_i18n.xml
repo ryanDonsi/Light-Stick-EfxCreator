@@ -428,4 +428,7 @@
     <string name="song_info_auto">Auto</string>
     <string name="song_preview_play">Play</string>
     <string name="song_preview_pause">Pause</string>
+    <string name="add_songs_selected">%1$d songs selected</string>
+    <string name="add_songs_more">and %1$d more</string>
+    <string name="add_songs_add_more">Add more songs</string>
 </resources>

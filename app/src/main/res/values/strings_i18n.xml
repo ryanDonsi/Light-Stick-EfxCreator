@@ -428,4 +428,7 @@
     <string name="song_info_auto">자동</string>
     <string name="song_preview_play">재생</string>
     <string name="song_preview_pause">일시정지</string>
+    <string name="add_songs_selected">선택한 곡 %1$d개</string>
+    <string name="add_songs_more">외 %1$d곡</string>
+    <string name="add_songs_add_more">곡 더 추가</string>
 </resources>

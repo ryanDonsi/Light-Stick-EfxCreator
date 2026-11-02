@@ -428,4 +428,7 @@
     <string name="song_info_auto">自動</string>
     <string name="song_preview_play">再生</string>
     <string name="song_preview_pause">一時停止</string>
+    <string name="add_songs_selected">選択した曲 %1$d 曲</string>
+    <string name="add_songs_more">ほか %1$d 曲</string>
+    <string name="add_songs_add_more">曲を追加</string>
 </resources>

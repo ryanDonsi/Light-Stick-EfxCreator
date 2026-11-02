@@ -105,6 +105,11 @@ fun EfxListScreen(
         if (uris.isNotEmpty()) pendingMusicUris = uris
     }
 
+    // 파일 선택기가 한 곡만 골라 돌려주는 경우(길게 눌러야 다중 선택되는 기기)를 위해, 고른 뒤에도 곡을 더 추가할 수 있다
+    val addMoreMusicPicker = rememberLauncherForActivityResult(OpenMusicDocuments()) { uris ->
+        if (uris.isNotEmpty()) pendingMusicUris = (pendingMusicUris + uris).distinct()
+    }
+
     // 자동 생성 완료 → 공연에 곡 추가 + 편집 화면 이동 / 실패 → 안내
     LaunchedEffect(autoGenState) {
         when (val state = autoGenState) {
@@ -249,7 +254,33 @@ fun EfxListScreen(
                 pendingMusicUris = emptyList()
                 onNavigateToSets()
             },
-            onDismiss = { pendingMusicUris = emptyList() }
+            onDismiss = { pendingMusicUris = emptyList() },
+            extraContent = {
+                val names = remember(uris) {
+                    uris.map { uri ->
+                        runCatching {
+                            context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                                if (it.moveToFirst()) it.getString(0) else null
+                            }
+                        }.getOrNull() ?: (uri.lastPathSegment ?: "")
+                    }
+                }
+                Text(
+                    Loc.str(R.string.add_songs_selected, uris.size),
+                    style = MaterialTheme.typography.labelLarge
+                )
+                names.take(4).forEach {
+                    Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (names.size > 4) {
+                    Text(Loc.str(R.string.add_songs_more, names.size - 4), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                OutlinedButton(onClick = { addMoreMusicPicker.launch(MusicFolder.initialUri(context)) }) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(Loc.str(R.string.add_songs_add_more))
+                }
+            }
         )
     }
 
