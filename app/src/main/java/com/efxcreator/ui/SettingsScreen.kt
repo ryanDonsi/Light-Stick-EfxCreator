@@ -316,13 +316,17 @@ fun SettingsScreen(
 }
 
 /** 설정 화면의 왼쪽 메뉴 항목 */
-enum class SettingsSection(val route: String, val label: String, val subtitle: String, val icon: ImageVector) {
-    STORAGE("storage", Loc.str(R.string.settings_screen_5), Loc.str(R.string.settings_screen_15), Icons.Default.FolderOpen),
-    DEVICE("device", Loc.str(R.string.settings_screen_13), Loc.str(R.string.settings_screen_16), Icons.Default.Bluetooth),
-    EFFECT_LIBRARY("library", Loc.str(R.string.settings_screen_17), Loc.str(R.string.settings_screen_18), Icons.Default.Layers),
-    EFFECT_SETS("effect", Loc.str(R.string.settings_screen_19), Loc.str(R.string.settings_screen_20), Icons.Default.AutoAwesome),
-    PALETTE_SETS("palette", Loc.str(R.string.settings_screen_21), Loc.str(R.string.settings_screen_22), Icons.Default.Palette),
-    LANGUAGE("language", Loc.str(R.string.settings_screen_14), Loc.str(R.string.settings_screen_23), Icons.Default.Language);
+enum class SettingsSection(val route: String, private val labelRes: Int, private val subtitleRes: Int, val icon: ImageVector) {
+    STORAGE("storage", R.string.settings_screen_5, R.string.settings_screen_15, Icons.Default.FolderOpen),
+    DEVICE("device", R.string.settings_screen_13, R.string.settings_screen_16, Icons.Default.Bluetooth),
+    EFFECT_LIBRARY("library", R.string.settings_screen_17, R.string.settings_screen_18, Icons.Default.Layers),
+    EFFECT_SETS("effect", R.string.settings_screen_19, R.string.settings_screen_20, Icons.Default.AutoAwesome),
+    PALETTE_SETS("palette", R.string.settings_screen_21, R.string.settings_screen_22, Icons.Default.Palette),
+    LANGUAGE("language", R.string.settings_screen_14, R.string.settings_screen_23, Icons.Default.Language);
+
+    // 언어를 바꾸면 값이 달라지므로 enum 생성 시점이 아니라 읽을 때마다 문자열을 가져온다
+    val label: String get() = Loc.str(labelRes)
+    val subtitle: String get() = Loc.str(subtitleRes)
 
     companion object {
         fun from(route: String?): SettingsSection = entries.firstOrNull { it.route == route } ?: STORAGE

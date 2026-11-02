@@ -28,8 +28,10 @@ data class EffectPreset(
     /** 칸의 이름 아래에 한 줄 더 보여 줄 설명 (패턴이면 "1비트" 같은 길이) */
     val subLabel: String? = null
 ) {
-    enum class Category(val label: String) {
-        USER(Loc.str(R.string.effect_presets_1)), ON("ON"), OFF("OFF"), BLINK("BLINK"), BREATH("BREATH"), STROBE("STROBE")
+    enum class Category(private val fixedLabel: String?) {
+        USER(null), ON("ON"), OFF("OFF"), BLINK("BLINK"), BREATH("BREATH"), STROBE("STROBE");
+
+        val label: String get() = fixedLabel ?: Loc.str(R.string.effect_presets_1)
     }
 
     /** 전경(FG)·배경(BG) 두 색을 쓰는 이펙트인가 */
