@@ -426,4 +426,6 @@
     <string name="song_info_effect_set">Effect set</string>
     <string name="song_info_default">Default</string>
     <string name="song_info_auto">Auto</string>
+    <string name="song_preview_play">Play</string>
+    <string name="song_preview_pause">Pause</string>
 </resources>

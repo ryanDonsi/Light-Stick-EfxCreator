@@ -426,4 +426,6 @@
     <string name="song_info_effect_set">이펙트 세트</string>
     <string name="song_info_default">기본</string>
     <string name="song_info_auto">자동</string>
+    <string name="song_preview_play">재생</string>
+    <string name="song_preview_pause">일시정지</string>
 </resources>

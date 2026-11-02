@@ -426,4 +426,6 @@
     <string name="song_info_effect_set">エフェクトセット</string>
     <string name="song_info_default">デフォルト</string>
     <string name="song_info_auto">自動</string>
+    <string name="song_preview_play">再生</string>
+    <string name="song_preview_pause">一時停止</string>
 </resources>

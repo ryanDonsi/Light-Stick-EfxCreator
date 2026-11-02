@@ -35,6 +35,10 @@ import com.efxcreator.viewmodel.EfxListViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.viewmodel.ShowViewModel
 import java.io.File
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.material3.LinearProgressIndicator
+import com.efxcreator.ui.editor.TimelineMath
 import com.efxcreator.R
 import com.efxcreator.core.Loc
 
@@ -68,6 +72,8 @@ fun EfxListScreen(
     val bleConnected by bleVm.connected.collectAsState()
     var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     val context = LocalContext.current
+    val preview = rememberSongPreview(bleVm)
+    val previewScope = rememberCoroutineScope()
 
     var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -428,6 +434,8 @@ fun EfxListScreen(
                                 EfxProjectCard(
                                     modifier = Modifier.animateItem(),
                                     project = project,
+                                    preview = preview,
+                                    onTogglePlay = { previewScope.launch { preview.toggle(project.id) } },
                                     entryCount = viewModel.getEntryCount(project.id),
                                     musicId = viewModel.getMusicId(project.id),
                                     onEdit = { onNavigateToEdit(project.id) },
@@ -546,6 +554,8 @@ private fun ShowRow(
 fun EfxProjectCard(
     modifier: Modifier = Modifier,
     project: EfxProjectMetadata,
+    preview: SongPreviewState? = null,
+    onTogglePlay: () -> Unit = {},
     entryCount: Int,
     musicId: Int,
     onEdit: () -> Unit,
@@ -559,6 +569,12 @@ fun EfxProjectCard(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var tempFileToSave by remember { mutableStateOf<File?>(null) }
+    // 전체 재생 시간 (분석 결과에 저장된 길이)
+    val knownDurationMs by produceState<Long?>(null, project.id) {
+        value = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.efxcreator.data.EfxRepository(context.applicationContext).loadAnalysis(project.id)?.durationMs }.getOrNull()
+        }
+    }
 
     // 파일 저장 위치 선택 런처
     val saveFileLauncher = rememberLauncherForActivityResult(
@@ -594,7 +610,7 @@ fun EfxProjectCard(
                     .fillMaxWidth()
                     .heightIn(min = LIST_ITEM_HEIGHT)
                     .clickable(onClick = onEdit)
-                    .padding(start = 16.dp, end = 56.dp, top = 12.dp, bottom = 12.dp),
+                    .padding(start = 16.dp, end = 108.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 음악 파일의 메타데이터(앨범 아트)
@@ -629,6 +645,37 @@ fun EfxProjectCard(
                     Text(
                         text = Loc.str(R.string.efx_list_screen_31, entryCount),
                         style = MaterialTheme.typography.bodySmall
+                    )
+
+                    // 재생 시간 (이 곡이 재생 중/일시정지 상태일 때만 진행 표시)
+                    val active = preview != null && preview.activeId == project.id
+                    val total = if (active && preview!!.player.durationMs > 0) preview.player.durationMs else (knownDurationMs ?: 0L)
+                    val pos = if (active) preview!!.player.positionMs else 0L
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = TimelineMath.formatTime(pos) + " / " + (if (total > 0) TimelineMath.formatTime(total) else "--:--"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (active && total > 0) {
+                        LinearProgressIndicator(
+                            progress = { (pos.toFloat() / total).coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            // 재생 / 일시정지 (음악 + 이펙트 미리듣기, 기기가 연결돼 있으면 기기에도 표출)
+            if (preview != null) {
+                val playing = preview.activeId == project.id && preview.player.isPlaying
+                FilledTonalIconButton(
+                    onClick = onTogglePlay,
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 52.dp)
+                ) {
+                    Icon(
+                        if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = Loc.str(if (playing) R.string.song_preview_pause else R.string.song_preview_play)
                     )
                 }
             }
