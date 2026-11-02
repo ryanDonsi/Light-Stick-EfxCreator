@@ -9,6 +9,11 @@ import com.efxcreator.data.EfxRepository
 import com.efxcreator.model.EfxProjectMetadata
 import com.efxcreator.music.AutoEfxGenerator
 import com.efxcreator.music.sets.GenerationOptions
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,6 +54,9 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
     private var autoGenJob: Job? = null
 
     companion object {
+        /** 동시에 만들 곡 수 (Light-Stick-Music 과 같게 3개) */
+        private const val PARALLEL_COUNT = 3
+
         private const val TAG = "EfxListViewModel"
     }
 
@@ -115,45 +123,70 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
         if (autoGenJob?.isActive == true || uris.isEmpty()) return
 
         autoGenJob = viewModelScope.launch {
-            val created = mutableListOf<String>()
+            // 결과는 선택한 순서대로 보관하고, 앞에서부터 연속으로 끝난 곡만 차례로 공연에 넣는다
+            val results = arrayOfNulls<String>(uris.size)       // 성공한 projectId
+            val done = BooleanArray(uris.size)
+            var nextEmit = 0
             var failed = 0
             var lastError: String? = null
+            var started = 0
+            val semaphore = Semaphore(PARALLEL_COUNT)
 
-            for ((i, uri) in uris.withIndex()) {
-                val displayName = repository.getDisplayName(uri)
-                    ?: "New EFX ${_projects.value.size + 1}"
-                _autoGenState.value = AutoGenState.Generating(displayName, i + 1, uris.size)
-
-                val metadata = EfxProjectMetadata(name = displayName)
-                try {
-                    // 재생/분석은 앱 내부 사본을 사용한다 (SAF 권한 만료 방지)
-                    val musicFile = withContext(Dispatchers.IO) { repository.importMusic(metadata.id, uri) }
-                    val result = autoEfxGenerator.generate(musicFile, options)
-
-                    withContext(Dispatchers.IO) {
-                        repository.saveEfx(metadata.id, result.efx)
-                        result.analysis?.let { repository.saveAnalysis(metadata.id, it) }
-                        repository.saveProjectMetadata(
-                            metadata.copy(musicUriString = Uri.fromFile(musicFile).toString())
-                        )
-                    }
-                    loadProjects()
-                    created += metadata.id
-                    onEach(metadata.id)
-
-                    Log.d(TAG, "Auto-generated project: ${metadata.name} (${result.efx.body.entries.size} entries)")
-                } catch (e: CancellationException) {
-                    // cancelAutoGeneration() 이 이미 상태를 Idle 로 되돌렸다
-                    withContext(NonCancellable + Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
-                    throw e
-                } catch (e: Exception) {
-                    withContext(Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
-                    Log.e(TAG, "Auto generation failed: $displayName", e)
-                    failed++
-                    lastError = e.message
+            fun flush() {
+                while (nextEmit < uris.size && done[nextEmit]) {
+                    results[nextEmit]?.let(onEach)
+                    nextEmit++
                 }
             }
 
+            try {
+                coroutineScope {
+                    uris.mapIndexed { i, uri ->
+                        async {
+                            semaphore.withPermit {
+                                val displayName = repository.getDisplayName(uri)
+                                    ?: "New EFX ${_projects.value.size + i + 1}"
+                                started++
+                                _autoGenState.value = AutoGenState.Generating(displayName, started, uris.size)
+
+                                val metadata = EfxProjectMetadata(name = displayName)
+                                try {
+                                    // 재생/분석은 앱 내부 사본을 사용한다 (SAF 권한 만료 방지)
+                                    val musicFile = withContext(Dispatchers.IO) { repository.importMusic(metadata.id, uri) }
+                                    val result = autoEfxGenerator.generate(musicFile, options)
+
+                                    withContext(Dispatchers.IO) {
+                                        repository.saveEfx(metadata.id, result.efx)
+                                        result.analysis?.let { repository.saveAnalysis(metadata.id, it) }
+                                        repository.saveProjectMetadata(
+                                            metadata.copy(musicUriString = Uri.fromFile(musicFile).toString())
+                                        )
+                                    }
+                                    loadProjects()
+                                    results[i] = metadata.id
+                                    Log.d(TAG, "Auto-generated project: ${metadata.name} (${result.efx.body.entries.size} entries)")
+                                } catch (e: CancellationException) {
+                                    // cancelAutoGeneration() 이 이미 상태를 Idle 로 되돌렸다
+                                    withContext(NonCancellable + Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
+                                    throw e
+                                } catch (e: Exception) {
+                                    withContext(Dispatchers.IO) { repository.deleteMusicFiles(metadata.id) }
+                                    Log.e(TAG, "Auto generation failed: $displayName", e)
+                                    failed++
+                                    lastError = e.message
+                                }
+                                done[i] = true
+                                flush()
+                            }
+                        }
+                    }.awaitAll()
+                }
+            } finally {
+                // 취소돼도 이미 만들어진 곡은 공연에 들어가게, 순서와 상관없이 남은 것을 모두 넘긴다
+                for (i in nextEmit until uris.size) results[i]?.let(onEach)
+            }
+
+            val created = results.filterNotNull()
             _autoGenState.value = when {
                 created.isEmpty() -> AutoGenState.Error(lastError ?: Loc.str(R.string.efx_list_view_model_1))
                 uris.size == 1 -> AutoGenState.Done(created[0])
