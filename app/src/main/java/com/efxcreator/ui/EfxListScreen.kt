@@ -437,7 +437,10 @@ fun EfxListScreen(
                                     onTogglePlay = { previewScope.launch { preview.toggle(project.id) } },
                                     entryCount = viewModel.getEntryCount(project.id),
                                     musicId = viewModel.getMusicId(project.id),
-                                    onEdit = { onNavigateToEdit(project.id) },
+                                    onEdit = {
+                                        preview.handOffTo(project.id)
+                                        onNavigateToEdit(project.id)
+                                    },
                                     onSave = { projectId, projectName ->
                                         viewModel.prepareExportFile(projectId, projectName)
                                     },

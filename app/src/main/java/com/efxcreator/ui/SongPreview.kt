@@ -78,11 +78,41 @@ class SongPreviewState(private val repository: EfxRepository) {
         if (player.isReady) player.play() else activeId = null
     }
 
+    /** 편집 화면으로 넘어가기 직전에 호출: 이 곡이 활성이면 현재 위치/재생 여부를 넘긴다. */
+    fun handOffTo(projectId: String) {
+        if (activeId != projectId) return
+        PlaybackHandoff.put(projectId, player.positionMs, player.isPlaying)
+    }
+
     fun stop() {
         player.release()
         activeId = null
         frames = emptyList()
         entries = emptyList()
+    }
+}
+
+/**
+ * 곡 목록에서 재생 중이던 곡을 편집 화면으로 들어갈 때 이어서 재생하기 위한 한 번짜리 인계 값.
+ * 편집 화면이 음악을 불러온 뒤 [take] 로 가져가 같은 위치에서 이어 재생한다.
+ */
+object PlaybackHandoff {
+    private var projectId: String? = null
+    private var positionMs: Long = 0L
+    private var playing: Boolean = false
+
+    fun put(projectId: String, positionMs: Long, playing: Boolean) {
+        this.projectId = projectId
+        this.positionMs = positionMs
+        this.playing = playing
+    }
+
+    /** 이 곡의 인계 값이 있으면 (위치, 재생 중이었는지) 를 돌려주고 비운다. */
+    fun take(projectId: String): Pair<Long, Boolean>? {
+        if (this.projectId != projectId) return null
+        val result = positionMs to playing
+        this.projectId = null
+        return result
     }
 }
 

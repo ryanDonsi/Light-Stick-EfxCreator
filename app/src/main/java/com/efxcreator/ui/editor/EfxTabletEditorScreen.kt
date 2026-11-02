@@ -193,7 +193,22 @@ fun EfxTabletEditorScreen(
     var deviceLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(projectId) { editVm.loadProject(projectId) }
-    LaunchedEffect(musicFile) { player.load(musicFile) }
+    LaunchedEffect(musicFile) {
+        player.load(musicFile)
+        // 곡 목록에서 재생 중에 들어왔다면 같은 위치에서 이어서 재생한다
+        val handoff = if (musicFile != null) com.efxcreator.ui.PlaybackHandoff.take(projectId) else null
+        if (handoff != null) {
+            var waited = 0
+            while (!player.isReady && player.error == null && waited < 3_000) {
+                delay(50)
+                waited += 50
+            }
+            if (player.isReady) {
+                player.seekTo(handoff.first)
+                if (handoff.second) player.play()
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         while (isActive) {
             player.tick()
