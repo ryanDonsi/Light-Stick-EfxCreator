@@ -195,6 +195,7 @@ fun EfxTabletEditorScreen(
 
     LaunchedEffect(projectId) { editVm.loadProject(projectId) }
     LaunchedEffect(musicFile) {
+        val musicFile = musicFile   // 위임 프로퍼티라 스마트 캐스트가 안 되므로 지역 변수로 복사
         // 이어받은 플레이어가 이미 이 곡을 불러와 재생 중이면 다시 불러오지 않는다
         if (musicFile != null && player.loadedPath == musicFile.absolutePath && player.isReady) {
             com.efxcreator.ui.PlaybackHandoff.take(projectId)
