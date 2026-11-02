@@ -614,7 +614,16 @@ fun EfxProjectCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 음악 파일의 메타데이터(앨범 아트)
-                SongArt(musicUriString = project.musicUriString, size = 64.dp)
+                SongArt(musicUriString = project.musicUriString, size = 64.dp) {
+                    // 재생 중이면 현재 이펙트 이름과 LED 색을 앨범 아트 위에 실시간으로 보여 준다 (Light-Stick-Music 과 같은 배지)
+                    if (preview != null && preview.activeId == project.id && preview.player.isPlaying) {
+                        EffectOverlayBadge(
+                            entries = preview.entries,
+                            positionMs = preview.player.positionMs,
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp)
+                        )
+                    }
+                }
                 Spacer(Modifier.width(16.dp))
                 Column(
                     modifier = Modifier.weight(1f)

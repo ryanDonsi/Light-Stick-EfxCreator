@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -298,7 +299,12 @@ fun AppIcon(size: Dp, modifier: Modifier = Modifier) {
  * 이미지가 없거나 파일을 읽을 수 없으면 음표 아이콘을 보여 준다.
  */
 @Composable
-fun SongArt(musicUriString: String?, size: Dp, modifier: Modifier = Modifier) {
+fun SongArt(
+    musicUriString: String?,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    overlay: @Composable BoxScope.() -> Unit = {}
+) {
     val bitmap by produceState<ImageBitmap?>(initialValue = null, musicUriString) {
         value = withContext(Dispatchers.IO) { loadAlbumArt(musicUriString, 256) }
     }
@@ -320,6 +326,7 @@ fun SongArt(musicUriString: String?, size: Dp, modifier: Modifier = Modifier) {
                 modifier = Modifier.size(size / 2)
             )
         }
+        overlay()
     }
 }
 

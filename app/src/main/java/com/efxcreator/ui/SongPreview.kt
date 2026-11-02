@@ -36,6 +36,10 @@ class SongPreviewState(private val repository: EfxRepository) {
     var frames by mutableStateOf<List<Pair<Long, ByteArray>>>(emptyList())
         private set
 
+    /** 재생 중인 곡의 이펙트 목록 (앨범 아트 위 실시간 배지용) */
+    var entries by mutableStateOf<List<com.efxcreator.model.EfxEntry>>(emptyList())
+        private set
+
     private var broadcasting = true
 
     fun setBroadcasting(enabled: Boolean) {
@@ -46,7 +50,8 @@ class SongPreviewState(private val repository: EfxRepository) {
 
     private fun reloadFrames(projectId: String) {
         val efx = repository.loadEfx(projectId)
-        frames = efx?.body?.entries.orEmpty().map {
+        entries = efx?.body?.entries.orEmpty()
+        frames = entries.map {
             it.timestampMs to it.payload.copy(broadcasting = if (broadcasting) 1 else 0).toByteArray()
         }
     }
@@ -77,6 +82,7 @@ class SongPreviewState(private val repository: EfxRepository) {
         player.release()
         activeId = null
         frames = emptyList()
+        entries = emptyList()
     }
 }
 
