@@ -431,4 +431,12 @@
     <string name="add_songs_selected">%1$d songs selected</string>
     <string name="add_songs_more">and %1$d more</string>
     <string name="add_songs_add_more">Add more songs</string>
+    <string name="music_chooser_title">Choose songs</string>
+    <string name="music_chooser_search">Search title or artist</string>
+    <string name="music_chooser_count">%1$d / %2$d selected</string>
+    <string name="music_chooser_toggle_all">Select / clear all</string>
+    <string name="music_chooser_loading">Loading music…</string>
+    <string name="music_chooser_empty">No music found</string>
+    <string name="music_chooser_confirm">Add %1$d songs</string>
+    <string name="music_chooser_cancel">Cancel</string>
 </resources>

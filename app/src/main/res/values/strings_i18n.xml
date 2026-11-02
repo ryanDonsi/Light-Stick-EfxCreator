@@ -431,4 +431,12 @@
     <string name="add_songs_selected">선택한 곡 %1$d개</string>
     <string name="add_songs_more">외 %1$d곡</string>
     <string name="add_songs_add_more">곡 더 추가</string>
+    <string name="music_chooser_title">곡 선택</string>
+    <string name="music_chooser_search">제목 또는 가수 검색</string>
+    <string name="music_chooser_count">%1$d / %2$d곡 선택</string>
+    <string name="music_chooser_toggle_all">전체 선택/해제</string>
+    <string name="music_chooser_loading">음악을 불러오는 중…</string>
+    <string name="music_chooser_empty">음악이 없습니다</string>
+    <string name="music_chooser_confirm">%1$d곡 추가</string>
+    <string name="music_chooser_cancel">취소</string>
 </resources>
