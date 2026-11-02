@@ -37,7 +37,7 @@ class SongPreviewState(private val repository: EfxRepository) {
         private set
 
     /** 재생 중인 곡의 이펙트 목록 (앨범 아트 위 실시간 배지용) */
-    var entries by mutableStateOf<List<com.efxcreator.model.EfxEntry>>(emptyList())
+    var entries by mutableStateOf<List<com.lightstick.efx.EfxEntry>>(emptyList())
         private set
 
     private var broadcasting = true
