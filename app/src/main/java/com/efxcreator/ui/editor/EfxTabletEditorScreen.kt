@@ -174,7 +174,8 @@ fun EfxTabletEditorScreen(
     }
 
     // ── 재생 / 타임라인 상태 ──────────────────────────────────
-    val player = remember { MusicPlayerController() }
+    // 곡 목록에서 재생 중에 들어왔다면 그 플레이어를 그대로 이어받아 음악이 끊기지 않게 한다
+    val player = remember { com.efxcreator.ui.PlaybackHandoff.peekController(projectId) ?: MusicPlayerController() }
     val timeline = remember { TimelineState() }
     val drag = remember { PresetDragState() }
 
@@ -194,6 +195,11 @@ fun EfxTabletEditorScreen(
 
     LaunchedEffect(projectId) { editVm.loadProject(projectId) }
     LaunchedEffect(musicFile) {
+        // 이어받은 플레이어가 이미 이 곡을 불러와 재생 중이면 다시 불러오지 않는다
+        if (musicFile != null && player.loadedPath == musicFile.absolutePath && player.isReady) {
+            com.efxcreator.ui.PlaybackHandoff.take(projectId)
+            return@LaunchedEffect
+        }
         player.load(musicFile)
         // 곡 목록에서 재생 중에 들어왔다면 같은 위치에서 이어서 재생한다
         val handoff = if (musicFile != null) com.efxcreator.ui.PlaybackHandoff.take(projectId) else null

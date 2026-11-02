@@ -31,6 +31,10 @@ class MusicPlayerController {
     var error by mutableStateOf<String?>(null)
         private set
 
+    /** 지금 불러온 파일 경로 (다른 화면이 같은 플레이어를 이어받을 때 같은 곡인지 확인용) */
+    var loadedPath: String? = null
+        private set
+
     companion object {
         private const val TAG = "MusicPlayerController"
     }
@@ -42,6 +46,7 @@ class MusicPlayerController {
         durationMs = 0L
         error = null
         if (file == null || !file.exists()) return
+        loadedPath = file.absolutePath
 
         try {
             val mp = MediaPlayer()
@@ -116,6 +121,7 @@ class MusicPlayerController {
             runCatching { it.release() }
         }
         player = null
+        loadedPath = null
         isPlaying = false
         isReady = false
     }

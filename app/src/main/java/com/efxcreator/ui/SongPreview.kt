@@ -26,7 +26,8 @@ import kotlinx.coroutines.withContext
  */
 @Stable
 class SongPreviewState(private val repository: EfxRepository) {
-    val player = MusicPlayerController()
+    var player by mutableStateOf(MusicPlayerController())
+        private set
 
     /** 현재 불러왔거나 재생 중인 곡 (없으면 null) */
     var activeId by mutableStateOf<String?>(null)
@@ -81,8 +82,18 @@ class SongPreviewState(private val repository: EfxRepository) {
     /** 편집 화면으로 넘어가기 직전에 호출: 이 곡이 활성이면 현재 위치/재생 여부를 넘긴다. */
     fun handOffTo(projectId: String) {
         if (activeId != projectId) return
-        PlaybackHandoff.put(projectId, player.positionMs, player.isPlaying)
+        // 플레이어 객체 자체를 넘겨 음악이 끊기지 않게 한다. 이 상태는 새 플레이어로 바꿔 둔다.
+        PlaybackHandoff.put(projectId, player.positionMs, player.isPlaying, player)
+        handedOff = true
+        player = MusicPlayerController()
+        activeId = null
+        frames = emptyList()
+        entries = emptyList()
     }
+
+    /** 플레이어를 편집 화면에 넘긴 상태인가 (넘겼다면 화면을 떠날 때 기기 타임라인을 멈추지 않는다) */
+    var handedOff = false
+        private set
 
     fun stop() {
         player.release()
@@ -100,18 +111,25 @@ object PlaybackHandoff {
     private var projectId: String? = null
     private var positionMs: Long = 0L
     private var playing: Boolean = false
+    private var controller: MusicPlayerController? = null
 
-    fun put(projectId: String, positionMs: Long, playing: Boolean) {
+    fun put(projectId: String, positionMs: Long, playing: Boolean, controller: MusicPlayerController) {
         this.projectId = projectId
         this.positionMs = positionMs
         this.playing = playing
+        this.controller = controller
     }
+
+    /** 넘겨받을 플레이어가 있으면 돌려준다 (이미 같은 곡이 로드돼 재생 중일 수 있다). 값은 [take] 로 비운다. */
+    fun peekController(projectId: String): MusicPlayerController? =
+        if (this.projectId == projectId) controller else null
 
     /** 이 곡의 인계 값이 있으면 (위치, 재생 중이었는지) 를 돌려주고 비운다. */
     fun take(projectId: String): Pair<Long, Boolean>? {
         if (this.projectId != projectId) return null
         val result = positionMs to playing
         this.projectId = null
+        this.controller = null
         return result
     }
 }
@@ -158,8 +176,11 @@ fun rememberSongPreview(bleVm: BleViewModel): SongPreviewState {
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { state.player.pause() }
     DisposableEffect(Unit) {
         onDispose {
-            state.stop()
-            bleVm.stopTimeline()
+            // 편집 화면으로 플레이어를 넘겼다면 음악도 기기 타임라인도 그대로 둔다
+            if (!state.handedOff) {
+                state.stop()
+                bleVm.stopTimeline()
+            }
         }
     }
     return state
