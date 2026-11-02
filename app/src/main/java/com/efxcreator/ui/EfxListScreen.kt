@@ -110,21 +110,6 @@ fun EfxListScreen(
         if (uris.isNotEmpty()) pendingMusicUris = (pendingMusicUris + uris).distinct()
     }
 
-    var showMusicChooser by remember { mutableStateOf(false) }
-    val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) showMusicChooser = true
-        else autoMusicPicker.launch(MusicFolder.initialUri(context))   // 권한이 없으면 시스템 파일 선택기로 대신한다
-    }
-    if (showMusicChooser) {
-        MusicChooserDialog(
-            onConfirm = { uris ->
-                showMusicChooser = false
-                pendingMusicUris = uris
-            },
-            onDismiss = { showMusicChooser = false }
-        )
-    }
-
     // 자동 생성 완료 → 공연에 곡 추가 + 편집 화면 이동 / 실패 → 안내
     LaunchedEffect(autoGenState) {
         when (val state = autoGenState) {
@@ -157,14 +142,7 @@ fun EfxListScreen(
                 TextButton(onClick = {
                     showCreateDialog = false
                     addTargetShowId = selectedShow?.id
-                    // 앱 안의 체크박스 목록으로 여러 곡을 고른다 (저장소 권한이 없으면 먼저 요청)
-                    val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_AUDIO
-                    else android.Manifest.permission.READ_EXTERNAL_STORAGE
-                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, perm) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                        showMusicChooser = true
-                    } else {
-                        audioPermissionLauncher.launch(perm)
-                    }
+                    autoMusicPicker.launch(MusicFolder.initialUri(context))
                 }) {
                     Text(Loc.str(R.string.efx_list_screen_5))
                 }
