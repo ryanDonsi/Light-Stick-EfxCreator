@@ -620,7 +620,7 @@ fun EfxProjectCard(
                         EffectOverlayBadge(
                             entries = preview.entries,
                             positionMs = preview.player.positionMs,
-                            modifier = Modifier.align(Alignment.TopEnd).padding(2.dp)
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp)
                         )
                     }
                 }
