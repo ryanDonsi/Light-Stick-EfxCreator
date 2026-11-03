@@ -15,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -96,6 +97,7 @@ fun GameSettingsContent(viewModel: GameViewModel, modifier: Modifier = Modifier)
     val playingMaxSeconds by viewModel.playingMaxSeconds.collectAsState()
 
     var showStopDialog by remember { mutableStateOf(false) }
+    var tutorialMode by remember { mutableStateOf<GameMode?>(null) }
 
     LaunchedEffect(Unit) { viewModel.connectIfNeeded() }
     // 게임 도중 다른 메뉴로 가거나 화면을 떠나면 기기와 BGM 이 계속 돌지 않도록 중지한다
@@ -132,6 +134,7 @@ fun GameSettingsContent(viewModel: GameViewModel, modifier: Modifier = Modifier)
                     onDifficultySelect = viewModel::selectDifficulty,
                     onRoundsSelect = viewModel::selectRounds,
                     onStart = viewModel::startGame,
+                    onTutorialClick = { mode -> tutorialMode = mode },
                     bleConnected = bleState is GameBleManager.ConnectionState.Connected,
                     isGameModeSupported = isGameModeSupported
                 )
@@ -152,6 +155,10 @@ fun GameSettingsContent(viewModel: GameViewModel, modifier: Modifier = Modifier)
                 )
             }
         }
+    }
+
+    tutorialMode?.let { mode ->
+        GameTutorialDialog(mode = mode, onDismiss = { tutorialMode = null })
     }
 
     if (showStopDialog) {
@@ -180,6 +187,7 @@ private fun ModeSelectionContent(
     onModeSelect: (GameMode) -> Unit,
     onDifficultySelect: (GameDifficulty) -> Unit,
     onRoundsSelect: (Int) -> Unit,
+    onTutorialClick: (GameMode) -> Unit,
     onStart: () -> Unit
 ) {
     Column(
@@ -197,7 +205,12 @@ private fun ModeSelectionContent(
 
         GameMode.entries.forEach { mode ->
             Column {
-                GameModeCard(mode = mode, selected = selectedMode == mode, onClick = { onModeSelect(mode) })
+                GameModeCard(
+                    mode = mode,
+                    selected = selectedMode == mode,
+                    onClick = { onModeSelect(mode) },
+                    onTutorialClick = { onTutorialClick(mode) }
+                )
                 AnimatedVisibility(
                     visible = selectedMode == mode,
                     enter = fadeIn(tween(200)) + expandVertically(animationSpec = tween(200)),
@@ -321,7 +334,7 @@ private fun GameStatusBanner(
 }
 
 @Composable
-private fun GameModeCard(mode: GameMode, selected: Boolean, onClick: () -> Unit) {
+private fun GameModeCard(mode: GameMode, selected: Boolean, onClick: () -> Unit, onTutorialClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val icon = when (mode) {
         GameMode.SPEED_REACTION -> Icons.Filled.Bolt
@@ -356,6 +369,16 @@ private fun GameModeCard(mode: GameMode, selected: Boolean, onClick: () -> Unit)
                     style = MaterialTheme.typography.labelMedium,
                     color = if (selected) scheme.primary else scheme.outline
                 )
+            }
+            // 튜토리얼 열기 (?)
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(scheme.onSurface.copy(alpha = if (selected) 0.15f else 0.08f), CircleShape)
+                    .clickable(onClick = onTutorialClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("?", style = MaterialTheme.typography.labelMedium, color = if (selected) scheme.onSurface else scheme.onSurfaceVariant)
             }
         }
     }
