@@ -139,14 +139,22 @@ fun SettingsScreen(
                         Text(Loc.str(R.string.settings_screen_4), style = MaterialTheme.typography.titleMedium)
                     }
                     Spacer(Modifier.height(8.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        SettingsSection.entries.forEach { item ->
-                            SettingsMenuRow(
-                                item = item,
-                                selected = item == section,
-                                onClick = { section = item }
-                            )
+                    // 메뉴 항목이 많아 화면 높이를 넘으면 스크롤된다
+                    val menuScroll = rememberScrollState()
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(menuScroll),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SettingsSection.entries.forEach { item ->
+                                SettingsMenuRow(
+                                    item = item,
+                                    selected = item == section,
+                                    onClick = { section = item }
+                                )
+                            }
                         }
+                        SlimVerticalScrollBar(menuScroll, Modifier.align(Alignment.CenterEnd))
                     }
                 }
             }
