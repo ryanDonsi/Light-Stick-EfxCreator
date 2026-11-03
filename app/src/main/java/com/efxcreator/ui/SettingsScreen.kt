@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -297,6 +298,17 @@ fun SettingsScreen(
                         SettingsSection.EFFECT_LIBRARY -> EffectPatternsPanel(modifier = Modifier.fillMaxSize())
                         SettingsSection.EFFECT_SETS -> EffectSetsPanel(modifier = Modifier.fillMaxSize())
                         SettingsSection.PALETTE_SETS -> PaletteSetsPanel(modifier = Modifier.fillMaxSize())
+                        SettingsSection.GAME -> {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(Loc.str(R.string.game_title), style = MaterialTheme.typography.titleMedium)
+                                }
+                                GameSettingsContent(viewModel(), Modifier.fillMaxSize())
+                            }
+                        }
                         SettingsSection.LANGUAGE -> {
                             Column(modifier = Modifier.fillMaxSize()) {
                                 Row(
@@ -322,6 +334,7 @@ enum class SettingsSection(val route: String, private val labelRes: Int, private
     EFFECT_LIBRARY("library", R.string.settings_screen_17, R.string.settings_screen_18, Icons.Default.Layers),
     EFFECT_SETS("effect", R.string.settings_screen_19, R.string.settings_screen_20, Icons.Default.AutoAwesome),
     PALETTE_SETS("palette", R.string.settings_screen_21, R.string.settings_screen_22, Icons.Default.Palette),
+    GAME("game", R.string.game_title, R.string.game_subtitle, Icons.Default.SportsEsports),
     LANGUAGE("language", R.string.settings_screen_14, R.string.settings_screen_23, Icons.Default.Language);
 
     // 언어를 바꾸면 값이 달라지므로 enum 생성 시점이 아니라 읽을 때마다 문자열을 가져온다
