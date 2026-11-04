@@ -298,7 +298,7 @@
     <string name="pattern_panel_1">%1$s. %2$s %3$s beats%4$s%5$s</string>
     <string name="pattern_panel_2">Add effect</string>
     <string name="pattern_panel_3">Build effect bundles</string>
-    <string name="pattern_panel_4">e.g. Pulse = ① ON 0.3 beat (main color) → ② ON 1.7 beats (black, Transit 3). Lengths are in beats (one decimal place), and colors are set as palette-set roles so the same effect can use different colors per palette. Built-in effects can be duplicated and edited, and every effect appears in the editor\'s My library.</string>
+    <string name="pattern_panel_4">e.g. Pulse = ① ON 0.4 beat (main color) → ② ON 1.6 beats (black, Transit 3). Lengths are in beats (one decimal place), and colors are set as palette-set roles so the same effect can use different colors per palette. Built-in effects can be duplicated and edited, and every effect appears in the editor\'s My library.</string>
     <string name="pattern_panel_5">You haven\'t made any effects yet. Create one with \"Add effect\".</string>
     <string name="pattern_panel_6">Built-in</string>
     <string name="pattern_panel_7">%1$s steps · %2$s beats total</string>

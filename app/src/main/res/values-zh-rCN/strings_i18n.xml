@@ -298,7 +298,7 @@
     <string name="pattern_panel_1">%1$s. %2$s %3$s拍%4$s%5$s</string>
     <string name="pattern_panel_2">添加效果</string>
     <string name="pattern_panel_3">制作效果组合</string>
-    <string name="pattern_panel_4">例）脉冲 = ① ON 0.3拍（主色）→ ② ON 1.7拍（黑色，过渡时间 3）。长度以拍为单位（保留一位小数），颜色按调色板集的角色指定，因此同一效果可随调色板使用不同颜色。内置效果可以复制后修改，所有效果都会显示在编辑器的“我的库”中。</string>
+    <string name="pattern_panel_4">例）脉冲 = ① ON 0.4拍（主色）→ ② ON 1.6拍（黑色，过渡时间 3）。长度以拍为单位（保留一位小数），颜色按调色板集的角色指定，因此同一效果可随调色板使用不同颜色。内置效果可以复制后修改，所有效果都会显示在编辑器的“我的库”中。</string>
     <string name="pattern_panel_5">还没有自己创建的效果。请通过“添加效果”创建。</string>
     <string name="pattern_panel_6">内置</string>
     <string name="pattern_panel_7">%1$s个步骤 · 共%2$s拍</string>

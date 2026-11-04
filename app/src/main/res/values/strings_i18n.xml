@@ -298,7 +298,7 @@
     <string name="pattern_panel_1">%1$s. %2$s %3$s박%4$s%5$s</string>
     <string name="pattern_panel_2">이펙트 추가</string>
     <string name="pattern_panel_3">이펙트 묶음 만들기</string>
-    <string name="pattern_panel_4">예) 펄스 = ① ON 0.3박(대표색) → ② ON 1.7박(검정, 전환 시간 3). 길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. 기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.</string>
+    <string name="pattern_panel_4">예) 펄스 = ① ON 0.4박(대표색) → ② ON 1.6박(검정, 전환 시간 3). 길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. 기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.</string>
     <string name="pattern_panel_5">아직 직접 만든 이펙트가 없습니다. \"이펙트 추가\" 로 만들어 보세요.</string>
     <string name="pattern_panel_6">기본 제공</string>
     <string name="pattern_panel_7">%1$s단계 · 총 %2$s박</string>

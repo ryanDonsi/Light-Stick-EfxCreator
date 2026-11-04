@@ -28,7 +28,7 @@ data class PatternStep(
     val effectType: EffectType get() = runCatching { EffectType.valueOf(type) }.getOrDefault(EffectType.ON)
 }
 
-/** 이름을 붙인 단계들의 묶음. 예) ON_PULSE = [ON 0.3박, ON 0.7박 (Transit 3)] */
+/** 이름을 붙인 단계들의 묶음. 예) ON_PULSE = [ON 0.4박, ON 1.6박 (Transit 3)] */
 data class EffectPattern(
     val id: String,
     val name: String,
@@ -117,13 +117,13 @@ object PatternResolver {
  */
 object BuiltInPatterns {
     val ALL: List<EffectPattern> get() = listOf(
-        // 엔진의 ON_PULSE 는 2박마다 한 번 울린다: 대표색을 짧게(0.3박) 켰다가, 나머지 1.7박 동안 검정으로 Transit 3 만에 꺼진 채 유지
+        // 엔진의 ON_PULSE 는 2박마다 한 번 울린다: 대표색을 짧게(엔진은 한 박의 44%, 여기서는 가장 가까운 0.4박) 켰다가, 나머지 1.6박 동안 검정으로 Transit 3 만에 꺼진 채 유지
         EffectPattern(
             id = "builtin_on_pulse", name = Loc.str(R.string.effect_pattern_7), builtIn = true,
             description = Loc.str(R.string.effect_pattern_8),
             steps = listOf(
-                PatternStep(type = "ON", beatsTenths = 3, fg = PatternColors.MAIN, frames = 0),
-                PatternStep(type = "ON", beatsTenths = 17, fg = PatternColors.BLACK, frames = 3)
+                PatternStep(type = "ON", beatsTenths = 4, fg = PatternColors.MAIN, frames = 0),
+                PatternStep(type = "ON", beatsTenths = 16, fg = PatternColors.BLACK, frames = 3)
             )
         ),
         // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 2.5초 한 사이클 @SPF 100)
