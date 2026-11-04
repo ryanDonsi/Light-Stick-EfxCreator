@@ -690,6 +690,24 @@ fun TimelineView(
         if (px in 0f..w) {
             drawLine(playheadColor, Offset(px, 0f), Offset(px, laneTop + laneH), strokeWidth = 2f)
             drawCircle(playheadColor, radius = 6f, center = Offset(px, 6f))
+
+            // 선택한(재생) 위치의 시각을 세로선 옆 박스로 보여 준다. 예: 0:09.7
+            val label = textMeasurer.measure(
+                TimelineMath.formatTime(position, withTenths = true),
+                TextStyle(fontSize = 11.sp, color = cs.onTertiary)
+            )
+            val padX = 6f
+            val padY = 3f
+            val boxW = label.size.width + padX * 2
+            val boxH = label.size.height + padY * 2
+            // 기본은 선 오른쪽, 화면 오른쪽 끝에 닿으면 왼쪽에 둔다
+            val boxX = if (px + 6f + boxW <= w) px + 6f else px - 6f - boxW
+            val boxY = rulerH + 4f
+            drawRoundRect(
+                playheadColor, Offset(boxX, boxY), Size(boxW, boxH),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f)
+            )
+            drawText(label, topLeft = Offset(boxX + padX, boxY + padY))
         }
     }
 }
