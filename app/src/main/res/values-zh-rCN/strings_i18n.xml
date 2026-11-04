@@ -589,7 +589,7 @@
     <string name="palette_family_blue">蓝色</string>
     <string name="timeline_select_mode">选择</string>
     <string name="multi_selected_count">已选择%1$d个</string>
-    <string name="multi_select_hint">在空白处拖动可框选范围，点击效果可添加/取消，拖动已选效果可一起移动。</string>
     <string name="multi_clear">取消选择</string>
     <string name="multi_delete_n">删除%1$d个</string>
+    <string name="multi_range">区间 %1$s ~ %2$s</string>
 </resources>

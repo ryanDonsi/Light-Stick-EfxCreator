@@ -589,7 +589,7 @@
     <string name="palette_family_blue">ブルー</string>
     <string name="timeline_select_mode">選択</string>
     <string name="multi_selected_count">%1$d件選択</string>
-    <string name="multi_select_hint">空いた場所をドラッグで範囲選択、エフェクトをタップで追加/解除、選択したエフェクトをドラッグでまとめて移動します。</string>
     <string name="multi_clear">選択解除</string>
     <string name="multi_delete_n">%1$d件を削除</string>
+    <string name="multi_range">区間 %1$s ~ %2$s</string>
 </resources>

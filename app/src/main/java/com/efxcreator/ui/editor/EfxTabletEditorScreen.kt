@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ZoomIn
@@ -535,7 +537,7 @@ fun EfxTabletEditorScreen(
                     SelectedEntryPanel(
                         modifier = Modifier.weight(1f),
                         entry = if (selectMode) null else entries.getOrNull(selectedIndex),
-                        multiCount = if (selectMode) multiTimes.size else 0,
+                        multiEntries = if (selectMode) entries.filter { it.timestampMs in multiTimes } else emptyList(),
                         onClearSelection = { multiTimes = emptySet() },
                         onDeleteSelected = {
                             val idxs = entries.indices.filter { entries[it].timestampMs in multiTimes }
@@ -1022,60 +1024,10 @@ private fun PreviewPanel(
     }
 }
 
+/** 이펙트 한 개의 상세 항목 (시간, 종류, 색, 주기, SPF, 밝기, 그룹 마스크 …). 한 개 선택과 다중 선택의 펼침에서 함께 쓴다. */
 @Composable
-private fun SelectedEntryPanel(
-    modifier: Modifier = Modifier,
-    entry: EfxEntry?,
-    multiCount: Int = 0,
-    onClearSelection: () -> Unit = {},
-    onDeleteSelected: () -> Unit = {},
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
-            .padding(12.dp)
-    ) {
-        Text(Loc.str(R.string.efx_tablet_editor_screen_35), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(8.dp))
-        if (multiCount > 0) {
-            // 선택 모드: 선택한 이펙트 수와 일괄 동작
-            Text(Loc.str(R.string.multi_selected_count, multiCount), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                Loc.str(R.string.multi_select_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onClearSelection) { Text(Loc.str(R.string.multi_clear)) }
-                Button(
-                    onClick = onDeleteSelected,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(Loc.str(R.string.multi_delete_n, multiCount))
-                }
-            }
-            return@Column
-        }
-        if (entry == null) {
-            Text(
-                Loc.str(R.string.efx_tablet_editor_screen_36),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            return@Column
-        }
-        val p = entry.payload
-        // (라벨, 값, 값 옆에 보여줄 색 견본)
+private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier) {
+    val p = entry.payload
         val rows: List<Triple<String, String, Color?>> = listOf(
             Triple(Loc.str(R.string.efx_tablet_editor_screen_37), TimelineMath.formatTime(entry.timestampMs, withTenths = true), null),
             Triple(Loc.str(R.string.efx_tablet_editor_screen_38), p.effectType.name, null),
@@ -1098,13 +1050,7 @@ private fun SelectedEntryPanel(
             Triple(Loc.str(R.string.label_random_color), if (p.randomColor != 0) "ON" else "OFF", null),
             Triple(Loc.str(R.string.label_index), p.effectIndex.toString(), null)
         )
-        // 항목이 많아 카드 높이를 넘으면 이 목록만 스크롤되고, 편집/삭제 버튼은 카드 하단에 고정된다
-        val rowsScroll = rememberScrollState()
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(end = 10.dp).verticalScroll(rowsScroll),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
-        ) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(9.dp)) {
             rows.forEach { (k, v, swatch) ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -1131,6 +1077,125 @@ private fun SelectedEntryPanel(
                     )
                 }
             }
+    }
+}
+
+@Composable
+private fun SelectedEntryPanel(
+    modifier: Modifier = Modifier,
+    entry: EfxEntry?,
+    multiEntries: List<EfxEntry> = emptyList(),
+    onClearSelection: () -> Unit = {},
+    onDeleteSelected: () -> Unit = {},
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
+            .padding(12.dp)
+    ) {
+        Text(Loc.str(R.string.efx_tablet_editor_screen_35), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.height(8.dp))
+        val multiCount = multiEntries.size
+        if (multiCount > 0) {
+            // 선택 모드: 선택 수, 구간, 이펙트별 한 줄 요약(펼치면 상세), 일괄 동작
+            Text(Loc.str(R.string.multi_selected_count, multiCount), style = MaterialTheme.typography.titleMedium)
+            val sorted = multiEntries.sortedBy { it.timestampMs }
+            Text(
+                Loc.str(
+                    R.string.multi_range,
+                    TimelineMath.formatTime(sorted.first().timestampMs, withTenths = true),
+                    TimelineMath.formatTime(sorted.last().timestampMs, withTenths = true)
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            // 이펙트별 한 줄 요약. 오른쪽 화살표로 상세 정보를 펼치고 접는다
+            var expanded by remember { mutableStateOf<Set<Long>>(emptySet()) }
+            val listScroll = rememberScrollState()
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(end = 10.dp).verticalScroll(listScroll),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    sorted.forEach { e ->
+                        val open = e.timestampMs in expanded
+                        val p = e.payload
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
+                                .clickable { expanded = if (open) expanded - e.timestampMs else expanded + e.timestampMs }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    TimelineMath.formatTime(e.timestampMs, withTenths = true),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.width(62.dp)
+                                )
+                                Text(p.effectType.name, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                listOf(
+                                    Color(p.color.r, p.color.g, p.color.b),
+                                    Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b)
+                                ).forEach { c ->
+                                    Box(
+                                        Modifier
+                                            .padding(end = 4.dp)
+                                            .size(14.dp)
+                                            .background(c, MaterialTheme.shapes.extraSmall)
+                                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                                    )
+                                }
+                                Icon(
+                                    if (open) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            if (open) {
+                                Spacer(Modifier.height(8.dp))
+                                EntryDetailRows(e)
+                                Spacer(Modifier.height(2.dp))
+                            }
+                        }
+                    }
+                }
+                SlimVerticalScrollBar(listScroll, Modifier.align(Alignment.CenterEnd))
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onClearSelection) { Text(Loc.str(R.string.multi_clear)) }
+                Button(
+                    onClick = onDeleteSelected,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(Loc.str(R.string.multi_delete_n, multiCount))
+                }
+            }
+            return@Column
+        }
+        if (entry == null) {
+            Text(
+                Loc.str(R.string.efx_tablet_editor_screen_36),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return@Column
+        }
+        // 항목이 많아 카드 높이를 넘으면 이 목록만 스크롤되고, 편집/삭제 버튼은 카드 하단에 고정된다
+        val rowsScroll = rememberScrollState()
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxSize().padding(end = 10.dp).verticalScroll(rowsScroll)) {
+            EntryDetailRows(entry)
         }
         SlimVerticalScrollBar(rowsScroll, Modifier.align(Alignment.CenterEnd))
         }
