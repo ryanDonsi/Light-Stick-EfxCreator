@@ -595,4 +595,5 @@
     <string name="multi_select_hint">Long-press the effect row or turn on Select to enter select mode. Drag on empty space to select a range, tap an effect to add or remove it, and drag a selected effect to move them together.</string>
     <string name="multi_exit">Exit select mode</string>
     <string name="timeline_select_mode_badge">Select mode</string>
+    <string name="song_palette_choose">Choose palette for this song</string>
 </resources>

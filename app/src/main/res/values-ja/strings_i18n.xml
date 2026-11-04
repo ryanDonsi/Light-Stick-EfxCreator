@@ -595,4 +595,5 @@
     <string name="multi_select_hint">エフェクト行を長押しするか「選択」をオンにすると選択モードになります。空いた場所をドラッグで範囲選択、エフェクトをタップで追加/解除、選択したエフェクトをドラッグでまとめて移動します。</string>
     <string name="multi_exit">選択モードを終了</string>
     <string name="timeline_select_mode_badge">選択モード</string>
+    <string name="song_palette_choose">この曲のパレットを選択</string>
 </resources>

@@ -31,9 +31,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -59,6 +61,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -447,6 +451,12 @@ fun EfxTabletEditorScreen(
                             autoPaletteColors = autoPalette?.roleColors.orEmpty().map { Color(it.r, it.g, it.b) },
                             autoSetName = com.efxcreator.music.sets.SetCatalog.BUILT_IN_RULE_SETS
                                 .firstOrNull { it.id == "builtin_energy" }?.name?.substringBefore(" ("),
+                            paletteChoices = paletteSets,
+                            onSelectPalette = { set ->
+                                // 이 곡의 팔레트 세트를 바꾼다 (라이브러리 칸의 색과 앞으로 넣는 이펙트의 색이 따라간다)
+                                setsVm.rememberSongPalette(projectId, set?.id)
+                                songSetsRev++
+                            },
                             paletteSet = songSetsRev.let { paletteSets.firstOrNull { it.id == setsVm.songPaletteSetId(projectId) } },
                             effectSetName = effectSets.firstOrNull { it.id == setsVm.songEffectSetId(projectId) }?.name,
                             snapToBeats = snapToBeats,
@@ -874,6 +884,9 @@ private fun TimelineToolbar(
     autoPaletteColors: List<Color>,
     autoSetName: String?,
     paletteSet: com.efxcreator.music.sets.PaletteSet?,
+    /** 곡의 팔레트로 고를 수 있는 세트들과, 고른 결과(null = 기본/자동) */
+    paletteChoices: List<com.efxcreator.music.sets.PaletteSet>,
+    onSelectPalette: (com.efxcreator.music.sets.PaletteSet?) -> Unit,
     effectSetName: String?,
     snapToBeats: Boolean,
     showBeats: Boolean,
@@ -902,7 +915,12 @@ private fun TimelineToolbar(
         Spacer(Modifier.width(16.dp))
         // 이 곡에 적용된 팔레트 / 이펙트 세트
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            var paletteMenu by remember { mutableStateOf(false) }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                // 눌러서 이 곡의 팔레트 세트를 고른다
+                modifier = Modifier.clickable { paletteMenu = true }
+            ) {
                 Text(
                     Loc.str(R.string.song_info_palette),
                     style = MaterialTheme.typography.labelSmall,
@@ -929,6 +947,39 @@ private fun TimelineToolbar(
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
+                Icon(Icons.Default.ArrowDropDown, contentDescription = Loc.str(R.string.song_palette_choose), modifier = Modifier.size(18.dp))
+                DropdownMenu(expanded = paletteMenu, onDismissRequest = { paletteMenu = false }) {
+                    // 기본(자동): 엔진이 곡에 맞춰 고른 색 계열
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                autoPaletteColors.forEach { c ->
+                                    Box(Modifier.padding(end = 3.dp).size(12.dp).background(c, androidx.compose.foundation.shape.CircleShape))
+                                }
+                                Spacer(Modifier.width(6.dp))
+                                Text(autoPaletteFamily?.let { Loc.str(R.string.song_info_detail, Loc.str(R.string.song_info_default), familyLabel(it)) }
+                                    ?: Loc.str(R.string.song_info_default))
+                            }
+                        },
+                        trailingIcon = { if (paletteSet == null) Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        onClick = { paletteMenu = false; onSelectPalette(null) }
+                    )
+                    paletteChoices.forEach { set ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    set.colors.forEach { c ->
+                                        Box(Modifier.padding(end = 3.dp).size(12.dp).background(Color(c.r, c.g, c.b), androidx.compose.foundation.shape.CircleShape))
+                                    }
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(set.name)
+                                }
+                            },
+                            trailingIcon = { if (paletteSet?.id == set.id) Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            onClick = { paletteMenu = false; onSelectPalette(set) }
+                        )
+                    }
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

@@ -595,4 +595,5 @@
     <string name="multi_select_hint">长按效果行或开启“选择”即可进入选择模式。在空白处拖动可框选范围，点击效果可添加/取消，拖动已选效果可一起移动。</string>
     <string name="multi_exit">退出选择模式</string>
     <string name="timeline_select_mode_badge">选择模式</string>
+    <string name="song_palette_choose">选择这首歌的调色板</string>
 </resources>
