@@ -362,6 +362,36 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         commitDraft(list)
     }
 
+    /** 선택한 여러 이펙트를 한 번에 지운다 (실행 취소 한 번으로 되돌린다) */
+    fun deleteTimelineEntries(indices: Collection<Int>) {
+        val current = _efx.value ?: return
+        val drop = indices.toSet()
+        if (drop.isEmpty()) return
+        _editingEntry.value = null
+        commitDraft(current.body.entries.filterIndexed { i, _ -> i !in drop })
+    }
+
+    /**
+     * 선택한 이펙트들을 [deltaMs] 만큼 함께 옮긴다 (상대 간격 유지, 0ms 아래로는 내려가지 않는다).
+     * 옮겨진 자리에 있던 선택되지 않은 이펙트는 교체된다. 실행 취소 한 번으로 되돌린다.
+     * @return 옮겨진 이펙트들의 새 시각 (선택 표시를 유지하는 데 쓴다)
+     */
+    fun moveTimelineEntries(indices: Collection<Int>, deltaMs: Long): Set<Long> {
+        val current = _efx.value ?: return emptySet()
+        val move = indices.toSet()
+        val list = current.body.entries
+        // 가장 앞 이펙트가 0ms 아래로 내려가지 않도록 이동량을 제한한다
+        val minTs = list.filterIndexed { i, _ -> i in move }.minOfOrNull { it.timestampMs } ?: return emptySet()
+        val delta = maxOf(deltaMs, -minTs)
+        if (delta == 0L) return list.filterIndexed { i, _ -> i in move }.map { it.timestampMs }.toSet()
+        val moved = list.filterIndexed { i, _ -> i in move }.map { it.copy(timestampMs = it.timestampMs + delta) }
+        val newTimes = moved.map { it.timestampMs }.toSet()
+        val kept = list.filterIndexed { i, e -> i !in move && e.timestampMs !in newTimes }
+        _editingEntry.value = null
+        commitDraft(kept + moved)
+        return newTimes
+    }
+
     fun deleteTimelineEntry(index: Int) {
         val current = _efx.value ?: return
         val list = current.body.entries.toMutableList()

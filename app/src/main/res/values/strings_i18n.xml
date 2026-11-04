@@ -587,4 +587,9 @@
     <string name="palette_family_orange_gold">오렌지 골드</string>
     <string name="palette_family_teal">틸</string>
     <string name="palette_family_blue">블루</string>
+    <string name="timeline_select_mode">선택</string>
+    <string name="multi_selected_count">%1$d개 선택</string>
+    <string name="multi_select_hint">빈 곳을 끌면 범위 선택, 이펙트를 탭하면 추가/해제, 선택한 이펙트를 끌면 함께 이동합니다.</string>
+    <string name="multi_clear">선택 해제</string>
+    <string name="multi_delete_n">%1$d개 삭제</string>
 </resources>

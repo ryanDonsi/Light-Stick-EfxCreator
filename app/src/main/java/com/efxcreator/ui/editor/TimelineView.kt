@@ -207,7 +207,7 @@ private fun DrawScope.drawEffectBlock(
     )
 }
 
-private enum class DragMode { NONE, SEEK, PAN, MOVE }
+private enum class DragMode { NONE, SEEK, PAN, MOVE, GROUP, MARQUEE }
 
 private class DragHolder {
     var mode = DragMode.NONE
@@ -230,6 +230,9 @@ fun TimelineView(
     durationMs: Long,
     positionProvider: () -> Long,
     selectedIndex: Int,
+    /** 선택 모드(복수 선택): 켜져 있으면 [selectedIndices] 가 선택 표시와 이동 대상이 된다 */
+    selectMode: Boolean = false,
+    selectedIndices: Set<Int> = emptySet(),
     dropPreviewMs: Long?,
     snapToBeats: Boolean,
     showBeats: Boolean = true,
@@ -239,6 +242,10 @@ fun TimelineView(
     onSeek: (Long) -> Unit,
     onEntryClick: (Int) -> Unit,
     onEntryMove: (Int, Long) -> Unit,
+    onEntryToggle: (Int) -> Unit = {},
+    onSelectionChange: (Set<Int>) -> Unit = {},
+    /** 선택한 이펙트들을 함께 옮긴다: (인덱스들, 이동량 ms) */
+    onEntriesMove: (List<Int>, Long) -> Unit = { _, _ -> },
     onBoundsChanged: (Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -291,10 +298,18 @@ fun TimelineView(
     val onSeekState by rememberUpdatedState(onSeek)
     val onEntryClickState by rememberUpdatedState(onEntryClick)
     val onEntryMoveState by rememberUpdatedState(onEntryMove)
+    val selectModeState by rememberUpdatedState(selectMode)
+    val selectedIndicesState by rememberUpdatedState(selectedIndices)
+    val onEntryToggleState by rememberUpdatedState(onEntryToggle)
+    val onSelectionChangeState by rememberUpdatedState(onSelectionChange)
+    val onEntriesMoveState by rememberUpdatedState(onEntriesMove)
 
     val drag = remember { DragHolder() }
     var dragIndex by remember { mutableIntStateOf(-1) }
     var dragDeltaMs by remember { mutableFloatStateOf(0f) }
+    // 선택 모드의 범위 선택(마키): 시작/끝 시각(ms), 없으면 -1
+    var marqueeA by remember { mutableFloatStateOf(-1f) }
+    var marqueeB by remember { mutableFloatStateOf(-1f) }
 
     // 재생 중 플레이헤드가 화면을 벗어나면 따라간다
     LaunchedEffect(isPlaying, followPlayhead) {
@@ -361,7 +376,8 @@ fun TimelineView(
             .pointerInput(Unit) {
                 detectTapGestures { o ->
                     if (o.y >= laneTop) {
-                        onEntryClickState(blockAt(o.x))
+                        val idx = blockAt(o.x)
+                        if (selectModeState) { if (idx >= 0) onEntryToggleState(idx) } else onEntryClickState(idx)
                     } else {
                         onSeekState(state.msAtX(o.x).toLong().coerceAtLeast(0L))
                     }
@@ -372,8 +388,14 @@ fun TimelineView(
                     onDragStart = { o ->
                         if (o.y >= laneTop) {
                             val idx = blockAt(o.x)
-                            if (idx >= 0) {
-                                drag.mode = DragMode.MOVE
+                            if (selectModeState && idx < 0) {
+                                // 선택 모드에서 빈 곳을 끌면 범위 선택
+                                drag.mode = DragMode.MARQUEE
+                                marqueeA = state.msAtX(o.x)
+                                marqueeB = marqueeA
+                            } else if (idx >= 0) {
+                                drag.mode = if (selectModeState) DragMode.GROUP else DragMode.MOVE
+                                if (selectModeState && idx !in selectedIndicesState) onSelectionChangeState(setOf(idx))
                                 drag.originMs = currentEntries[idx].timestampMs
                                 dragIndex = idx
                                 dragDeltaMs = 0f
@@ -392,7 +414,8 @@ fun TimelineView(
                             DragMode.SEEK ->
                                 onSeekState(state.msAtX(change.position.x).toLong().coerceAtLeast(0L))
                             DragMode.PAN -> state.panByMs(-amount.x / state.pxPerMs, currentDuration)
-                            DragMode.MOVE -> dragDeltaMs += amount.x / state.pxPerMs
+                            DragMode.MOVE, DragMode.GROUP -> dragDeltaMs += amount.x / state.pxPerMs
+                            DragMode.MARQUEE -> marqueeB = state.msAtX(change.position.x)
                             DragMode.NONE -> Unit
                         }
                     },
@@ -401,11 +424,29 @@ fun TimelineView(
                             val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
                             if (newMs != drag.originMs) onEntryMoveState(dragIndex, newMs)
                         }
+                        if (drag.mode == DragMode.GROUP && dragIndex >= 0) {
+                            val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
+                            val delta = newMs - drag.originMs
+                            val targets = (selectedIndicesState + dragIndex).sorted()
+                            if (delta != 0L) onEntriesMoveState(targets, delta)
+                        }
+                        if (drag.mode == DragMode.MARQUEE && marqueeA >= 0f) {
+                            val lo = minOf(marqueeA, marqueeB).toLong()
+                            val hi = maxOf(marqueeA, marqueeB).toLong()
+                            val picked = TimelineMath.blocks(currentEntries, currentDuration)
+                                .filter { it.endMs >= lo && it.startMs <= hi }
+                                .map { it.index }.toSet()
+                            onSelectionChangeState(picked)
+                        }
+                        marqueeA = -1f
+                        marqueeB = -1f
                         drag.mode = DragMode.NONE
                         dragIndex = -1
                         dragDeltaMs = 0f
                     },
                     onDragCancel = {
+                        marqueeA = -1f
+                        marqueeB = -1f
                         drag.mode = DragMode.NONE
                         dragIndex = -1
                         dragDeltaMs = 0f
@@ -537,7 +578,8 @@ fun TimelineView(
         drawBeats(laneTop, laneTop + laneH, beatLight.copy(alpha = 0.09f), beatLight.copy(alpha = 0.25f), withNumbers = false)
         val blocks = TimelineMath.blocks(entries, durationMs)
         for (b in blocks) {
-            val shift = if (b.index == dragIndex) dragDeltaMs else 0f
+            val moving = dragIndex >= 0 && (b.index == dragIndex || (drag.mode == DragMode.GROUP && b.index in selectedIndices))
+            val shift = if (moving) dragDeltaMs else 0f
             val x0 = xOf(b.startMs + shift)
             val x1 = xOf(b.endMs + shift)
             if (x1 < 0f || x0 > w) continue
@@ -545,7 +587,7 @@ fun TimelineView(
             val p = b.entry.payload
             val left = max(-2f, x0)
             val width = max(2f, min(x1, w + 2f) - left - 1f)
-            val alpha = if (b.index == dragIndex) 0.7f else 1f
+            val alpha = if (moving) 0.7f else 1f
 
             drawEffectBlock(offBlock,
                 p.effectType,
@@ -553,7 +595,7 @@ fun TimelineView(
                 bg = Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b),
                 left = left, top = laneTop + 3f, width = width, height = laneH - 6f, alpha = alpha
             )
-            if (b.index == selectedIndex) {
+            if (if (selectMode) b.index in selectedIndices else b.index == selectedIndex) {
                 drawRect(
                     Color.White, Offset(left, laneTop + 3f), Size(width, laneH - 6f),
                     style = Stroke(width = 3f)
@@ -570,6 +612,14 @@ fun TimelineView(
                     maxWidth = width - 8f
                 )
             }
+        }
+
+        // ── 범위 선택(마키) ───────────────────────────────────
+        if (marqueeA >= 0f) {
+            val xa = xOf(minOf(marqueeA, marqueeB))
+            val xb = xOf(maxOf(marqueeA, marqueeB))
+            drawRect(cs.primary.copy(alpha = 0.22f), Offset(xa, laneTop), Size(xb - xa, laneH))
+            drawRect(cs.primary, Offset(xa, laneTop), Size(xb - xa, laneH), style = Stroke(width = 2f))
         }
 
         // ── 드롭 위치 미리보기 ────────────────────────────────

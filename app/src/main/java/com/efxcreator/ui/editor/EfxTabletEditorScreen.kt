@@ -56,6 +56,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -176,6 +177,9 @@ fun EfxTabletEditorScreen(
     val drag = remember { PresetDragState() }
 
     var selectedIndex by remember { mutableIntStateOf(-1) }
+    // 선택 모드(복수 선택): 선택한 이펙트를 시각(ms)으로 기억한다 — 이동/편집으로 순서가 바뀌어도 선택이 유지된다
+    var selectMode by remember { mutableStateOf(false) }
+    var multiTimes by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var pendingSelectTs by remember { mutableStateOf<Long?>(null) }
     var snapToBeats by remember { mutableStateOf(true) }
     var showBeats by remember { mutableStateOf(true) }
@@ -249,6 +253,9 @@ fun EfxTabletEditorScreen(
             pendingSelectTs = null
         }
         if (selectedIndex >= entries.size) selectedIndex = -1
+        // 지워졌거나 사라진 이펙트는 선택에서 뺀다
+        val existing = entries.map { it.timestampMs }.toSet()
+        if (!existing.containsAll(multiTimes)) multiTimes = multiTimes.filter { it in existing }.toSet()
     }
 
     val durationMs: Long = analysis?.durationMs
@@ -409,6 +416,18 @@ fun EfxTabletEditorScreen(
                             .padding(8.dp)
                     ) {
                         TimelineToolbar(
+                            selectMode = selectMode,
+                            onSelectModeChange = { on ->
+                                if (on) {
+                                    // 지금 선택돼 있던 이펙트를 첫 선택으로 가져간다
+                                    multiTimes = entries.getOrNull(selectedIndex)?.let { setOf(it.timestampMs) } ?: emptySet()
+                                } else {
+                                    // 하나만 남았으면 그 이펙트를 일반 선택으로 돌려놓는다
+                                    selectedIndex = if (multiTimes.size == 1) entries.indexOfFirst { it.timestampMs == multiTimes.first() } else -1
+                                    multiTimes = emptySet()
+                                }
+                                selectMode = on
+                            },
                             autoPaletteFamily = autoPalette?.colorFamily,
                             autoPaletteColors = autoPalette?.roleColors.orEmpty().map { Color(it.r, it.g, it.b) },
                             autoSetName = com.efxcreator.music.sets.SetCatalog.BUILT_IN_RULE_SETS
@@ -438,6 +457,18 @@ fun EfxTabletEditorScreen(
                             durationMs = durationMs,
                             positionProvider = { player.positionMs },
                             selectedIndex = selectedIndex,
+                            selectMode = selectMode,
+                            selectedIndices = remember(entries, multiTimes) {
+                                entries.indices.filter { entries[it].timestampMs in multiTimes }.toSet()
+                            },
+                            onEntryToggle = { idx ->
+                                val t = entries.getOrNull(idx)?.timestampMs
+                                if (t != null) multiTimes = if (t in multiTimes) multiTimes - t else multiTimes + t
+                            },
+                            onSelectionChange = { picked ->
+                                multiTimes = picked.mapNotNull { entries.getOrNull(it)?.timestampMs }.toSet()
+                            },
+                            onEntriesMove = { idxs, delta -> multiTimes = editVm.moveTimelineEntries(idxs, delta) },
                             dropPreviewMs = dropPreviewMs,
                             snapToBeats = snapToBeats,
                             showBeats = showBeats,
@@ -503,7 +534,14 @@ fun EfxTabletEditorScreen(
                     )
                     SelectedEntryPanel(
                         modifier = Modifier.weight(1f),
-                        entry = entries.getOrNull(selectedIndex),
+                        entry = if (selectMode) null else entries.getOrNull(selectedIndex),
+                        multiCount = if (selectMode) multiTimes.size else 0,
+                        onClearSelection = { multiTimes = emptySet() },
+                        onDeleteSelected = {
+                            val idxs = entries.indices.filter { entries[it].timestampMs in multiTimes }
+                            editVm.deleteTimelineEntries(idxs)
+                            multiTimes = emptySet()
+                        },
                         onEdit = { entries.getOrNull(selectedIndex)?.let { editVm.startEditingEntry(selectedIndex, it) } },
                         onDelete = {
                             if (selectedIndex in entries.indices) {
@@ -807,6 +845,8 @@ private fun EditorTopBar(
 
 @Composable
 private fun TimelineToolbar(
+    selectMode: Boolean,
+    onSelectModeChange: (Boolean) -> Unit,
     autoPaletteFamily: String?,
     autoPaletteColors: List<Color>,
     autoSetName: String?,
@@ -873,6 +913,8 @@ private fun TimelineToolbar(
                 )
             }
         }
+        FilterChip(selected = selectMode, onClick = { onSelectModeChange(!selectMode) }, label = { Text(Loc.str(R.string.timeline_select_mode)) })
+        Spacer(Modifier.width(8.dp))
         FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_27)) })
         Spacer(Modifier.width(8.dp))
         FilterChip(selected = snapToBeats, onClick = { onSnapChange(!snapToBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_28)) })
@@ -984,6 +1026,9 @@ private fun PreviewPanel(
 private fun SelectedEntryPanel(
     modifier: Modifier = Modifier,
     entry: EfxEntry?,
+    multiCount: Int = 0,
+    onClearSelection: () -> Unit = {},
+    onDeleteSelected: () -> Unit = {},
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -995,6 +1040,32 @@ private fun SelectedEntryPanel(
     ) {
         Text(Loc.str(R.string.efx_tablet_editor_screen_35), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(8.dp))
+        if (multiCount > 0) {
+            // 선택 모드: 선택한 이펙트 수와 일괄 동작
+            Text(Loc.str(R.string.multi_selected_count, multiCount), style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                Loc.str(R.string.multi_select_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onClearSelection) { Text(Loc.str(R.string.multi_clear)) }
+                Button(
+                    onClick = onDeleteSelected,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(Loc.str(R.string.multi_delete_n, multiCount))
+                }
+            }
+            return@Column
+        }
         if (entry == null) {
             Text(
                 Loc.str(R.string.efx_tablet_editor_screen_36),

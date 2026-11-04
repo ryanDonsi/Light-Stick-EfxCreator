@@ -587,4 +587,9 @@
     <string name="palette_family_orange_gold">Orange gold</string>
     <string name="palette_family_teal">Teal</string>
     <string name="palette_family_blue">Blue</string>
+    <string name="timeline_select_mode">Select</string>
+    <string name="multi_selected_count">%1$d selected</string>
+    <string name="multi_select_hint">Drag on empty space to select a range, tap an effect to add or remove it, and drag a selected effect to move them together.</string>
+    <string name="multi_clear">Clear selection</string>
+    <string name="multi_delete_n">Delete %1$d</string>
 </resources>
