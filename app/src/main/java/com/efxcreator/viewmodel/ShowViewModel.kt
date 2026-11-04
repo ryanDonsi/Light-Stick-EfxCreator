@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.efxcreator.data.EfxFolderMirror
 import com.efxcreator.data.ShowRepository
 import com.efxcreator.model.Show
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,14 @@ class ShowViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _shows = MutableStateFlow(repository.load())
     val shows: StateFlow<List<Show>> = _shows.asStateFlow()
+
+    private val mirror = EfxFolderMirror(application)
+
+    /** 공연 구성이 바뀐 곡들의 폴더 사본(공연명/곡명.efx)을 새 위치에 맞춘다 */
+    private fun resync(projectIds: Collection<String>) {
+        if (projectIds.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) { projectIds.forEach { mirror.sync(it) } }
+    }
 
     private fun commit(list: List<Show>) {
         repository.save(list)
@@ -43,6 +52,8 @@ class ShowViewModel(application: Application) : AndroidViewModel(application) {
         commit(_shows.value.map {
             if (it.id == id) it.copy(name = n.ifEmpty { it.name }, performanceAt = performanceAt) else it
         })
+        // 공연 이름이 바뀌면 폴더 이름도 따라 바뀐다
+        resync(_shows.value.firstOrNull { it.id == id }?.songIds.orEmpty())
         when {
             newImage != null -> setImage(id, newImage)
             removeImage -> {
@@ -62,13 +73,16 @@ class ShowViewModel(application: Application) : AndroidViewModel(application) {
     /** 공연만 지운다. 곡(프로젝트)은 지워지지 않고 "미분류" 로 돌아간다. */
     fun deleteShow(id: String) {
         viewModelScope.launch(Dispatchers.IO) { repository.deleteImages(id) }
+        val songs = _shows.value.firstOrNull { it.id == id }?.songIds.orEmpty()
         commit(_shows.value.filterNot { it.id == id })
+        resync(songs)
     }
 
     fun addSong(showId: String, projectId: String) {
         commit(_shows.value.map {
             if (it.id == showId && projectId !in it.songIds) it.copy(songIds = it.songIds + projectId) else it
         })
+        resync(listOf(projectId))
     }
 
     /** 곡이 프로젝트에서 삭제될 때 모든 공연에서 뺀다 */
@@ -86,5 +100,6 @@ class ShowViewModel(application: Application) : AndroidViewModel(application) {
                 else -> it
             }
         })
+        resync(listOf(projectId))
     }
 }

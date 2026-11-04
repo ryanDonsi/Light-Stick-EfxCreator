@@ -90,7 +90,7 @@ class EfxRepository(private val context: Context) {
     /**
      * EFX 파일 경로 반환
      */
-    private fun getEfxFile(projectId: String): File {
+    fun getEfxFile(projectId: String): File {
         val directory = getEfxDirectory()
         return File(directory, "$projectId.efx")
     }
@@ -146,6 +146,9 @@ class EfxRepository(private val context: Context) {
         }
 
         saveProjectsMetadata(projects)
+
+        // 이름이 바뀌었거나 새로 만든 곡이면 폴더 사본의 이름/위치도 맞춘다
+        EfxFolderMirror(context).sync(metadata.id)
     }
 
     /**
@@ -154,6 +157,9 @@ class EfxRepository(private val context: Context) {
     fun deleteProject(projectId: String) {
         val projects = loadProjectsMetadata().toMutableList()
         val project = projects.find { it.id == projectId }
+
+        // 저장소 폴더의 사본도 지운다
+        EfxFolderMirror(context).remove(projectId)
 
         // EFX 파일 삭제
         project?.let {
@@ -288,6 +294,9 @@ class EfxRepository(private val context: Context) {
             }
 
             Log.d(TAG, "═══════════════════════════════════════")
+
+            // 저장소 폴더 아래 공연명/곡명.efx 사본도 맞춰 둔다
+            EfxFolderMirror(context).sync(projectId)
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error saving EFX file for $projectId", e)
@@ -479,6 +488,8 @@ class EfxRepository(private val context: Context) {
         // URI 경로인 경우 파일 이동 스킵 (DocumentFile API 필요)
         if (newPath.startsWith("content://")) {
             Log.d(TAG, "New path is URI, skipping file migration")
+            // 새 폴더에 공연명/곡명.efx 사본을 만들어 둔다
+            EfxFolderMirror(context).syncAll()
             return
         }
 
@@ -500,6 +511,7 @@ class EfxRepository(private val context: Context) {
             }
         }
 
+        EfxFolderMirror(context).syncAll()
         Log.d(TAG, "EFX storage path changed successfully")
     }
 
