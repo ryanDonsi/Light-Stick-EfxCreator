@@ -393,9 +393,12 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         if (move.size >= 2) {
             val oldFirst = list.filterIndexed { i, _ -> i in move }.minOf { it.timestampMs }
             val oldLast = list.filterIndexed { i, _ -> i in move }.maxOf { it.timestampMs }
-            // 마지막 이펙트가 차지하던 길이: 다음 이펙트까지의 간격 (뒤에 없으면 0.5초)
+            // 마지막 이펙트가 차지하던 길이: 다음 이펙트까지의 간격 (뒤에 없으면 곡 끝까지, 곡 길이를 모르면 0.5초)
             val lastIdx = move.max()
-            val lastDur = list.getOrNull(lastIdx + 1)?.let { (it.timestampMs - oldLast).coerceAtLeast(1L) } ?: 500L
+            val songEnd = _analysis.value?.durationMs
+            val lastDur = list.getOrNull(lastIdx + 1)?.let { (it.timestampMs - oldLast).coerceAtLeast(1L) }
+                ?: songEnd?.let { (it - oldLast).coerceAtLeast(1L) }
+                ?: 500L
             val span = (oldLast - oldFirst) + lastDur
             val firstNew = oldFirst + delta
             val rest = list.filterIndexed { i, _ -> i !in move }.map { e ->
