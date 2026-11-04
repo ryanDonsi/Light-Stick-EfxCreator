@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -66,8 +65,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -356,7 +353,6 @@ fun EfxTabletEditorScreen(
         uris.firstOrNull()?.let { editVm.setMusicFile(it) }
     }
 
-    val rightScroll = rememberScrollState()
 
     // ── 화면 ─────────────────────────────────────────────────
     Scaffold(
@@ -482,20 +478,11 @@ fun EfxTabletEditorScreen(
                     )
                 }
 
-                // 우측: Preview + 재생 + 선택 이펙트
-                var rightHeightPx by remember { mutableStateOf(0) }
-                Box(modifier = Modifier.width(320.dp).fillMaxHeight().onSizeChanged { rightHeightPx = it.height }) {
-                // 선택 이펙트 패널 하단을 좌측 라이브러리 하단과 맞추기 위해, 남는 높이를 패널 최소 높이로 준다
-                val density = androidx.compose.ui.platform.LocalDensity.current
-                var previewHeightPx by remember { mutableStateOf(0) }
-                val selectedMinHeight = with(density) { ((rightHeightPx - previewHeightPx).toDp() - 8.dp).coerceAtLeast(0.dp) }
+                // 우측: Preview + 재생(고정) / 선택 이펙트(남는 높이를 채우고, 넘치면 이 카드 안에서만 스크롤)
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rightScroll),
+                    modifier = Modifier.width(320.dp).fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(Modifier.onSizeChanged { previewHeightPx = it.height }) {
                     PreviewPanel(
                         player = player,
                         entries = entries,
@@ -514,9 +501,8 @@ fun EfxTabletEditorScreen(
                         },
                         onSeek = { seek(it) }
                     )
-                    }
                     SelectedEntryPanel(
-                        modifier = Modifier.heightIn(min = selectedMinHeight),
+                        modifier = Modifier.weight(1f),
                         entry = entries.getOrNull(selectedIndex),
                         onEdit = { entries.getOrNull(selectedIndex)?.let { editVm.startEditingEntry(selectedIndex, it) } },
                         onDelete = {
@@ -526,8 +512,6 @@ fun EfxTabletEditorScreen(
                             }
                         }
                     )
-                }
-                SlimVerticalScrollBar(rightScroll, Modifier.align(Alignment.CenterEnd))
                 }
             }
 
@@ -1006,8 +990,6 @@ private fun SelectedEntryPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            // 선택/해제로 행이 늘고 줄 때 패널 높이가 부드럽게 바뀐다
-            .animateContentSize(tween(EfxMotion.MEDIUM, easing = EfxMotion.Emphasized))
             .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
             .padding(12.dp)
     ) {
@@ -1045,7 +1027,13 @@ private fun SelectedEntryPanel(
             Triple(Loc.str(R.string.label_random_color), if (p.randomColor != 0) "ON" else "OFF", null),
             Triple(Loc.str(R.string.label_index), p.effectIndex.toString(), null)
         )
-        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        // 항목이 많아 카드 높이를 넘으면 이 목록만 스크롤되고, 편집/삭제 버튼은 카드 하단에 고정된다
+        val rowsScroll = rememberScrollState()
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(end = 10.dp).verticalScroll(rowsScroll),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
             rows.forEach { (k, v, swatch) ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -1073,7 +1061,9 @@ private fun SelectedEntryPanel(
                 }
             }
         }
-        Spacer(Modifier.height(14.dp))
+        SlimVerticalScrollBar(rowsScroll, Modifier.align(Alignment.CenterEnd))
+        }
+        Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
