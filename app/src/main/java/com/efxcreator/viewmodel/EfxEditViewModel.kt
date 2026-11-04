@@ -373,7 +373,8 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * 선택한 이펙트들을 [deltaMs] 만큼 함께 옮긴다 (상대 간격 유지, 0ms 아래로는 내려가지 않는다).
-     * 옮겨진 자리에 있던 선택되지 않은 이펙트는 교체된다. 실행 취소 한 번으로 되돌린다.
+     * 옮겨진 자리에 있던 선택되지 않은 이펙트는 지워지지 않고, 옮기는 이펙트가 비운 자리로 가서 서로 자리를 바꾼다
+     * (하나를 옮기면 두 이펙트의 위치 맞바꿈). 실행 취소 한 번으로 되돌린다.
      * @return 옮겨진 이펙트들의 새 시각 (선택 표시를 유지하는 데 쓴다)
      */
     fun moveTimelineEntries(indices: Collection<Int>, deltaMs: Long): Set<Long> {
@@ -386,9 +387,15 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         if (delta == 0L) return list.filterIndexed { i, _ -> i in move }.map { it.timestampMs }.toSet()
         val moved = list.filterIndexed { i, _ -> i in move }.map { it.copy(timestampMs = it.timestampMs + delta) }
         val newTimes = moved.map { it.timestampMs }.toSet()
-        val kept = list.filterIndexed { i, e -> i !in move && e.timestampMs !in newTimes }
+        val oldTimes = list.filterIndexed { i, _ -> i in move }.map { it.timestampMs }.toSet()
+        // 옮겨 간 자리에 있던 (선택되지 않은) 이펙트는 옮기는 쪽이 비운 자리로 보낸다. 시각 순서대로 짝지어 순서를 유지한다.
+        val displaced = list.filterIndexed { i, e -> i !in move && e.timestampMs in newTimes }.sortedBy { it.timestampMs }
+        val vacated = (oldTimes - newTimes).sorted()
+        val swapped = displaced.mapIndexed { n, e -> e.copy(timestampMs = vacated[n]) }
+        val displacedSet = displaced.map { it.timestampMs }.toSet()
+        val kept = list.filterIndexed { i, e -> i !in move && e.timestampMs !in displacedSet }
         _editingEntry.value = null
-        commitDraft(kept + moved)
+        commitDraft(kept + swapped + moved)
         return newTimes
     }
 

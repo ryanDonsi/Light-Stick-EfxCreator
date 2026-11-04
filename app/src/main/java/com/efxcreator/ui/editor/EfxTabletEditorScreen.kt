@@ -496,12 +496,8 @@ fun EfxTabletEditorScreen(
                             onEntryMove = { index, newMs ->
                                 pendingSelectTs = newMs
                                 val moved = entries.getOrNull(index) ?: return@TimelineView
-                                val clash = entries.indexOfFirst { it.timestampMs == newMs && it !== moved }
-                                if (clash >= 0) editVm.deleteTimelineEntry(clash)
-                                editVm.updateTimelineEntry(
-                                    if (clash in 0 until index) index - 1 else index,
-                                    moved.copy(timestampMs = newMs)
-                                )
+                                // 옮긴 자리에 이펙트가 있으면 지우지 않고 서로 자리를 바꾼다
+                                editVm.moveTimelineEntries(listOf(index), newMs - moved.timestampMs)
                             },
                             onBoundsChanged = { timelineBounds = it }
                         )
