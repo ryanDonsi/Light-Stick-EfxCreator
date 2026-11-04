@@ -25,12 +25,20 @@ object TimelineMath {
             TimelineBlock(i, e.timestampMs, end, e)
         }
 
-    /** 가장 가까운 비트(허용 오차 [toleranceMs] 이내)로 스냅하고, 없으면 10ms 단위로 반올림한다. */
+    /**
+     * 비트 스냅이 켜져 있으면 가장 가까운 비트로 정렬한다. 첫 비트와 마지막 비트 사이라면 비트 안에서 조금 틀어져 있어도
+     * 항상 가장 가까운 비트에 맞춘다. 비트 범위 바깥(곡 앞뒤)은 [toleranceMs] 또는 비트 간격 이내일 때만 맞추고,
+     * 그 밖이거나 스냅이 꺼져 있으면 10ms 단위로 반올림한다.
+     */
     fun snap(ms: Long, beatsMs: List<Long>, toleranceMs: Long, snapToBeats: Boolean): Long {
         val clamped = ms.coerceAtLeast(0L)
         if (snapToBeats && beatsMs.isNotEmpty()) {
             val nearest = nearestBeat(clamped, beatsMs)
-            if (nearest != null && abs(nearest - clamped) <= toleranceMs) return nearest
+            if (nearest != null) {
+                val inside = clamped >= beatsMs.first() && clamped <= beatsMs.last()
+                val beatGap = if (beatsMs.size > 1) (beatsMs.last() - beatsMs.first()) / (beatsMs.size - 1) else 0L
+                if (inside || abs(nearest - clamped) <= maxOf(toleranceMs, beatGap)) return nearest
+            }
         }
         return (clamped + 5) / 10 * 10
     }
