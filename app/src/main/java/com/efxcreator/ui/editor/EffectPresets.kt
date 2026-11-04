@@ -1,6 +1,7 @@
 package com.efxcreator.ui.editor
 
 import com.efxcreator.model.EffectPattern
+import com.efxcreator.music.sets.PaletteSet
 import com.efxcreator.model.PatternResolver
 import com.efxcreator.model.PatternStep
 import com.efxcreator.model.UserEffect
@@ -124,9 +125,10 @@ fun UserEffect.toPreset(): EffectPreset = EffectPreset(
 )
 
 /** 설정의 이펙트 라이브러리(패턴)를 라이브러리 칸으로 쓸 수 있는 프리셋으로 변환 (첫 단계로 칸의 모양을 정한다) */
-fun EffectPattern.toPreset(): EffectPreset {
+/** [palette] 는 곡의 팔레트 — 칸에 보이는 색도 이 팔레트로 풀어서 곡과 맞춘다 */
+fun EffectPattern.toPreset(palette: PaletteSet? = null): EffectPreset {
     val first = steps.firstOrNull() ?: PatternStep()
-    val payload = PatternResolver.payload(first, null)
+    val payload = PatternResolver.payload(first, palette)
     return EffectPreset(
         id = "pattern_$id",
         label = name,

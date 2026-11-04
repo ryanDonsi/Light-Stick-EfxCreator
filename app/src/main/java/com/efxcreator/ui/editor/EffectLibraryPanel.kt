@@ -90,6 +90,8 @@ fun EffectPreset.swatchBgColor(): Color = Color(backgroundColor.r, backgroundCol
 fun EffectLibraryPanel(
     drag: PresetDragState,
     patterns: List<EffectPattern>,
+    /** 곡의 팔레트 (칸의 색을 이 팔레트로 보여 준다) */
+    palette: com.efxcreator.music.sets.PaletteSet? = null,
     onTapPreset: (EffectPreset) -> Unit,
     onDrop: () -> Unit,
     onManageEffects: () -> Unit,
@@ -100,7 +102,7 @@ fun EffectLibraryPanel(
             if (patterns.isNotEmpty()) EffectPreset.Category.USER else EffectPreset.Category.ON
         )
     }
-    val patternPresets = remember(patterns) { patterns.map { it.toPreset() } }
+    val patternPresets = remember(patterns, palette) { patterns.map { it.toPreset(palette) } }
 
     Column(modifier = modifier.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {

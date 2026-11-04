@@ -161,6 +161,20 @@ fun EfxTabletEditorScreen(
     }
     // 곡별 세트 선택은 설정값이라 상태가 아니므로, 적용할 때마다 올려서 표시를 갱신한다
     var songSetsRev by remember { mutableIntStateOf(0) }
+    // 이 곡의 실제 팔레트: 고른 팔레트 세트, 없으면 엔진이 곡에 맞춰 고른 색 계열("기본").
+    // 이펙트 라이브러리 칸의 색과, 칸을 타임라인에 넣을 때의 색이 모두 이 팔레트를 따른다.
+    val effectivePalette = remember(songSetsRev, paletteSets, autoPalette) {
+        val id = setsVm.songPaletteSetId(projectId)
+        paletteSets.firstOrNull { it.id == id } ?: autoPalette?.roleColors?.takeIf { it.size >= 4 }?.let { c ->
+            com.efxcreator.music.sets.PaletteSet(
+                id = "auto", name = "auto",
+                main = com.efxcreator.music.sets.RgbColor(c[0].r, c[0].g, c[0].b),
+                step1 = com.efxcreator.music.sets.RgbColor(c[1].r, c[1].g, c[1].b),
+                step2 = com.efxcreator.music.sets.RgbColor(c[2].r, c[2].g, c[2].b),
+                step3 = com.efxcreator.music.sets.RgbColor(c[3].r, c[3].g, c[3].b)
+            )
+        }
+    }
 
     val bleConnected by bleVm.connected.collectAsState()
     val patterns by patternsVm.patterns.collectAsState()
@@ -323,8 +337,7 @@ fun EfxTabletEditorScreen(
                 return
             }
             // 색 역할은 현재 곡에 적용된 팔레트 세트로 풀어 넣는다 (없으면 기본 팔레트)
-            val songPaletteId = setsVm.songPaletteSetId(projectId)
-            val palette = setsVm.paletteSets.value.firstOrNull { it.id == songPaletteId }
+            val palette = effectivePalette
             pendingSelectTs = ts
             // 시작 위치부터 이펙트 길이(비트 수)만큼의 기존 엔트리는 새 이펙트로 교체된다
             val beatMs = beatLengthAt(ts)
@@ -507,6 +520,7 @@ fun EfxTabletEditorScreen(
                     EffectLibraryPanel(
                         drag = drag,
                         patterns = patterns,
+                        palette = effectivePalette,
                         onTapPreset = { addPreset(it, snapAt(player.positionMs)) },
                         onDrop = { handleDrop() },
                         onManageEffects = onNavigateToEffectLibrary,
