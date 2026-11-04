@@ -568,7 +568,8 @@ class EffectMatchingEngineV1(
                     val holdMs = (section.beatMs * ON_PULSE_HOLD_PERCENT / 100L).coerceAtLeast(60L)
                     val offT   = minOf(section.endMs - 1L, t + holdMs)
                     if (offT > t)
-                        put(offT, LSEffectPayload.Effects.off(transit = 3).toByteArray())
+                        // OFF 가 아니라 검정색 ON: 내 라이브러리 펄스의 두 번째 단계(ON 검정, Transit 3)와 같다
+                        put(offT, LSEffectPayload.Effects.on(color = LSColor(0, 0, 0), transit = 3).toByteArray())
                 }
             }
         }
