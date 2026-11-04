@@ -415,8 +415,6 @@ fun EfxTabletEditorScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
-                            // 선택 모드이면 타임라인 카드 전체에 강조 테두리를 두른다
-                            .then(if (selectMode) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.large) else Modifier)
                             .padding(8.dp)
                     ) {
                         TimelineToolbar(
