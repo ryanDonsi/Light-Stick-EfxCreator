@@ -617,7 +617,13 @@ fun TimelineView(
             val p = b.entry.payload
             val left = max(-2f, x0)
             val width = max(2f, min(x1, w + 2f) - left - 1f)
-            val alpha = if (moving) 0.7f else 1f
+            val isPicked = if (selectMode) b.index in selectedIndices else b.index == selectedIndex
+            // 선택 모드에서는 선택되지 않은 블록을 흐리게 해서 선택된 것이 도드라지게 한다
+            val alpha = when {
+                moving -> 0.7f
+                selectMode && !isPicked -> 0.4f
+                else -> 1f
+            }
 
             drawEffectBlock(offBlock,
                 p.effectType,
@@ -625,11 +631,20 @@ fun TimelineView(
                 bg = Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b),
                 left = left, top = laneTop + 3f, width = width, height = laneH - 6f, alpha = alpha
             )
-            if (if (selectMode) b.index in selectedIndices else b.index == selectedIndex) {
+            if (isPicked) {
                 drawRect(
-                    Color.White, Offset(left, laneTop + 3f), Size(width, laneH - 6f),
-                    style = Stroke(width = 3f)
+                    if (selectMode) cs.primary else Color.White,
+                    Offset(left, laneTop + 3f), Size(width, laneH - 6f),
+                    style = Stroke(width = if (selectMode) 4f else 3f)
                 )
+                if (selectMode && width > 26f) {
+                    // 선택됨 표시: 블록 오른쪽 위의 체크 원
+                    val r = 9f
+                    val c = Offset(left + width - r - 4f, laneTop + 3f + r + 4f)
+                    drawCircle(cs.primary, r, c)
+                    drawLine(Color.White, Offset(c.x - 4f, c.y), Offset(c.x - 1f, c.y + 3.5f), strokeWidth = 2.2f)
+                    drawLine(Color.White, Offset(c.x - 1f, c.y + 3.5f), Offset(c.x + 4.5f, c.y - 3.5f), strokeWidth = 2.2f)
+                }
             }
             if (width > 44f) {
                 // 블록 안의 색이 위치마다 달라서, 어떤 색 위에서도 읽히도록 흰 글자 + 검은 그림자
@@ -642,6 +657,11 @@ fun TimelineView(
                     maxWidth = width - 8f
                 )
             }
+        }
+
+        // ── 선택 모드 표시: 이펙트 행 테두리 ──────────────────
+        if (selectMode) {
+            drawRect(cs.primary, Offset(1.5f, laneTop), Size(w - 3f, laneH), style = Stroke(width = 3f))
         }
 
         // ── 범위 선택(마키) ───────────────────────────────────

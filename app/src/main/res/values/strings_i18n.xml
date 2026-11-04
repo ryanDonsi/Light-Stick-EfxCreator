@@ -594,4 +594,5 @@
     <string name="multi_range">구간 %1$s ~ %2$s</string>
     <string name="multi_select_hint">이펙트 행을 길게 누르거나 \'선택\'을 켜면 선택 모드입니다. 빈 곳을 끌면 범위 선택, 이펙트를 탭하면 추가/해제, 선택한 이펙트를 끌면 함께 이동합니다.</string>
     <string name="multi_exit">선택 모드 끝내기</string>
+    <string name="timeline_select_mode_badge">선택 모드</string>
 </resources>
