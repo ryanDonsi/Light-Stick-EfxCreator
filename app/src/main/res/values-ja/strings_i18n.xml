@@ -581,4 +581,10 @@
     <string name="game_tut_78">待機/点滅</string>
     <string name="game_tut_79">赤確定</string>
     <string name="game_tut_80">青確定</string>
+    <string name="song_info_detail">%1$s(%2$s)</string>
+    <string name="palette_family_purple">パープル</string>
+    <string name="palette_family_red">レッド</string>
+    <string name="palette_family_orange_gold">オレンジゴールド</string>
+    <string name="palette_family_teal">ティール</string>
+    <string name="palette_family_blue">ブルー</string>
 </resources>

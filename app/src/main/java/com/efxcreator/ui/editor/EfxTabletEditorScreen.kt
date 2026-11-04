@@ -151,6 +151,14 @@ fun EfxTabletEditorScreen(
     val saving by editVm.saving.collectAsState()
     val effectSets by setsVm.effectSets.collectAsState()
     val paletteSets by setsVm.paletteSets.collectAsState()
+    // 팔레트/이펙트 세트가 "기본/자동"일 때 실제로 적용되는 값: 곡의 장르와 엔진이 고르는 색 계열
+    val autoStyle = analysis?.engineInput?.musicStyle
+    val autoPalette = remember(autoStyle, efx?.header?.musicId) {
+        val style = autoStyle?.let { runCatching { com.efxcreator.music.style.MusicStyleClassifier.MusicStyle.valueOf(it) }.getOrNull() }
+        val seed = efx?.header?.musicId
+        if (style == null || seed == null) null
+        else runCatching { com.efxcreator.music.effect.EffectMatchingEngineRouter.createEngine().buildPalette(seed, style) }.getOrNull()
+    }
     // 곡별 세트 선택은 설정값이라 상태가 아니므로, 적용할 때마다 올려서 표시를 갱신한다
     var songSetsRev by remember { mutableIntStateOf(0) }
 
@@ -405,6 +413,9 @@ fun EfxTabletEditorScreen(
                             .padding(8.dp)
                     ) {
                         TimelineToolbar(
+                            autoPaletteFamily = autoPalette?.colorFamily,
+                            autoPaletteColors = autoPalette?.roleColors.orEmpty().map { Color(it.r, it.g, it.b) },
+                            autoGenre = autoStyle?.let { com.efxcreator.music.sets.SetCatalog.genreLabel(it) },
                             paletteSet = songSetsRev.let { paletteSets.firstOrNull { it.id == setsVm.songPaletteSetId(projectId) } },
                             effectSetName = effectSets.firstOrNull { it.id == setsVm.songEffectSetId(projectId) }?.name,
                             snapToBeats = snapToBeats,
@@ -811,6 +822,9 @@ private fun EditorTopBar(
 
 @Composable
 private fun TimelineToolbar(
+    autoPaletteFamily: String?,
+    autoPaletteColors: List<Color>,
+    autoGenre: String?,
     paletteSet: com.efxcreator.music.sets.PaletteSet?,
     effectSetName: String?,
     snapToBeats: Boolean,
@@ -835,18 +849,21 @@ private fun TimelineToolbar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.width(6.dp))
-                paletteSet?.colors?.forEach { c ->
+                val dotColors = paletteSet?.colors?.map { Color(it.r, it.g, it.b) } ?: autoPaletteColors
+                dotColors.forEach { c ->
                     Box(
                         Modifier
                             .padding(end = 3.dp)
                             .size(12.dp)
-                            .background(Color(c.r, c.g, c.b), androidx.compose.foundation.shape.CircleShape)
+                            .background(c, androidx.compose.foundation.shape.CircleShape)
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, androidx.compose.foundation.shape.CircleShape)
                     )
                 }
                 Spacer(Modifier.width(3.dp))
                 Text(
-                    paletteSet?.name ?: Loc.str(R.string.song_info_default),
+                    // 기본(자동)이면 실제로 선택된 색 계열을 괄호로 덧붙인다. 예: 기본(퍼플)
+                    paletteSet?.name ?: autoPaletteFamily?.let { Loc.str(R.string.song_info_detail, Loc.str(R.string.song_info_default), familyLabel(it)) }
+                        ?: Loc.str(R.string.song_info_default),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -861,7 +878,9 @@ private fun TimelineToolbar(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    effectSetName ?: Loc.str(R.string.song_info_auto),
+                    // 자동이면 곡에서 감지한 장르를 괄호로 덧붙인다. 예: 자동(발라드)
+                    effectSetName ?: autoGenre?.let { Loc.str(R.string.song_info_detail, Loc.str(R.string.song_info_auto), it) }
+                        ?: Loc.str(R.string.song_info_auto),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -879,6 +898,16 @@ private fun TimelineToolbar(
         IconButton(onClick = onZoomIn) { Icon(Icons.Default.ZoomIn, contentDescription = Loc.str(R.string.efx_tablet_editor_screen_31)) }
         TextButton(onClick = onFit) { Text(Loc.str(R.string.efx_tablet_editor_screen_32)) }
     }
+}
+
+/** 엔진이 고른 팔레트 색 계열 이름을 화면에 쓸 이름으로 바꾼다 */
+private fun familyLabel(family: String): String = when (family) {
+    "PURPLE" -> Loc.str(R.string.palette_family_purple)
+    "RED" -> Loc.str(R.string.palette_family_red)
+    "ORANGE_GOLD" -> Loc.str(R.string.palette_family_orange_gold)
+    "TEAL" -> Loc.str(R.string.palette_family_teal)
+    "BLUE" -> Loc.str(R.string.palette_family_blue)
+    else -> family
 }
 
 // ─────────────────────────────────────────────────────────────

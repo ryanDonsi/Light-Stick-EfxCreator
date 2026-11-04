@@ -581,4 +581,10 @@
     <string name="game_tut_78">等待/闪烁</string>
     <string name="game_tut_79">红队确认</string>
     <string name="game_tut_80">蓝队确认</string>
+    <string name="song_info_detail">%1$s（%2$s）</string>
+    <string name="palette_family_purple">紫色</string>
+    <string name="palette_family_red">红色</string>
+    <string name="palette_family_orange_gold">橙金色</string>
+    <string name="palette_family_teal">青绿色</string>
+    <string name="palette_family_blue">蓝色</string>
 </resources>

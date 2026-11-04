@@ -581,4 +581,10 @@
     <string name="game_tut_78">Wait / blink</string>
     <string name="game_tut_79">Red confirmed</string>
     <string name="game_tut_80">Blue confirmed</string>
+    <string name="song_info_detail">%1$s (%2$s)</string>
+    <string name="palette_family_purple">Purple</string>
+    <string name="palette_family_red">Red</string>
+    <string name="palette_family_orange_gold">Orange gold</string>
+    <string name="palette_family_teal">Teal</string>
+    <string name="palette_family_blue">Blue</string>
 </resources>

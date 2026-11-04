@@ -581,4 +581,10 @@
     <string name="game_tut_78">대기/블링크</string>
     <string name="game_tut_79">홍팀 확정</string>
     <string name="game_tut_80">청팀 확정</string>
+    <string name="song_info_detail">%1$s(%2$s)</string>
+    <string name="palette_family_purple">퍼플</string>
+    <string name="palette_family_red">레드</string>
+    <string name="palette_family_orange_gold">오렌지 골드</string>
+    <string name="palette_family_teal">틸</string>
+    <string name="palette_family_blue">블루</string>
 </resources>
