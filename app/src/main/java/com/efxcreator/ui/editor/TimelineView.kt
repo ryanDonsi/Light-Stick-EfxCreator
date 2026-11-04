@@ -33,9 +33,11 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -246,6 +248,8 @@ fun TimelineView(
     onSelectionChange: (Set<Int>) -> Unit = {},
     /** 선택한 이펙트들을 함께 옮긴다: (인덱스들, 이동량 ms) */
     onEntriesMove: (List<Int>, Long) -> Unit = { _, _ -> },
+    /** 이펙트 행을 길게 눌렀다: 누른 위치의 블록 인덱스 (빈 곳이면 -1) */
+    onLaneLongPress: (Int) -> Unit = {},
     onBoundsChanged: (Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -303,6 +307,9 @@ fun TimelineView(
     val onEntryToggleState by rememberUpdatedState(onEntryToggle)
     val onSelectionChangeState by rememberUpdatedState(onSelectionChange)
     val onEntriesMoveState by rememberUpdatedState(onEntriesMove)
+    val onLaneLongPressState by rememberUpdatedState(onLaneLongPress)
+    val haptic = LocalHapticFeedback.current
+    var suppressNextTap by remember { mutableStateOf(false) }
 
     val drag = remember { DragHolder() }
     var dragIndex by remember { mutableIntStateOf(-1) }
@@ -354,7 +361,28 @@ fun TimelineView(
             // 아래의 탭/드래그 감지기가 (이동·시크 도중이던 것도) 취소되게 한다.
             .pointerInput(Unit) {
                 awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    suppressNextTap = false
+                    var gestureOver = false
+                    // 이펙트 행을 길게 누르면 선택 모드로 들어간다 (이벤트는 소비하지 않아 탭/드래그 감지기는 그대로 동작한다)
+                    if (down.position.y >= laneTop) {
+                        val held = withTimeoutOrNull<Unit>(viewConfiguration.longPressTimeoutMillis) {
+                            while (true) {
+                                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                                val c = ev.changes.firstOrNull { it.id == down.id }
+                                if (c == null || !c.pressed) { gestureOver = true; return@withTimeoutOrNull }
+                                if (ev.changes.count { it.pressed } >= 2 ||
+                                    (c.position - down.position).getDistance() > viewConfiguration.touchSlop
+                                ) return@withTimeoutOrNull
+                            }
+                        }
+                        if (held == null) {
+                            suppressNextTap = true   // 손을 뗄 때 탭으로도 처리되어 방금 한 선택이 뒤집히지 않게 한다
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLaneLongPressState(blockAt(down.position.x))
+                        }
+                    }
+                    if (gestureOver) return@awaitEachGesture
                     do {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val pressed = event.changes.filter { it.pressed && !it.changedToUp() }
@@ -375,6 +403,7 @@ fun TimelineView(
             }
             .pointerInput(Unit) {
                 detectTapGestures { o ->
+                    if (suppressNextTap) { suppressNextTap = false; return@detectTapGestures }
                     if (o.y >= laneTop) {
                         val idx = blockAt(o.x)
                         if (selectModeState) { if (idx >= 0) onEntryToggleState(idx) } else onEntryClickState(idx)

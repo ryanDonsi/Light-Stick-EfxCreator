@@ -592,4 +592,6 @@
     <string name="multi_clear">Clear selection</string>
     <string name="multi_delete_n">Delete %1$d</string>
     <string name="multi_range">Range %1$s – %2$s</string>
+    <string name="multi_select_hint">Long-press the effect row or turn on Select to enter select mode. Drag on empty space to select a range, tap an effect to add or remove it, and drag a selected effect to move them together.</string>
+    <string name="multi_exit">Exit select mode</string>
 </resources>

@@ -470,6 +470,16 @@ fun EfxTabletEditorScreen(
                             onSelectionChange = { picked ->
                                 multiTimes = picked.mapNotNull { entries.getOrNull(it)?.timestampMs }.toSet()
                             },
+                            onLaneLongPress = { idx ->
+                                // 길게 누르면 선택 모드로 들어가고, 누른 이펙트를 첫 선택으로 삼는다
+                                val t = entries.getOrNull(idx)?.timestampMs
+                                if (!selectMode) {
+                                    multiTimes = t?.let { setOf(it) } ?: emptySet()
+                                    selectMode = true
+                                } else if (t != null) {
+                                    multiTimes = multiTimes + t
+                                }
+                            },
                             onEntriesMove = { idxs, delta -> multiTimes = editVm.moveTimelineEntries(idxs, delta) },
                             dropPreviewMs = dropPreviewMs,
                             snapToBeats = snapToBeats,
@@ -538,7 +548,8 @@ fun EfxTabletEditorScreen(
                         modifier = Modifier.weight(1f),
                         entry = if (selectMode) null else entries.getOrNull(selectedIndex),
                         multiEntries = if (selectMode) entries.filter { it.timestampMs in multiTimes } else emptyList(),
-                        onClearSelection = { multiTimes = emptySet() },
+                        selectMode = selectMode,
+                        onClearSelection = { multiTimes = emptySet(); selectMode = false },
                         onDeleteSelected = {
                             val idxs = entries.indices.filter { entries[it].timestampMs in multiTimes }
                             editVm.deleteTimelineEntries(idxs)
@@ -1085,6 +1096,7 @@ private fun SelectedEntryPanel(
     modifier: Modifier = Modifier,
     entry: EfxEntry?,
     multiEntries: List<EfxEntry> = emptyList(),
+    selectMode: Boolean = false,
     onClearSelection: () -> Unit = {},
     onDeleteSelected: () -> Unit = {},
     onEdit: () -> Unit,
@@ -1181,6 +1193,17 @@ private fun SelectedEntryPanel(
                     Text(Loc.str(R.string.multi_delete_n, multiCount))
                 }
             }
+            return@Column
+        }
+        if (selectMode) {
+            // 선택 모드인데 아직 고른 이펙트가 없을 때의 안내
+            Text(
+                Loc.str(R.string.multi_select_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.weight(1f))
+            OutlinedButton(onClick = onClearSelection) { Text(Loc.str(R.string.multi_exit)) }
             return@Column
         }
         if (entry == null) {
