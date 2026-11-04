@@ -106,7 +106,8 @@ class EffectMatchingEngineV1(
         /** 내장 색 계열 (이름, cMain/cStep1~3 후보 4색) — 읽기 전용 팔레트 세트로 노출하기 위함 */
         fun familyColors(): List<Pair<String, List<LSColor>>> =
             PaletteFamily.values().map { it.name to it.rgb }
-        private const val ON_PULSE_ACCENT_HOLD_MS = 200L
+        /** ON_PULSE 에서 대표색이 켜져 있는 길이: 한 박의 40% (내 라이브러리의 기본 펄스 0.4박과 같다) */
+        private const val ON_PULSE_HOLD_PERCENT = 40L
         private const val ON_ROTATE_BALLAD_TRANSIT = ON_TRANSIT
         // OUTRO 전체에 걸쳐 서서히 꺼지도록, outroStartMs~finalOffMs 구간을 여러 스텝으로
         // 나눠 각 스텝마다 밝기를 낮춘 fg색을 on(transit=...)으로 보낸다(마지막 스텝만
@@ -564,7 +565,7 @@ class EffectMatchingEngineV1(
                 }
 
                 if (beatEngine == EffectMatchingEngine.FgEngine.ON_PULSE && !skipOnPulseOdd) {
-                    val holdMs = minOf(ON_PULSE_ACCENT_HOLD_MS * 2L, section.beatMs * 44L / 100L).coerceAtLeast(60L)
+                    val holdMs = (section.beatMs * ON_PULSE_HOLD_PERCENT / 100L).coerceAtLeast(60L)
                     val offT   = minOf(section.endMs - 1L, t + holdMs)
                     if (offT > t)
                         put(offT, LSEffectPayload.Effects.off(transit = 3).toByteArray())
