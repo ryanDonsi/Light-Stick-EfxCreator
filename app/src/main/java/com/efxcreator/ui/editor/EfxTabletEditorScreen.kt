@@ -415,7 +415,8 @@ fun EfxTabletEditorScreen(
                         TimelineToolbar(
                             autoPaletteFamily = autoPalette?.colorFamily,
                             autoPaletteColors = autoPalette?.roleColors.orEmpty().map { Color(it.r, it.g, it.b) },
-                            autoGenre = autoStyle?.let { com.efxcreator.music.sets.SetCatalog.genreLabel(it) },
+                            autoSetName = com.efxcreator.music.sets.SetCatalog.BUILT_IN_RULE_SETS
+                                .firstOrNull { it.id == "builtin_energy" }?.name?.substringBefore(" ("),
                             paletteSet = songSetsRev.let { paletteSets.firstOrNull { it.id == setsVm.songPaletteSetId(projectId) } },
                             effectSetName = effectSets.firstOrNull { it.id == setsVm.songEffectSetId(projectId) }?.name,
                             snapToBeats = snapToBeats,
@@ -824,7 +825,7 @@ private fun EditorTopBar(
 private fun TimelineToolbar(
     autoPaletteFamily: String?,
     autoPaletteColors: List<Color>,
-    autoGenre: String?,
+    autoSetName: String?,
     paletteSet: com.efxcreator.music.sets.PaletteSet?,
     effectSetName: String?,
     snapToBeats: Boolean,
@@ -878,8 +879,8 @@ private fun TimelineToolbar(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    // 자동이면 곡에서 감지한 장르를 괄호로 덧붙인다. 예: 자동(발라드)
-                    effectSetName ?: autoGenre?.let { Loc.str(R.string.song_info_detail, Loc.str(R.string.song_info_auto), it) }
+                    // 자동은 엔진 기본 동작이며 내장 세트 "에너지 반응" 과 규칙이 같다. 예: 자동(에너지 반응)
+                    effectSetName ?: autoSetName?.let { Loc.str(R.string.song_info_detail, Loc.str(R.string.song_info_auto), it) }
                         ?: Loc.str(R.string.song_info_auto),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
