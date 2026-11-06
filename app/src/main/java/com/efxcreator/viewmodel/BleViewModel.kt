@@ -111,8 +111,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "BleViewModel"
         private const val SCAN_SECONDS = 10
-        /** SDK 가 앞으로 10초 넘게 이동한 것으로 보고 프레임 위치를 다시 계산하는 기준을 넘기는 값 */
-        private const val FORCE_RESYNC_OFFSET_MS = 11_000L
         private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
 
         /** 현재 OS 버전에서 요청해야 하는 BLE 런타임 권한 */
@@ -559,18 +557,16 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 재개: 기기에 타임라인이 없으면(연결 재시도 등) 다시 올린다.
-     * SDK 의 updatePlaybackPosition 은 1초 넘게 뒤로 / 10초 넘게 앞으로 이동했을 때만 "현재 프레임 위치"를
-     * 다시 계산하므로, 일시정지 중 가까운 위치로 옮기면 이전 프레임(예: BLINK)이 그대로 재전송된다.
-     * 그래서 재개 직전에 먼 위치 → 실제 위치 순으로 두 번 갱신해 프레임 위치를 확실히 다시 계산한다.
+     * 재개 (Light-Stick-Music 의 resyncEffectsOnResume 과 같은 순서):
+     * 기기에 타임라인이 없으면 다시 올리고 → resumeTimeline → 현재 재생 위치로 갱신(Seek, 즉시 위치 업데이트).
      */
     fun resumeTimeline(positionMs: Long) {
         val device = connectedOrNull() ?: return
         val needsReload = runCatching { !device.isTimelineLoaded() }.getOrDefault(true)
         if (needsReload) loadedFrames?.let { device.playTimeline(it) }
-        device.updatePlaybackPosition(positionMs + FORCE_RESYNC_OFFSET_MS)
-        device.updatePlaybackPosition(positionMs)
         val resumed = device.resumeTimeline()
+        device.updatePlaybackPosition(positionMs) // Seek
+        device.updatePlaybackPosition(positionMs) // 즉시 위치 업데이트
         Log.d(
             TAG, "resumeTimeline: pos=${positionMs}ms reload=$needsReload resumed=$resumed " +
                 "loaded=${device.isTimelineLoaded()} playing=${device.isTimelinePlaying()}"
