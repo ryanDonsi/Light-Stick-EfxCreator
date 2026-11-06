@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -111,6 +112,11 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "BleViewModel"
         private const val SCAN_SECONDS = 10
+        /** 재생 중 위치가 예상과 이만큼 다르면 Seek 로 본다 */
+        private const val SEEK_JUMP_MS = 700L
+        private const val SEEK_SETTLE_MS = 150L
+        /** SDK 가 프레임 위치를 다시 계산하는 기준(앞으로 10초 초과)을 넘기는 값 */
+        private const val FORCE_RESYNC_OFFSET_MS = 11_000L
         private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
 
         /** 현재 OS 버전에서 요청해야 하는 BLE 런타임 권한 */
@@ -530,23 +536,63 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         val device = connectedOrNull() ?: return
         loadedFrames = frames
         val ok = device.playTimeline(frames)
+        timelinePaused = false
+        lastPositionAtMs = 0L
         Log.d(TAG, "loadTimeline: frames=${frames.size} ok=$ok")
     }
 
-    private var lastPositionForLog = 0L
+    private var lastPositionMs = 0L
+    private var lastPositionAtMs = 0L
+    /** 일시정지 중이거나 타임라인이 멈춘 상태인지 (재생 중 Seek 감지에만 쓴다) */
+    private var timelinePaused = true
+    private var seekJob: Job? = null
 
     fun updatePosition(positionMs: Long) {
-        // Seek 진단용: 직전 위치와 크게 달라졌을 때만 기록한다 (정상 재생은 100ms 마다 호출되므로)
-        if (kotlin.math.abs(positionMs - lastPositionForLog) > 500L) {
-            Log.d(TAG, "updatePosition jump: ${lastPositionForLog}ms -> ${positionMs}ms")
+        val device = connectedOrNull() ?: return
+        val now = SystemClock.elapsedRealtime()
+        // 직전 위치에서 경과 시간만큼 흐른 위치와 크게 다르면 재생 중 Seek 로 본다
+        val expected = lastPositionMs + (now - lastPositionAtMs)
+        val jumped = lastPositionAtMs != 0L && kotlin.math.abs(positionMs - expected) > SEEK_JUMP_MS
+        if (jumped) Log.d(TAG, "updatePosition jump: expected=${expected}ms -> ${positionMs}ms paused=$timelinePaused")
+        lastPositionMs = positionMs
+        lastPositionAtMs = now
+
+        device.updatePlaybackPosition(positionMs)
+        if (jumped && !timelinePaused) {
+            // MediaPlayer.seekTo 는 비동기라 직후 잠깐 이전 위치가 읽힐 수 있다 → 위치가 안정된 뒤 최신 위치로 한 번만 보낸다
+            seekJob?.cancel()
+            seekJob = viewModelScope.launch {
+                delay(SEEK_SETTLE_MS)
+                val d = connectedOrNull() ?: return@launch
+                if (timelinePaused) return@launch
+                resendFrameAt(d, lastPositionMs + (SystemClock.elapsedRealtime() - lastPositionAtMs))
+            }
         }
-        lastPositionForLog = positionMs
-        connectedOrNull()?.updatePlaybackPosition(positionMs)
+    }
+
+    /**
+     * 재생 중 Seek 직후, 이동한 위치의 이펙트를 바로 보낸다.
+     * SDK 는 Seek 하면 그 위치의 프레임은 이미 보낸 것으로 보고 다음 프레임 시각이 올 때까지 아무것도 보내지 않아
+     * 기기가 이전 상태(꺼짐 등)로 남는다. 그 위치의 프레임을 직접 보내고(sendEffect 가 타임라인 전송을 잠시 멈춤),
+     * 프레임 위치를 다시 계산한 뒤 resumeTimeline 으로 재개한다.
+     */
+    private fun resendFrameAt(device: Device, positionMs: Long) {
+        val frame = loadedFrames?.lastOrNull { it.first <= positionMs }?.second
+        val payload = frame?.let { runCatching { LSEffectPayload.fromByteArray(it) }.getOrNull() }
+            ?: LSEffectPayload.Effects.off()
+        val sent = device.sendEffect(payload)
+        // 1초 이내 후진 / 10초 이내 전진은 SDK 가 프레임 위치를 다시 계산하지 않으므로 먼 위치 → 실제 위치로 강제 재계산
+        device.updatePlaybackPosition(positionMs + FORCE_RESYNC_OFFSET_MS)
+        device.updatePlaybackPosition(positionMs)
+        val resumed = device.resumeTimeline()
+        Log.d(TAG, "seek resend: pos=${positionMs}ms type=${payload.effectType} sent=$sent resumed=$resumed")
     }
 
     /** 일시정지: 타임라인을 멈추고, 마지막 이펙트가 기기에서 계속 반복되지 않도록 OFF 를 보낸다 (Light-Stick-Music 과 동일) */
     fun pauseTimeline() {
         val device = connectedOrNull() ?: return
+        timelinePaused = true
+        seekJob?.cancel()
         val paused = device.pauseTimeline()
         val off = LSEffectPayload.Effects.off()
         val sent = device.sendEffect(off)
@@ -565,6 +611,9 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         val needsReload = runCatching { !device.isTimelineLoaded() }.getOrDefault(true)
         if (needsReload) loadedFrames?.let { device.playTimeline(it) }
         val resumed = device.resumeTimeline()
+        timelinePaused = false
+        lastPositionMs = positionMs
+        lastPositionAtMs = SystemClock.elapsedRealtime()
         device.updatePlaybackPosition(positionMs) // Seek
         device.updatePlaybackPosition(positionMs) // 즉시 위치 업데이트
         Log.d(
@@ -577,6 +626,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopTimeline() {
         loadedFrames = null
+        timelinePaused = true
+        seekJob?.cancel()
         connectedOrNull()?.stopTimeline()
     }
 
