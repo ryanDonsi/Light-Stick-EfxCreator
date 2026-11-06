@@ -465,8 +465,12 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── 타임라인 동기화 ──────────────────────────────────────────
 
+    /** 마지막으로 기기에 올린 프레임 — 재개 시 기기에 타임라인이 없으면 다시 올리는 데 쓴다 */
+    private var loadedFrames: List<Pair<Long, ByteArray>>? = null
+
     fun loadTimeline(frames: List<Pair<Long, ByteArray>>) {
         val device = connectedOrNull() ?: return
+        loadedFrames = frames
         if (!device.playTimeline(frames)) Log.w(TAG, "playTimeline rejected")
     }
 
@@ -474,15 +478,26 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         connectedOrNull()?.updatePlaybackPosition(positionMs)
     }
 
+    /** 일시정지: 타임라인을 멈추고, 마지막 이펙트가 기기에서 계속 반복되지 않도록 OFF 를 보낸다 */
     fun pauseTimeline() {
-        connectedOrNull()?.pauseTimeline()
+        val device = connectedOrNull() ?: return
+        device.pauseTimeline()
+        device.sendEffect(solidPayload(EffectType.OFF, 0, 0, 0))
     }
 
+    /**
+     * 재개: 기기에 타임라인이 남아 있지 않으면(연결 재시도 등) 다시 올린다.
+     * 이후 resumeTimeline() 과 재생 위치 갱신으로 SDK 가 현재 위치의 이펙트를 복원한다.
+     */
     fun resumeTimeline() {
-        connectedOrNull()?.resumeTimeline()
+        val device = connectedOrNull() ?: return
+        val needsReload = runCatching { !device.isTimelineLoaded() }.getOrDefault(true)
+        if (needsReload) loadedFrames?.let { if (!device.playTimeline(it)) Log.w(TAG, "playTimeline rejected") }
+        device.resumeTimeline()
     }
 
     fun stopTimeline() {
+        loadedFrames = null
         connectedOrNull()?.stopTimeline()
     }
 
