@@ -623,4 +623,7 @@
     <string name="dlg_overwrite_summary">Overwrite: %1$d effect(s) removed · %2$d trimmed</string>
     <string name="dlg_push_summary">%1$d later effect(s) pushed back by %2$s</string>
     <string name="dlg_overlap_none">No overlapping effects</string>
+    <string name="dlg_start_beat">Start: beat %1$s</string>
+    <string name="dlg_step_prev">Earlier</string>
+    <string name="dlg_step_next">Later</string>
 </resources>
