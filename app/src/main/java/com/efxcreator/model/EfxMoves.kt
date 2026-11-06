@@ -46,13 +46,9 @@ object EfxMoves {
             if (e.timestampMs >= oldFirst + width) e.copy(timestampMs = e.timestampMs - width) else e
         }
 
-        // 2) 놓은 지점을 "메운 뒤" 시간축으로 옮긴다 (자기 구간 안에 놓으면 제자리)
-        val newFirst = oldFirst + delta
-        val p = when {
-            newFirst <= oldFirst -> newFirst
-            newFirst >= oldFirst + width -> newFirst - width
-            else -> oldFirst
-        }
+        // 2) 놓은 지점. 옮긴 이펙트는 끼워 넣은 뒤에도 놓은 위치에서 시작하므로 메운 시간축에서도 같은 값을 그대로 쓴다
+        //    (뒤쪽 이펙트는 끼워 넣은 뒤 width 만큼 다시 밀려 원래 자리로 돌아간다)
+        val p = oldFirst + delta
 
         // 3) 끼워 넣을 경계: 다른 이펙트가 재생 중인 한가운데면 가까운 경계(시작 또는 끝)로 붙인다
         var b = p
