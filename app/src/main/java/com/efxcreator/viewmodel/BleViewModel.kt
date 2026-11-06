@@ -77,7 +77,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     val battery: StateFlow<Int?> = _battery.asStateFlow()
 
     private val _broadcasting = MutableStateFlow(true)
-    /** Broadcasting Mode: 연결된 기기가 보내는 이펙트 신호를 주변 응원봉에도 전파할지 (기기별 저장) */
+    /** Broadcasting Mode: 연결된 기기가 보내는 이펙트 신호를 주변 응원봉에도 전파할지 (기기 설정 + 기기별 저장) */
     val broadcasting: StateFlow<Boolean> = _broadcasting.asStateFlow()
 
     private val _groupAllowed = MutableStateFlow(true)
@@ -230,6 +230,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         monitorJob = viewModelScope.launch {
             refreshInfo()
             readMode(device)
+            readBroadcasting(device)
             readBattery(device)
             var elapsed = 0L
             while (true) {
@@ -258,6 +259,21 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         runCatching { device.readBattery { r -> r.onSuccess { _battery.value = it } } }
     }
 
+    /** SDK 2.1.0: Broadcasting Mode 는 기기 설정이다. 지원 기기는 기기 값을 읽어 반영하고, 미지원 기기는 저장된 값을 그대로 쓴다 */
+    private fun readBroadcasting(device: Device) {
+        if (!runCatching { device.supportsBroadcasting() }.getOrDefault(false)) return
+        runCatching {
+            device.readBroadcasting { r ->
+                r.onSuccess {
+                    if (_connected.value?.mac == device.mac) {
+                        _broadcasting.value = it
+                        prefs.setBroadcasting(device.mac, it)
+                    }
+                }
+            }
+        }
+    }
+
     private fun readMode(device: Device) {
         if (!runCatching { device.supportsDeviceMode() }.getOrDefault(false)) {
             _groupAllowed.value = true   // 구형 펌웨어는 중계기로 간주
@@ -278,7 +294,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             val blink = LSEffectPayload(
                 effectType = EffectType.BLINK, color = white, backgroundColor = LsColor(0, 0, 0),
                 period = 3, spf = 100, fade = 100, randomColor = 1, randomDelay = 0,
-                broadcasting = if (_broadcasting.value) 1 else 0, effectIndex = 0
+                duration = 0, effectIndex = 0
             )
             device.sendEffect(blink)
             delay(3_000L)
@@ -296,7 +312,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     private fun solidPayload(type: EffectType, r: Int, g: Int, b: Int) = LSEffectPayload(
         effectType = type, color = LsColor(r, g, b), backgroundColor = LsColor(0, 0, 0),
         period = 0, spf = 100, fade = 100, randomColor = 0, randomDelay = 0,
-        broadcasting = if (_broadcasting.value) 1 else 0, effectIndex = 0
+        duration = 0, effectIndex = 0
     )
 
     /**
@@ -351,7 +367,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 do {
                     for ((payload, ms) in steps) {
                         if (connectedOrNull() == null) return@launch
-                        device.sendEffect(payload.copy(broadcasting = if (_broadcasting.value) 1 else 0))
+                        device.sendEffect(payload)
                         delay(ms.coerceAtLeast(10L))
                     }
                 } while (loop)
@@ -373,6 +389,9 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         val device = _connected.value ?: return
         prefs.setBroadcasting(device.mac, enabled)
         _broadcasting.value = enabled
+        if (runCatching { device.supportsBroadcasting() }.getOrDefault(false)) {
+            runCatching { device.setBroadcasting(enabled) }
+        }
     }
 
     fun setGroupCount(count: Int) {

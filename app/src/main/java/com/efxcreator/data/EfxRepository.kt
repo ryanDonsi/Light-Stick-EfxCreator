@@ -320,7 +320,7 @@ class EfxRepository(private val context: Context) {
             fade = 100,
             randomColor = 0,
             randomDelay = 0,
-            broadcasting = 1
+            duration = 0
         )
 
         val defaultEntry = EfxEntry(

@@ -339,7 +339,7 @@ fun TimelineEntryDialog(
                         fade = fade,
                         randomColor = randomColor,
                         randomDelay = randomDelay,
-                        broadcasting = 1,
+                        duration = 0,
                         effectIndex = 0
                     )
                     onSave(EfxEntry(timestampMs, payload))

@@ -33,7 +33,7 @@ class SongPreviewState(private val repository: EfxRepository) {
     var activeId by mutableStateOf<String?>(null)
         private set
 
-    /** 기기에 올릴 프레임 (Broadcasting 설정이 반영된 것) */
+    /** 기기에 올릴 프레임 */
     var frames by mutableStateOf<List<Pair<Long, ByteArray>>>(emptyList())
         private set
 
@@ -41,20 +41,10 @@ class SongPreviewState(private val repository: EfxRepository) {
     var entries by mutableStateOf<List<com.lightstick.efx.EfxEntry>>(emptyList())
         private set
 
-    private var broadcasting = true
-
-    fun setBroadcasting(enabled: Boolean) {
-        if (broadcasting == enabled) return
-        broadcasting = enabled
-        activeId?.let { reloadFrames(it) }
-    }
-
     private fun reloadFrames(projectId: String) {
         val efx = repository.loadEfx(projectId)
         entries = efx?.body?.entries.orEmpty()
-        frames = entries.map {
-            it.timestampMs to it.payload.copy(broadcasting = if (broadcasting) 1 else 0).toByteArray()
-        }
+        frames = entries.map { it.timestampMs to it.payload.toByteArray() }
     }
 
     /** 이 곡을 재생/일시정지한다. 다른 곡이 활성이면 그 곡으로 바꾼다. */
@@ -139,8 +129,6 @@ fun rememberSongPreview(bleVm: BleViewModel): SongPreviewState {
     val context = LocalContext.current
     val state = remember { SongPreviewState(EfxRepository(context.applicationContext)) }
     val connected by bleVm.connected.collectAsState()
-    val broadcasting by bleVm.broadcasting.collectAsState()
-    LaunchedEffect(broadcasting) { state.setBroadcasting(broadcasting) }
 
     // 재생 위치 갱신
     LaunchedEffect(Unit) {

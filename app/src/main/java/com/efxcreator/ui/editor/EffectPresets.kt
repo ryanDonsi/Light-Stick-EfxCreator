@@ -50,7 +50,7 @@ data class EffectPreset(
             fade = fade,
             randomColor = 0,
             randomDelay = 0,
-            broadcasting = 1,
+            duration = 0,
             effectIndex = 0   // 실제 Effect Index 는 EfxEditViewModel 이 저장 시 1부터 재부여한다
         )
     )
