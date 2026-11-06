@@ -219,6 +219,82 @@ fun TimelineEntryDialog(
                     }
                 }
 
+                // 시작 시간 바로 아래: 지속 시간과 덮어쓰기/밀기 (서로 영향을 주는 값이라 한곳에 모은다)
+                if (showTargetOptions) {
+                // ── 지속시간: 비트 단위(소수점 2자리) 또는 10ms 단위로 입력. 0 = 다음 이펙트까지 ──
+                Text(Loc.str(R.string.label_duration), style = MaterialTheme.typography.labelMedium)
+                if (beatsAvailable) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = beatUnit, onClick = { beatUnit = true }, label = { Text(Loc.str(R.string.dlg_beat_unit)) })
+                        FilterChip(selected = !beatUnit, onClick = { beatUnit = false }, label = { Text(Loc.str(R.string.dlg_unit_10ms)) })
+                    }
+                }
+                if (beatUnit && beatsAvailable) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = beatsText,
+                            onValueChange = { raw ->
+                                val f = raw.replace(',', '.')
+                                if (Regex("""\d{0,4}(\.\d{0,2})?""").matches(f)) {
+                                    beatsText = f
+                                    duration = ticksOfBeats(f.toDoubleOrNull() ?: 0.0)
+                                }
+                            },
+                            label = { Text(Loc.str(R.string.dlg_beat_unit)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedButton(onClick = {
+                            val nb = ((beatsText.toDoubleOrNull() ?: 0.0) - 0.1).coerceAtLeast(0.0)
+                            beatsText = fmtBeats(nb)
+                            duration = ticksOfBeats(nb)
+                        }) { Text("-0.1") }
+                        OutlinedButton(onClick = {
+                            val nb = (beatsText.toDoubleOrNull() ?: 0.0) + 0.1
+                            beatsText = fmtBeats(nb)
+                            duration = ticksOfBeats(nb)
+                        }) { Text("+0.1") }
+                    }
+                } else {
+                    NumberTextField(
+                        value = duration,
+                        onValueChange = { duration = it },
+                        label = Loc.str(R.string.label_duration),
+                        range = 0..EfxDurations.MAX_TICKS,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                // 실제로 들어가는 값 안내
+                val durMs = EfxDurations.ticksToMs(duration)
+                UnitHint(
+                    when {
+                        duration == 0 -> Loc.str(R.string.duration_until_next)
+                        beatsAvailable -> Loc.str(R.string.dlg_duration_ref_beats, fmtBeats(beatsOfTicks(duration)), EfxDurations.formatMs(durMs), duration)
+                        else -> Loc.str(R.string.dlg_duration_ref_ms, EfxDurations.formatMs(durMs), duration)
+                    }
+                )
+
+                // ── 덮어쓰기(ON) / 밀기(OFF) ──
+                if (showOverwrite) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(Loc.str(R.string.dlg_overwrite_label))
+                            UnitHint(Loc.str(if (overwrite) R.string.dlg_overwrite_on_desc else R.string.dlg_overwrite_off_desc))
+                        }
+                        Switch(checked = overwrite, onCheckedChange = { overwrite = it })
+                    }
+                    val impact = EfxOverwrite.preview(otherEntries, effectiveTs, duration, overwrite)
+                    UnitHint(
+                        when {
+                            impact.removed > 0 || impact.trimmed > 0 -> Loc.str(R.string.dlg_overwrite_summary, impact.removed, impact.trimmed)
+                            impact.pushed > 0 -> Loc.str(R.string.dlg_push_summary, impact.pushed, EfxDurations.formatMs(impact.pushedByMs))
+                            else -> Loc.str(R.string.dlg_overlap_none)
+                        }
+                    )
+                }
+                }
+
                 // ========== Effect Type ==========
                 Text(Loc.str(R.string.label_effect_type), style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -375,79 +451,6 @@ fun TimelineEntryDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 UnitHint(if (randomDelay == 0) Loc.str(R.string.timeline_entry_dialog_10) else Loc.str(R.string.timeline_entry_dialog_11, TimelineMath.formatFrames(randomDelay, spf)))
-
-                // ── 지속시간: 비트 단위(소수점 2자리) 또는 10ms 단위로 입력. 0 = 다음 이펙트까지 ──
-                Text(Loc.str(R.string.label_duration), style = MaterialTheme.typography.labelMedium)
-                if (beatsAvailable) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = beatUnit, onClick = { beatUnit = true }, label = { Text(Loc.str(R.string.dlg_beat_unit)) })
-                        FilterChip(selected = !beatUnit, onClick = { beatUnit = false }, label = { Text(Loc.str(R.string.dlg_unit_10ms)) })
-                    }
-                }
-                if (beatUnit && beatsAvailable) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = beatsText,
-                            onValueChange = { raw ->
-                                val f = raw.replace(',', '.')
-                                if (Regex("""\d{0,4}(\.\d{0,2})?""").matches(f)) {
-                                    beatsText = f
-                                    duration = ticksOfBeats(f.toDoubleOrNull() ?: 0.0)
-                                }
-                            },
-                            label = { Text(Loc.str(R.string.dlg_beat_unit)) },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedButton(onClick = {
-                            val nb = ((beatsText.toDoubleOrNull() ?: 0.0) - 0.1).coerceAtLeast(0.0)
-                            beatsText = fmtBeats(nb)
-                            duration = ticksOfBeats(nb)
-                        }) { Text("-0.1") }
-                        OutlinedButton(onClick = {
-                            val nb = (beatsText.toDoubleOrNull() ?: 0.0) + 0.1
-                            beatsText = fmtBeats(nb)
-                            duration = ticksOfBeats(nb)
-                        }) { Text("+0.1") }
-                    }
-                } else {
-                    NumberTextField(
-                        value = duration,
-                        onValueChange = { duration = it },
-                        label = Loc.str(R.string.label_duration),
-                        range = 0..EfxDurations.MAX_TICKS,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                // 실제로 들어가는 값 안내
-                val durMs = EfxDurations.ticksToMs(duration)
-                UnitHint(
-                    when {
-                        duration == 0 -> Loc.str(R.string.duration_until_next)
-                        beatsAvailable -> Loc.str(R.string.dlg_duration_ref_beats, fmtBeats(beatsOfTicks(duration)), EfxDurations.formatMs(durMs), duration)
-                        else -> Loc.str(R.string.dlg_duration_ref_ms, EfxDurations.formatMs(durMs), duration)
-                    }
-                )
-
-                // ── 덮어쓰기(ON) / 밀기(OFF) ──
-                if (showOverwrite) {
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(Loc.str(R.string.dlg_overwrite_label))
-                            UnitHint(Loc.str(if (overwrite) R.string.dlg_overwrite_on_desc else R.string.dlg_overwrite_off_desc))
-                        }
-                        Switch(checked = overwrite, onCheckedChange = { overwrite = it })
-                    }
-                    val impact = EfxOverwrite.preview(otherEntries, effectiveTs, duration, overwrite)
-                    UnitHint(
-                        when {
-                            impact.removed > 0 || impact.trimmed > 0 -> Loc.str(R.string.dlg_overwrite_summary, impact.removed, impact.trimmed)
-                            impact.pushed > 0 -> Loc.str(R.string.dlg_push_summary, impact.pushed, EfxDurations.formatMs(impact.pushedByMs))
-                            else -> Loc.str(R.string.dlg_overlap_none)
-                        }
-                    )
-                }
 
                 GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
                 }
