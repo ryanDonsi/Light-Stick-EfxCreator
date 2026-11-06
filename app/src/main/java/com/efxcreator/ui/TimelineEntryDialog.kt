@@ -18,13 +18,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.efxcreator.music.sets.RgbColor
+import com.efxcreator.ui.components.HsvColorPicker
 import com.efxcreator.ui.components.NumberTextField
+import com.efxcreator.ui.device.activityBleViewModel
+import com.efxcreator.ui.editor.TimelineMath
 import com.lightstick.types.Color
 import com.lightstick.types.Colors
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
-import com.lightstick.types.MsgType
 import com.lightstick.efx.EfxEntry
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 /**
  * ✅ 리팩토링: NumberTextField 컴포넌트 사용
@@ -34,13 +39,32 @@ import com.lightstick.efx.EfxEntry
  * - 포커스 시 "0" 자동 지우기
  * - 숫자 키보드 자동 표시
  */
+/** 입력칸 아래에 단위 환산 결과를 보여 주는 작은 안내 글 */
+@Composable
+private fun UnitHint(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
 @Composable
 fun TimelineEntryDialog(
     entry: EfxEntry?,
     lastEntryTimestamp: Long = 0L,
     onDismiss: () -> Unit,
     onSave: (EfxEntry) -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    title: String = Loc.str(R.string.timeline_entry_dialog_1),
+    deleteTitle: String = Loc.str(R.string.timeline_entry_dialog_2),
+    deleteMessage: String = Loc.str(R.string.efx_edit_screen_14),
+    /** false 면 Timestamp 입력을 숨긴다 (시간이 없는 내 라이브러리 편집용) */
+    showTimestamp: Boolean = true,
+    /** false 면 Random Color / Random Delay / 그룹 마스크를 숨긴다 (라이브러리에는 저장되지 않는 값) */
+    showTargetOptions: Boolean = true,
+    /** 맨 위에 끼워 넣을 내용 (예: 라이브러리 이름 입력) */
+    topContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     val initialTimestamp = entry?.timestampMs ?: lastEntryTimestamp
     val initialMinutes = (initialTimestamp / 60000).toInt()
@@ -65,9 +89,11 @@ fun TimelineEntryDialog(
 
     // Advanced
     var spf by remember { mutableIntStateOf(entry?.payload?.spf ?: 100) }
-    var fade by remember { mutableIntStateOf(entry?.payload?.fade ?: 100) }
+    var fade by remember { mutableIntStateOf((entry?.payload?.fade ?: 100).coerceIn(0, 100)) }
     var randomColor by remember { mutableIntStateOf(entry?.payload?.randomColor ?: 0) }
     var randomDelay by remember { mutableIntStateOf(entry?.payload?.randomDelay ?: 0) }
+    // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 마스터 키/모든 그룹, bit(n-1) = 그룹 n)
+    var groupMask by remember { mutableLongStateOf(entry?.payload?.groupMask ?: 0L) }
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showFgColorPicker by remember { mutableStateOf(false) }
@@ -87,7 +113,7 @@ fun TimelineEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Effect 편집") },
+        title = { Text(title) },
         text = {
             Column(
                 modifier = Modifier
@@ -95,9 +121,11 @@ fun TimelineEntryDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                topContent?.invoke(this)
+
                 // ========== Timestamp ==========
-                Text("Timestamp", style = MaterialTheme.typography.labelMedium)
-                Row(
+                if (showTimestamp) Text(Loc.str(R.string.label_timestamp), style = MaterialTheme.typography.labelMedium)
+                if (showTimestamp) Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -105,14 +133,14 @@ fun TimelineEntryDialog(
                     NumberTextField(
                         value = minutes,
                         onValueChange = { minutes = it },
-                        label = "min",
+                        label = Loc.str(R.string.label_minutes),
                         modifier = Modifier.weight(1f)
                     )
 
                     NumberTextField(
                         value = seconds,
                         onValueChange = { seconds = it },
-                        label = "sec",
+                        label = Loc.str(R.string.label_seconds),
                         range = 0..59,
                         modifier = Modifier.weight(1f)
                     )
@@ -120,14 +148,14 @@ fun TimelineEntryDialog(
                     NumberTextField(
                         value = millis,
                         onValueChange = { millis = it },
-                        label = "ms",
+                        label = Loc.str(R.string.label_millis),
                         range = 0..999,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 // ========== Effect Type ==========
-                Text("Effect Type", style = MaterialTheme.typography.labelMedium)
+                Text(Loc.str(R.string.label_effect_type), style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -177,16 +205,17 @@ fun TimelineEntryDialog(
                     value = period,
                     onValueChange = { period = it },
                     label = if (effectType in listOf(EffectType.ON, EffectType.OFF))
-                        "Transit (0-255)"
+                        Loc.str(R.string.timeline_entry_dialog_3)
                     else
-                        "Period (0-255)",
+                        Loc.str(R.string.timeline_entry_dialog_4),
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
+                UnitHint("= ${TimelineMath.formatFrames(period, spf)}")
 
                 // ========== Foreground Color ==========
                 if (effectType != EffectType.OFF) {
-                    Text("Foreground Color", style = MaterialTheme.typography.labelMedium)
+                    Text(Loc.str(R.string.label_foreground_color), style = MaterialTheme.typography.labelMedium)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -199,21 +228,21 @@ fun TimelineEntryDialog(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .background(ComposeColor(colorR, colorG, colorB))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
                             )
                             Text("RGB($colorR, $colorG, $colorB)")
                         }
                         TextButton(onClick = { showFgColorPicker = true }) {
-                            Text("변경")
+                            Text(Loc.str(R.string.timeline_entry_dialog_5))
                         }
                     }
                 }
 
                 // ========== Background Color ==========
                 if (effectType in listOf(EffectType.BLINK, EffectType.STROBE, EffectType.BREATH)) {
-                    Text("Background Color", style = MaterialTheme.typography.labelMedium)
+                    Text(Loc.str(R.string.label_background_color), style = MaterialTheme.typography.labelMedium)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -226,14 +255,14 @@ fun TimelineEntryDialog(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .background(ComposeColor(bgColorR, bgColorG, bgColorB))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
                             )
                             Text("RGB($bgColorR, $bgColorG, $bgColorB)")
                         }
                         TextButton(onClick = { showBgColorPicker = true }) {
-                            Text("변경")
+                            Text(Loc.str(R.string.timeline_entry_dialog_5))
                         }
                     }
                 }
@@ -241,30 +270,32 @@ fun TimelineEntryDialog(
                 HorizontalDivider()
 
                 // ========== Advanced Parameters ==========
-                Text("Advanced Parameters", style = MaterialTheme.typography.titleSmall)
+                Text(Loc.str(R.string.label_advanced_params), style = MaterialTheme.typography.titleSmall)
 
                 NumberTextField(
                     value = spf,
                     onValueChange = { spf = it },
-                    label = "SPF (0-255)",
+                    label = Loc.str(R.string.timeline_entry_dialog_6),
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
+                UnitHint(TimelineMath.frameUnitLabel(spf) + Loc.str(R.string.timeline_entry_dialog_7))
 
                 NumberTextField(
                     value = fade,
                     onValueChange = { fade = it },
-                    label = "Fade (0-255)",
-                    range = 0..255,
+                    label = Loc.str(R.string.timeline_entry_dialog_8),
+                    range = 0..100,
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                if (showTargetOptions) {
                 // Random Color Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Random Color")
+                    Text(Loc.str(R.string.label_random_color))
                     Switch(
                         checked = randomColor != 0,
                         onCheckedChange = { randomColor = if (it) 1 else 0 }
@@ -274,10 +305,14 @@ fun TimelineEntryDialog(
                 NumberTextField(
                     value = randomDelay,
                     onValueChange = { randomDelay = it },
-                    label = "Random Delay (0-255, x10ms)",
+                    label = Loc.str(R.string.timeline_entry_dialog_9),
                     range = 0..255,
                     modifier = Modifier.fillMaxWidth()
                 )
+                UnitHint(if (randomDelay == 0) Loc.str(R.string.timeline_entry_dialog_10) else Loc.str(R.string.timeline_entry_dialog_11, TimelineMath.formatFrames(randomDelay, spf)))
+
+                GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
+                }
             }
         },
         confirmButton = {
@@ -289,12 +324,13 @@ fun TimelineEntryDialog(
                             contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("삭제")
+                        Text(Loc.str(R.string.efx_edit_screen_15))
                     }
                 }
                 TextButton(onClick = {
                     val timestampMs = (minutes * 60000L) + (seconds * 1000L) + millis
                     val payload = LSEffectPayload(
+                        groupMask = groupMask,
                         effectType = effectType,
                         color = Color(colorR, colorG, colorB),
                         backgroundColor = Color(bgColorR, bgColorG, bgColorB),
@@ -304,19 +340,17 @@ fun TimelineEntryDialog(
                         randomColor = randomColor,
                         randomDelay = randomDelay,
                         broadcasting = 1,
-                        groupMask = 0L,
-                        msgType = MsgType.EFFECT,
                         effectIndex = 0
                     )
                     onSave(EfxEntry(timestampMs, payload))
                 }) {
-                    Text("저장")
+                    Text(Loc.str(R.string.efx_edit_screen_21))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text(Loc.str(R.string.efx_edit_screen_16))
             }
         }
     )
@@ -324,7 +358,7 @@ fun TimelineEntryDialog(
     // ========== Color Picker Dialogs ==========
     if (showFgColorPicker) {
         ColorPickerDialog(
-            title = "전경색 선택",
+            title = Loc.str(R.string.timeline_entry_dialog_12),
             currentColor = Color(colorR, colorG, colorB),
             onColorSelected = { color ->
                 colorR = color.r
@@ -338,7 +372,7 @@ fun TimelineEntryDialog(
 
     if (showBgColorPicker) {
         ColorPickerDialog(
-            title = "배경색 선택",
+            title = Loc.str(R.string.timeline_entry_dialog_13),
             currentColor = Color(bgColorR, bgColorG, bgColorB),
             onColorSelected = { color ->
                 bgColorR = color.r
@@ -354,8 +388,8 @@ fun TimelineEntryDialog(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Effect 삭제") },
-            text = { Text("이 타임라인 엔트리를 삭제하시겠습니까?") },
+            title = { Text(deleteTitle) },
+            text = { Text(deleteMessage) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -366,12 +400,12 @@ fun TimelineEntryDialog(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("삭제")
+                    Text(Loc.str(R.string.efx_edit_screen_15))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("취소")
+                    Text(Loc.str(R.string.efx_edit_screen_16))
                 }
             }
         )
@@ -385,7 +419,7 @@ fun TimelineEntryDialog(
  */
 @Composable
 fun ColorPickerDialog(
-    title: String = "색상 선택",
+    title: String = Loc.str(R.string.timeline_entry_dialog_14),
     currentColor: Color,
     onColorSelected: (Color) -> Unit,
     onDismiss: () -> Unit
@@ -397,6 +431,13 @@ fun ColorPickerDialog(
     // 현재 선택된 색상 (실시간)
     val selectedColor = Color(red, green, blue)
 
+    // 연결된 디바이스에 편집 중인 색을 실시간으로 표시한다 (닫을 때 끈다)
+    val bleVm = activityBleViewModel()
+    val connectedDevice by bleVm.connected.collectAsState()
+    val deviceConnected = connectedDevice != null
+    LaunchedEffect(red, green, blue, deviceConnected) { bleVm.previewColor(red, green, blue) }
+    DisposableEffect(Unit) { onDispose { bleVm.stopPreview() } }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, style = MaterialTheme.typography.titleMedium) },
@@ -405,42 +446,22 @@ fun ColorPickerDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // ========== 색상 미리보기 ==========
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(ComposeColor(red, green, blue))
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.outline,
-                            RoundedCornerShape(8.dp)
-                        )
+                // 색상/선명도/밝기 슬라이더 + RGB 직접 입력 (팔레트 세트 편집과 같은 색상 선택)
+                HsvColorPicker(
+                    color = RgbColor(red, green, blue),
+                    onChange = { red = it.r; green = it.g; blue = it.b }
                 )
-
-                // ========== RGB 슬라이더 ==========
-                CompactColorSlider(
-                    label = "R",
-                    value = red,
-                    onValueChange = { red = it }
-                )
-
-                CompactColorSlider(
-                    label = "G",
-                    value = green,
-                    onValueChange = { green = it }
-                )
-
-                CompactColorSlider(
-                    label = "B",
-                    value = blue,
-                    onValueChange = { blue = it }
+                Text(
+                    if (deviceConnected) Loc.str(R.string.timeline_entry_dialog_15)
+                    else Loc.str(R.string.timeline_entry_dialog_16),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (deviceConnected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // ========== 프리셋 색상 ==========
                 Text(
-                    text = "프리셋",
+                    text = Loc.str(R.string.timeline_entry_dialog_17),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 4.dp)
@@ -508,99 +529,15 @@ fun ColorPickerDialog(
             TextButton(onClick = {
                 onColorSelected(selectedColor)
             }) {
-                Text("확인")
+                Text(Loc.str(R.string.efx_edit_screen_19))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("취소")
+                Text(Loc.str(R.string.efx_edit_screen_16))
             }
         }
     )
-}
-
-/**
- * ✅ 컴팩트 RGB 슬라이더
- */
-@Composable
-private fun CompactColorSlider(
-    label: String,
-    value: Int,
-    onValueChange: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.width(20.dp)
-        )
-
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.toInt()) },
-            valueRange = 0f..255f,
-            modifier = Modifier
-                .weight(1f)
-                .height(20.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.onSurface,
-                activeTrackColor = MaterialTheme.colorScheme.onSurface,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            thumb = {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(
-                            MaterialTheme.colorScheme.onSurface,
-                            shape = CircleShape
-                        )
-                )
-            },
-            track = { sliderState ->
-                val fraction = sliderState.value / 255f
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                ) {
-                    // Inactive track
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .align(Alignment.Center)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                RoundedCornerShape(1.dp)
-                            )
-                    )
-                    // Active track
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(fraction)
-                            .height(2.dp)
-                            .align(Alignment.CenterStart)
-                            .background(
-                                MaterialTheme.colorScheme.onSurface,
-                                RoundedCornerShape(1.dp)
-                            )
-                    )
-                }
-            }
-        )
-
-        Text(
-            text = value.toString(),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(32.dp),
-            fontWeight = FontWeight.Medium
-        )
-    }
 }
 
 /**
@@ -616,7 +553,7 @@ private fun RowScope.PresetColorButton(
         modifier = Modifier
             .weight(1f)
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(ComposeColor(color.r, color.g, color.b))
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
@@ -624,14 +561,14 @@ private fun RowScope.PresetColorButton(
                     MaterialTheme.colorScheme.primary
                 else
                     MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(6.dp)
+                shape = MaterialTheme.shapes.extraSmall
             )
             .then(
                 if (!isSelected) {
                     Modifier.border(
                         width = 1.dp,
-                        color = ComposeColor.Black.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(6.dp)
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        shape = MaterialTheme.shapes.extraSmall
                     )
                 } else Modifier
             )

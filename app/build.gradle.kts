@@ -102,9 +102,6 @@ dependencies {
     // DocumentFile (SAF)
     implementation(libs.androidx.documentfile)
 
-    // JTransForms (자동 이펙트 생성 파이프라인의 BeatDetectorV2 FFT용)
-    implementation(libs.jtransforms)
-
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

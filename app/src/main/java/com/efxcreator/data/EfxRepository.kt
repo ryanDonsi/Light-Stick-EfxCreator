@@ -16,8 +16,9 @@ import com.lightstick.efx.MusicId
 import com.lightstick.types.Color
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
-import com.lightstick.types.MsgType
 import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 class EfxRepository(private val context: Context) {
 
@@ -89,7 +90,7 @@ class EfxRepository(private val context: Context) {
     /**
      * EFX 파일 경로 반환
      */
-    private fun getEfxFile(projectId: String): File {
+    fun getEfxFile(projectId: String): File {
         val directory = getEfxDirectory()
         return File(directory, "$projectId.efx")
     }
@@ -145,6 +146,9 @@ class EfxRepository(private val context: Context) {
         }
 
         saveProjectsMetadata(projects)
+
+        // 이름이 바뀌었거나 새로 만든 곡이면 폴더 사본의 이름/위치도 맞춘다
+        EfxFolderMirror(context).sync(metadata.id)
     }
 
     /**
@@ -154,6 +158,9 @@ class EfxRepository(private val context: Context) {
         val projects = loadProjectsMetadata().toMutableList()
         val project = projects.find { it.id == projectId }
 
+        // 저장소 폴더의 사본도 지운다
+        EfxFolderMirror(context).remove(projectId)
+
         // EFX 파일 삭제
         project?.let {
             val efxFile = getEfxFile(it.id)
@@ -162,6 +169,10 @@ class EfxRepository(private val context: Context) {
                 Log.d(TAG, "Deleted EFX file for $projectId: $deleted")
             }
         }
+
+        // 보관된 음악/분석 결과 삭제
+        deleteMusicFiles(projectId)
+        getAnalysisFile(projectId).delete()
 
         // 메타데이터에서 제거
         val removed = projects.removeAll { it.id == projectId }
@@ -284,6 +295,9 @@ class EfxRepository(private val context: Context) {
 
             Log.d(TAG, "═══════════════════════════════════════")
 
+            // 저장소 폴더 아래 공연명/곡명.efx 사본도 맞춰 둔다
+            EfxFolderMirror(context).sync(projectId)
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error saving EFX file for $projectId", e)
             e.printStackTrace()
@@ -306,9 +320,7 @@ class EfxRepository(private val context: Context) {
             fade = 100,
             randomColor = 0,
             randomDelay = 0,
-            broadcasting = 1,
-            groupMask = 0L,
-            msgType = MsgType.EFFECT
+            broadcasting = 1
         )
 
         val defaultEntry = EfxEntry(
@@ -339,24 +351,98 @@ class EfxRepository(private val context: Context) {
         }
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // 음악 보관 / 분석 결과 저장
+    // ──────────────────────────────────────────────────────────────
+
+    private val musicDir get() = File(context.filesDir, "music").apply { mkdirs() }
+    private val analysisDir get() = File(context.filesDir, "analysis").apply { mkdirs() }
+
+    private fun getAnalysisFile(projectId: String) = File(analysisDir, "$projectId.json")
+
+    /** 프로젝트에 보관된 음악 파일(없으면 null) */
+    fun getStoredMusicFile(projectId: String): File? =
+        musicDir.listFiles { f -> f.nameWithoutExtension == projectId }?.firstOrNull()
+
     /**
-     * 자동 생성 파이프라인(MediaExtractor 기반)은 content:// Uri를 직접 읽지 못하므로,
-     * 음악 Uri를 캐시 디렉토리의 임시 파일로 복사해 절대 경로를 돌려준다.
-     * 호출 측이 사용 후 반드시 delete() 해야 한다.
+     * 선택한 음악을 앱 내부 저장소로 복사한다. SAF Uri 는 권한이 만료될 수 있어,
+     * 재생/분석은 항상 이 사본을 사용한다. 기존 사본은 교체된다.
      */
-    fun copyUriToTempAudioFile(uri: Uri): File? {
-        return try {
-            val tempFile = File(context.cacheDir, "auto_gen_${System.currentTimeMillis()}.tmp")
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output -> input.copyTo(output) }
-            } ?: run {
-                Log.e(TAG, "Failed to open input stream for $uri")
-                return null
-            }
-            Log.d(TAG, "Copied $uri to temp file: ${tempFile.absolutePath} (${tempFile.length()} bytes)")
-            tempFile
+    fun importMusic(projectId: String, uri: Uri): File {
+        val mime = context.contentResolver.getType(uri)
+        val ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime)
+            ?: getDisplayFileName(uri)?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() }
+            ?: "audio"
+        // 임시 파일로 먼저 복사해, 실패하거나 원본이 기존 사본인 경우에도 기존 음악을 잃지 않는다
+        val temp = File(musicDir, "$projectId.$ext.tmp")
+        val input = context.contentResolver.openInputStream(uri)
+            ?: throw java.io.IOException(Loc.str(R.string.efx_repository_1))
+        try {
+            input.use { src -> temp.outputStream().use { dst -> src.copyTo(dst) } }
         } catch (e: Exception) {
-            Log.e(TAG, "Error copying uri to temp file: $uri", e)
+            temp.delete()
+            throw e
+        }
+        deleteMusicFiles(projectId)
+        val dest = File(musicDir, "$projectId.$ext")
+        if (!temp.renameTo(dest)) {
+            temp.copyTo(dest, overwrite = true)
+            temp.delete()
+        }
+        Log.d(TAG, "Imported music: ${dest.absolutePath} (${dest.length()} bytes)")
+        return dest
+    }
+
+    fun deleteMusicFiles(projectId: String) {
+        musicDir.listFiles { f -> f.nameWithoutExtension == projectId }?.forEach { it.delete() }
+    }
+
+    fun saveAnalysis(projectId: String, analysis: com.efxcreator.music.MusicAnalysis) {
+        try {
+            getAnalysisFile(projectId).writeText(gson.toJson(analysis))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving analysis for $projectId", e)
+        }
+    }
+
+    fun loadAnalysis(projectId: String): com.efxcreator.music.MusicAnalysis? {
+        val file = getAnalysisFile(projectId)
+        if (!file.exists()) return null
+        return try {
+            gson.fromJson(file.readText(), com.efxcreator.music.MusicAnalysis::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading analysis for $projectId", e)
+            null
+        }
+    }
+
+    fun deleteAnalysis(projectId: String) {
+        getAnalysisFile(projectId).delete()
+    }
+
+    /** Uri 의 표시 이름(확장자 포함). 조회 실패 시 null. */
+    private fun getDisplayFileName(uri: Uri): String? = try {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (index < 0) null else cursor.getString(index)
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    /**
+     * Uri 의 표시 이름(확장자 제외) 반환. 조회 실패 시 null.
+     */
+    fun getDisplayName(uri: Uri): String? {
+        return try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (index < 0) null else cursor.getString(index)?.substringBeforeLast(".")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting display name for $uri", e)
             null
         }
     }
@@ -402,6 +488,8 @@ class EfxRepository(private val context: Context) {
         // URI 경로인 경우 파일 이동 스킵 (DocumentFile API 필요)
         if (newPath.startsWith("content://")) {
             Log.d(TAG, "New path is URI, skipping file migration")
+            // 새 폴더에 공연명/곡명.efx 사본을 만들어 둔다
+            EfxFolderMirror(context).syncAll()
             return
         }
 
@@ -423,6 +511,7 @@ class EfxRepository(private val context: Context) {
             }
         }
 
+        EfxFolderMirror(context).syncAll()
         Log.d(TAG, "EFX storage path changed successfully")
     }
 
@@ -437,25 +526,60 @@ class EfxRepository(private val context: Context) {
     /**
      * 현재 EFX 저장 위치 정보
      */
+    /** 설정 > 휴대폰 정보의 "기기 이름" (예: "상인의 Tab S9"). 없으면 모델명 */
+    private fun deviceName(): String =
+        runCatching { android.provider.Settings.Global.getString(context.contentResolver, android.provider.Settings.Global.DEVICE_NAME) }
+            .getOrNull()?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL
+
+    /** 저장소 루트 이름: 내장 저장소는 기기 이름, SD 카드 등은 시스템이 붙인 볼륨 이름 */
+    private fun volumeLabel(volumeId: String): String {
+        if (volumeId == "primary") return deviceName()
+        return runCatching {
+            val sm = context.getSystemService(Context.STORAGE_SERVICE) as android.os.storage.StorageManager
+            sm.storageVolumes.firstOrNull { it.uuid.equals(volumeId, ignoreCase = true) }?.getDescription(context)
+        }.getOrNull() ?: volumeId
+    }
+
+    /** "/storage/emulated/0/Music/Effects" → "상인의 Tab S9 > Music > Effects" (파일 선택기의 표시와 비슷하게) */
+    private fun friendlyPath(absolutePath: String): String {
+        val internalRoot = "/storage/emulated/0"
+        if (absolutePath != internalRoot && !absolutePath.startsWith("$internalRoot/")) return absolutePath
+        val parts = absolutePath.removePrefix(internalRoot).split('/').filter { it.isNotEmpty() }
+        return (listOf(deviceName()) + parts).joinToString(" > ")
+    }
+
+    /**
+     * 폴더 선택기가 돌려준 트리 URI 를 사람이 읽을 수 있는 경로로 바꾼다.
+     * 내장 저장소는 `기기이름 > Music > Effects`, SD 카드는 `SD 카드 이름 > 폴더` 처럼 보여 주고,
+     * 그 외 제공자(다운로드, 클라우드 등)는 경로를 알 수 없어 폴더 이름만 보여 준다.
+     */
+    private fun describeTreeUri(uriString: String): String = try {
+        val uri = Uri.parse(uriString)
+        val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)   // 예: "primary:Music/Sub"
+        val volume = docId.substringBefore(':')
+        val relative = docId.substringAfter(':', "")
+        if (uri.authority == "com.android.externalstorage.documents") {
+            (listOf(volumeLabel(volume)) + relative.split('/').filter { it.isNotEmpty() }).joinToString(" > ")
+        } else {
+            DocumentFile.fromTreeUri(context, uri)?.name ?: uriString
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error describing tree uri", e)
+        DocumentFile.fromTreeUri(context, Uri.parse(uriString))?.name ?: Loc.str(R.string.efx_repository_2)
+    }
+
     fun getEfxStorageInfo(): String {
         val path = prefs.efxStoragePath
 
         return when {
             path == "default_internal" || path.isEmpty() -> {
-                "기본: ${context.filesDir.absolutePath}"
+                Loc.str(R.string.efx_repository_3, context.filesDir.absolutePath)
             }
             path.startsWith("content://") -> {
-                try {
-                    val uri = Uri.parse(path)
-                    val documentFile = DocumentFile.fromTreeUri(context, uri)
-                    documentFile?.name?.let { "사용자 지정: $it" } ?: "사용자 지정"
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error getting DocumentFile name", e)
-                    "사용자 지정"
-                }
+                Loc.str(R.string.efx_repository_4, describeTreeUri(path))
             }
             else -> {
-                "사용자 지정: $path"
+                Loc.str(R.string.efx_repository_4, friendlyPath(path))
             }
         }
     }
@@ -468,20 +592,13 @@ class EfxRepository(private val context: Context) {
 
         return when {
             path == "default_music" || path.isEmpty() -> {
-                "기본: ${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath}"
+                Loc.str(R.string.efx_repository_3, friendlyPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath))
             }
             path.startsWith("content://") -> {
-                try {
-                    val uri = Uri.parse(path)
-                    val documentFile = DocumentFile.fromTreeUri(context, uri)
-                    documentFile?.name?.let { "사용자 지정: $it" } ?: "사용자 지정"
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error getting DocumentFile name", e)
-                    "사용자 지정"
-                }
+                Loc.str(R.string.efx_repository_4, describeTreeUri(path))
             }
             else -> {
-                "사용자 지정: $path"
+                Loc.str(R.string.efx_repository_4, friendlyPath(path))
             }
         }
     }

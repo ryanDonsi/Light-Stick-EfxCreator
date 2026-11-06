@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- GLOWSYNC 로고를 Safe Zone 내에 맞게 축소 -->
+    <!-- Safe Zone: 66dp, 로고: 60dp x 20dp (3:1 비율 유지) -->
+    <item
+        android:width="60dp"
+        android:height="20dp"
+        android:gravity="center"
+        android:drawable="@drawable/logo_glowsync" />
+</layer-list>

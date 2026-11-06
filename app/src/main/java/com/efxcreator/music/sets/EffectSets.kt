@@ -1,0 +1,236 @@
+package com.efxcreator.music.sets
+
+import com.efxcreator.model.EffectPattern
+import com.efxcreator.music.effect.EffectMatchingEngine.FgEngine
+import com.efxcreator.music.effect.EffectMatchingEngineV1
+import com.lightstick.types.Color as LSColor
+import com.efxcreator.R
+import com.efxcreator.core.Loc
+
+/** Gson 으로 저장할 수 있는 단순 RGB */
+data class RgbColor(val r: Int, val g: Int, val b: Int) {
+    fun toLs(): LSColor = LSColor(r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
+
+    companion object {
+        fun of(c: LSColor) = RgbColor(c.r, c.g, c.b)
+    }
+}
+
+/**
+ * 팔레트 세트 — 엔진이 역할별로 쓰는 4색(대표색 + 단계색 3개).
+ * 어두운 톤(deep)과 흰/검정은 엔진이 대표색에서 자동으로 파생한다.
+ */
+data class PaletteSet(
+    val id: String,
+    val name: String,
+    val main: RgbColor,
+    val step1: RgbColor,
+    val step2: RgbColor,
+    val step3: RgbColor,
+    val builtIn: Boolean = false
+) {
+    val colors: List<RgbColor> get() = listOf(main, step1, step2, step3)
+
+    companion object {
+        val COLOR_ROLES get() = listOf(Loc.str(R.string.effect_pattern_3), Loc.str(R.string.effect_sets_1), Loc.str(R.string.effect_sets_2), Loc.str(R.string.effect_sets_3))
+    }
+}
+
+/**
+ * 이펙트 세트(엔진) — 섹션 종류별로 사용할 패턴을 고르는 규칙 묶음.
+ * [rules] 의 key = SectionType 이름, value = [FgEngine] 이름. 규칙이 없는 섹션은 기본 동작(자동)을 따른다.
+ */
+data class EffectRuleSet(
+    val id: String,
+    val name: String,
+    val rules: Map<String, String>,
+    val builtIn: Boolean = false,
+    /**
+     * 섹션 종류별 조건부 규칙 (key = SectionType 이름). 위에서부터 조건이 맞는 첫 규칙이 쓰인다.
+     * 이 섹션에 규칙이 있으면 [rules] 의 단일 패턴보다 우선한다. (이전 버전에서 저장한 세트에는 없으므로 null 일 수 있다)
+     */
+    val cases: Map<String, List<RuleCase>>? = null
+) {
+    fun patternFor(sectionType: String): FgEngine? =
+        rules[sectionType]?.let { runCatching { FgEngine.valueOf(it) }.getOrNull() }
+
+    fun casesFor(sectionType: String): List<RuleCase> = cases?.get(sectionType).orEmpty()
+}
+
+/**
+ * 조건부 규칙 하나: 모든 조건이 맞으면 [effect] 를 쓴다. 조건이 하나도 없으면 "그 외 모두" 이다.
+ * [effect] 는 엔진 기본 패턴 이름([FgEngine]) 이거나 이펙트 라이브러리의 이펙트("pattern:<id>").
+ *
+ * 에너지는 모두 0~100(%) 의 상대값이다.
+ * - 마디 에너지: 섹션 안의 마디들 중 이 마디의 순위 (100 에 가까울수록 섹션에서 가장 센 마디)
+ * - 섹션 에너지: 곡 전체 섹션들 중 이 섹션의 상대 에너지
+ */
+data class RuleCase(
+    val effect: String,
+    val minBarEnergy: Int? = null,
+    val maxBarEnergy: Int? = null,
+    val minSectionEnergy: Int? = null,
+    val maxSectionEnergy: Int? = null,
+    /** (이전 버전 호환) null = 모든 곡, "BALLAD" = 발라드 계열만, "NON_BALLAD" = 그 외. 새로 만드는 규칙은 [genres] 를 쓴다 */
+    val mood: String? = null,
+    /** 이 장르(곡 분위기)일 때만 적용. [MusicStyleClassifier.MusicStyle] 이름 목록, null = 모든 장르 */
+    val genres: List<String>? = null
+) {
+    val patternId: String? get() = effect.removePrefix(PATTERN_PREFIX).takeIf { effect.startsWith(PATTERN_PREFIX) }
+    val engine: FgEngine? get() = if (patternId != null) null else runCatching { FgEngine.valueOf(effect) }.getOrNull()
+    val hasCondition: Boolean
+        get() = minBarEnergy != null || maxBarEnergy != null || minSectionEnergy != null ||
+            maxSectionEnergy != null || mood != null || genres != null
+
+    fun matches(barEnergyPct: Int, sectionEnergyPct: Int, ballad: Boolean, musicStyle: String = ""): Boolean =
+        (minBarEnergy == null || barEnergyPct >= minBarEnergy) &&
+            (maxBarEnergy == null || barEnergyPct <= maxBarEnergy) &&
+            (minSectionEnergy == null || sectionEnergyPct >= minSectionEnergy) &&
+            (maxSectionEnergy == null || sectionEnergyPct <= maxSectionEnergy) &&
+            (mood == null || (mood == "BALLAD") == ballad) &&
+            (genres == null || musicStyle in genres)
+
+    companion object {
+        const val PATTERN_PREFIX = "pattern:"
+        fun library(patternId: String) = "$PATTERN_PREFIX$patternId"
+    }
+}
+
+/** 자동 생성/세트 적용 시 선택한 세트. null 이면 기본 동작(자동). */
+data class GenerationOptions(
+    val ruleSet: EffectRuleSet? = null,
+    val paletteSet: PaletteSet? = null,
+    /** 조건부 규칙이 가리키는 이펙트 라이브러리의 이펙트들 (기본 제공 + 사용자) */
+    val patterns: List<EffectPattern> = emptyList()
+)
+
+/** 편집 가능한 패턴(FgEngine) 설명 */
+data class PatternInfo(val engine: FgEngine, val label: String, val description: String)
+
+object SetCatalog {
+
+    /** 규칙을 편집할 수 있는 섹션 (CLIMAX 는 분석 단계에서 검출되지 않아 제외) */
+    val EDITABLE_SECTIONS get() = listOf(
+        "INTRO" to Loc.str(R.string.effect_sets_4),
+        "VERSE" to Loc.str(R.string.effect_sets_5),
+        "CHORUS" to Loc.str(R.string.effect_sets_6),
+        "BRIDGE" to Loc.str(R.string.effect_sets_7),
+        "BREAK" to Loc.str(R.string.effect_sets_8),
+        "OUTRO" to Loc.str(R.string.effect_sets_9),
+        "END" to Loc.str(R.string.effect_sets_10)
+    )
+
+    val PATTERNS get() = listOf(
+        PatternInfo(FgEngine.ON_PULSE, Loc.str(R.string.effect_pattern_7), Loc.str(R.string.effect_sets_11)),
+        PatternInfo(FgEngine.BLINK, Loc.str(R.string.effect_pattern_11), Loc.str(R.string.effect_sets_12)),
+        PatternInfo(FgEngine.BREATH, Loc.str(R.string.effect_pattern_9), Loc.str(R.string.effect_sets_13)),
+        PatternInfo(FgEngine.ON_TRANSIT_ROTATE, Loc.str(R.string.effect_sets_14), Loc.str(R.string.effect_sets_15)),
+        PatternInfo(FgEngine.FREEZE, Loc.str(R.string.effect_pattern_17), Loc.str(R.string.effect_sets_16)),
+        PatternInfo(FgEngine.OFF_TRANSIT, Loc.str(R.string.effect_pattern_19), Loc.str(R.string.effect_sets_17))
+    )
+
+    fun patternLabel(engineName: String?): String =
+        PATTERNS.firstOrNull { it.engine.name == engineName }?.label ?: Loc.str(R.string.effect_sets_18)
+
+    /** 섹션이 곡의 어디인지 설명 (이펙트 세트 편집 화면에 작게 보여 준다) */
+    val SECTION_DESCRIPTIONS: Map<String, String> get() = mapOf(
+        "INTRO" to Loc.str(R.string.effect_sets_19),
+        "VERSE" to Loc.str(R.string.effect_sets_20),
+        "CHORUS" to Loc.str(R.string.effect_sets_21),
+        "BRIDGE" to Loc.str(R.string.effect_sets_22),
+        "BREAK" to Loc.str(R.string.effect_sets_23),
+        "OUTRO" to Loc.str(R.string.effect_sets_24),
+        "END" to Loc.str(R.string.effect_sets_25)
+    )
+
+    /** 곡 분위기(장르) 이름과 화면 표시 이름 — 값은 MusicStyleClassifier.MusicStyle 이름 */
+    val GENRES: List<Pair<String, String>> get() = listOf(
+        "DANCE_POP" to Loc.str(R.string.effect_sets_26), "POP" to Loc.str(R.string.effect_sets_27), "BALLAD" to Loc.str(R.string.effect_sets_28),
+        "EDM" to "EDM", "HIPHOP_RNB" to Loc.str(R.string.effect_sets_29), "ROCK" to Loc.str(R.string.effect_sets_30)
+    )
+
+    /** 엔진이 "발라드 모드" 로 취급하는 장르 */
+    val BALLAD_LIKE_GENRES = listOf("BALLAD", "HIPHOP_RNB")
+
+    fun genreLabel(name: String): String = GENRES.firstOrNull { it.first == name }?.second ?: name
+
+    /** 섹션 종류별로 엔진이 "자동" 일 때 하는 동작 (이펙트 세트 편집 화면에 보여 준다) */
+    val DEFAULT_BEHAVIOR: Map<String, String> get() = mapOf(
+        "INTRO" to Loc.str(R.string.effect_sets_31),
+        "VERSE" to Loc.str(R.string.effect_sets_32),
+        "CHORUS" to Loc.str(R.string.effect_sets_33),
+        "BRIDGE" to Loc.str(R.string.effect_sets_31),
+        "BREAK" to Loc.str(R.string.effect_sets_34),
+        "OUTRO" to Loc.str(R.string.effect_sets_35),
+        "END" to Loc.str(R.string.effect_sets_36)
+    )
+
+    /** 벌스의 기본 동작을 조건부 규칙으로 옮긴 것 (에너지에 따라 BLINK / ON_PULSE) */
+    val DEFAULT_VERSE_CASES: List<RuleCase> get() = listOf(
+        RuleCase(FgEngine.BREATH.name, genres = BALLAD_LIKE_GENRES),
+        RuleCase(FgEngine.BLINK.name, minBarEnergy = 80),
+        RuleCase(FgEngine.ON_PULSE.name)
+    )
+
+    /** 엔진의 기본 동작과 같은 규칙 (새 세트를 만들 때의 출발점) */
+    val DEFAULT_RULES: Map<String, String> get() = mapOf(
+        "INTRO" to FgEngine.BREATH.name,
+        "VERSE" to FgEngine.ON_PULSE.name,
+        "CHORUS" to FgEngine.ON_TRANSIT_ROTATE.name,
+        "BRIDGE" to FgEngine.BREATH.name,
+        "BREAK" to FgEngine.FREEZE.name,
+        "OUTRO" to FgEngine.OFF_TRANSIT.name,
+        "END" to FgEngine.OFF_TRANSIT.name
+    )
+
+    val BUILT_IN_RULE_SETS: List<EffectRuleSet> get() = listOf(
+        EffectRuleSet(
+            "builtin_energy", Loc.str(R.string.effect_sets_37),
+            DEFAULT_RULES - "VERSE",
+            builtIn = true,
+            cases = mapOf("VERSE" to DEFAULT_VERSE_CASES)
+        ),
+        EffectRuleSet(
+            "builtin_calm", Loc.str(R.string.effect_sets_38),
+            DEFAULT_RULES + mapOf(
+                "VERSE" to FgEngine.BREATH.name,
+                "CHORUS" to FgEngine.BREATH.name
+            ),
+            builtIn = true
+        ),
+        EffectRuleSet(
+            "builtin_power", Loc.str(R.string.effect_sets_39),
+            DEFAULT_RULES + mapOf(
+                "INTRO" to FgEngine.ON_PULSE.name,
+                "BRIDGE" to FgEngine.ON_PULSE.name,
+                "VERSE" to FgEngine.ON_PULSE.name,
+                "CHORUS" to FgEngine.ON_TRANSIT_ROTATE.name
+            ),
+            builtIn = true
+        )
+    )
+
+    /** 엔진에 내장된 색 계열을 읽기 전용 팔레트 세트로 노출 */
+    val BUILT_IN_PALETTE_SETS: List<PaletteSet> get() = run {
+        EffectMatchingEngineV1.familyColors().map { (name, colors) ->
+            PaletteSet(
+                id = "builtin_${name.lowercase()}",
+                name = familyDisplayName(name),
+                main = RgbColor.of(colors[0]),
+                step1 = RgbColor.of(colors[1]),
+                step2 = RgbColor.of(colors[2]),
+                step3 = RgbColor.of(colors[3]),
+                builtIn = true
+            )
+        }
+    }
+
+    private fun familyDisplayName(name: String) = when (name) {
+        "PURPLE" -> Loc.str(R.string.effect_sets_40)
+        "RED" -> Loc.str(R.string.effect_sets_41)
+        "ORANGE_GOLD" -> Loc.str(R.string.effect_sets_42)
+        "TEAL" -> Loc.str(R.string.effect_sets_43)
+        "BLUE" -> Loc.str(R.string.effect_sets_44)
+        else -> name
+    }
+}

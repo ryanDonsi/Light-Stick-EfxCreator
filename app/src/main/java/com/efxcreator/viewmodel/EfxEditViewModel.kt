@@ -7,14 +7,22 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.efxcreator.data.EfxRepository
 import com.efxcreator.model.EfxProjectMetadata
+import com.efxcreator.music.AutoEfxGenerator
+import com.efxcreator.music.MusicAnalysis
+import com.efxcreator.music.sets.GenerationOptions
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
 import com.lightstick.efx.EfxEntry
 import com.lightstick.efx.EfxHeader
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import com.efxcreator.R
+import com.efxcreator.core.Loc
 
 class EfxEditViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -33,8 +41,57 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
     private val _suggestedName = MutableStateFlow<String?>(null)
     val suggestedName: StateFlow<String?> = _suggestedName.asStateFlow()
 
+    /** 에디터 타임라인용 파형/섹션/비트 분석 결과 (음악이 없거나 분석 전이면 null) */
+    private val _analysis = MutableStateFlow<MusicAnalysis?>(null)
+    val analysis: StateFlow<MusicAnalysis?> = _analysis.asStateFlow()
+
+    private val _analyzing = MutableStateFlow(false)
+    val analyzing: StateFlow<Boolean> = _analyzing.asStateFlow()
+
+    /** 재생/분석에 사용하는 앱 내부 음악 사본 */
+    private val _musicFile = MutableStateFlow<File?>(null)
+    val musicFile: StateFlow<File?> = _musicFile.asStateFlow()
+
+    /** 이펙트/팔레트 세트 적용(재생성) 진행 중 */
+    private val _applying = MutableStateFlow(false)
+    val applying: StateFlow<Boolean> = _applying.asStateFlow()
+
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val autoEfxGenerator = AutoEfxGenerator()
+
+    // ── 임시 작업본(draft) + Undo/Redo ─────────────────────────────
+    // [efx] 는 화면에 보이는 "작업본"이다. 타임라인 편집은 작업본만 바꾸고, [save] 를 눌러야 파일에 기록된다.
+    // 저장된 내용은 [savedEfx] 에 따로 들고 있어 변경 여부(dirty)를 비교한다.
+
+    /** 마지막으로 저장된(디스크와 같은) 내용 */
+    private var savedEfx: Efx? = null
+
+    private val undoStack = ArrayDeque<List<EfxEntry>>()
+    private val redoStack = ArrayDeque<List<EfxEntry>>()
+
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
+
+    private val _canRedo = MutableStateFlow(false)
+    val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
+
+    /** 저장되지 않은 변경이 있는가 */
+    private val _dirty = MutableStateFlow(false)
+    val dirty: StateFlow<Boolean> = _dirty.asStateFlow()
+
+    private val _saving = MutableStateFlow(false)
+    val saving: StateFlow<Boolean> = _saving.asStateFlow()
+
     companion object {
         private const val TAG = "EfxEditViewModel"
+        /** Undo 로 되돌릴 수 있는 최대 편집 횟수 */
+        private const val MAX_HISTORY = 100
+    }
+
+    fun consumeMessage() {
+        _message.value = null
     }
 
     fun loadProject(projectId: String) {
@@ -45,9 +102,63 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
             _metadata.value = loadedMetadata
 
             val loadedEfx = repository.loadEfx(projectId)
+            savedEfx = loadedEfx
             _efx.value = loadedEfx
+            undoStack.clear()
+            redoStack.clear()
+            refreshHistoryFlags()
+            if (loadedEfx == null && loadedMetadata != null) {
+                _message.value = Loc.str(R.string.efx_edit_view_model_1)
+            }
 
             Log.d(TAG, "Loaded project: ${loadedMetadata?.name}")
+
+            loadMusicAndAnalysis(loadedMetadata)
+        }
+    }
+
+    /**
+     * 앱 내부에 보관된 음악 사본과 분석 결과를 불러온다.
+     * 이전 버전 프로젝트(SAF Uri 만 저장)는 가능하면 내부 사본으로 이관하고,
+     * 분석 결과가 없으면 백그라운드에서 분석한다.
+     */
+    private suspend fun loadMusicAndAnalysis(metadata: EfxProjectMetadata?) {
+        metadata ?: return
+        var file = withContext(Dispatchers.IO) { repository.getStoredMusicFile(metadata.id) }
+
+        val legacyUri = metadata.musicUri
+        if (file == null && legacyUri != null) {
+            file = withContext(Dispatchers.IO) {
+                runCatching { repository.importMusic(metadata.id, legacyUri) }.getOrNull()
+            }
+            if (file != null) {
+                val migrated = metadata.copy(musicUriString = Uri.fromFile(file).toString())
+                repository.saveProjectMetadata(migrated)
+                _metadata.value = migrated
+            } else {
+                _message.value = Loc.str(R.string.efx_edit_view_model_2)
+            }
+        }
+        _musicFile.value = file
+        _analysis.value = withContext(Dispatchers.IO) { repository.loadAnalysis(metadata.id) }
+
+        // 분석 결과가 없거나, 세트 적용에 필요한 엔진 입력이 없는 예전 결과면 다시 분석한다
+        if (file != null && _analysis.value?.engineInput == null) runAnalysis(metadata.id, file)
+    }
+
+    private suspend fun runAnalysis(projectId: String, file: File) {
+        _analyzing.value = true
+        try {
+            val result = autoEfxGenerator.analyze(file)
+            withContext(Dispatchers.IO) { repository.saveAnalysis(projectId, result) }
+            _analysis.value = result
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Analysis failed", e)
+            _message.value = e.message ?: Loc.str(R.string.auto_efx_generator_2)
+        } finally {
+            _analyzing.value = false
         }
     }
 
@@ -77,11 +188,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
 
             if (uri == null) {
                 // 음악 제거
-                val newHeader = currentEfx.header.copy(musicId = 0)
-                val updatedEfx = Efx(newHeader, currentEfx.body)
-
-                repository.saveEfx(currentMetadata.id, updatedEfx)
-                _efx.value = updatedEfx
+                persistMusicId(currentMetadata.id, 0)
 
                 // 메타데이터에서 음악 URI 제거
                 val updatedMetadata = currentMetadata.copy(
@@ -91,23 +198,40 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveProjectMetadata(updatedMetadata)
                 _metadata.value = updatedMetadata
 
+                // 보관된 음악/분석 결과 삭제
+                repository.deleteMusicFiles(currentMetadata.id)
+                repository.deleteAnalysis(currentMetadata.id)
+                _musicFile.value = null
+                _analysis.value = null
+
                 // 제안 이름 초기화
                 _suggestedName.value = null
 
                 Log.d(TAG, "Music removed")
             } else {
-                // 음악 ID 계산 (SDK 사용)
-                val musicId = repository.calculateMusicId(uri)
+                // 앱 내부로 복사 후 그 사본으로 음악 ID 계산 (SDK 사용)
+                val file = try {
+                    withContext(Dispatchers.IO) { repository.importMusic(currentMetadata.id, uri) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Music import failed", e)
+                    _message.value = Loc.str(R.string.efx_edit_view_model_3, e.message)
+                    return@launch
+                }
+                val musicId = try {
+                    withContext(Dispatchers.IO) { autoEfxGenerator.computeMusicId(file) }
+                } catch (e: Exception) {
+                    _message.value = e.message ?: Loc.str(R.string.efx_edit_view_model_4)
+                    return@launch
+                }
+                repository.deleteAnalysis(currentMetadata.id)
+                _analysis.value = null
+                _musicFile.value = file
 
-                val newHeader = currentEfx.header.copy(musicId = musicId)
-                val updatedEfx = Efx(newHeader, currentEfx.body)
-
-                repository.saveEfx(currentMetadata.id, updatedEfx)
-                _efx.value = updatedEfx
+                persistMusicId(currentMetadata.id, musicId)
 
                 // 메타데이터에 음악 URI 저장
                 val updatedMetadata = currentMetadata.copy(
-                    musicUriString = uri.toString(),
+                    musicUriString = Uri.fromFile(file).toString(),
                     updatedAt = System.currentTimeMillis()
                 )
                 repository.saveProjectMetadata(updatedMetadata)
@@ -120,6 +244,8 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 Log.d(TAG, "Music set with ID: 0x${musicId.toUInt().toString(16).uppercase()}")
+
+                runAnalysis(currentMetadata.id, file)
             }
         }
     }
@@ -143,6 +269,60 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * 이펙트 세트/팔레트 세트를 적용해 타임라인을 다시 생성한다.
+     * 저장된 분석 결과를 쓰므로 느린 분석 없이 빠르게 끝난다.
+     *
+     * @param sectionIndex null 이면 곡 전체, 아니면 [MusicAnalysis.sections] 의 해당 섹션 구간만.
+     *   적용 범위 안의 기존 엔트리는 새로 만든 것으로 교체되고, 범위 밖은 그대로 둔다.
+     */
+    fun applySets(options: GenerationOptions, sectionIndex: Int?) {
+        if (_applying.value) return
+        viewModelScope.launch {
+            val meta = _metadata.value ?: return@launch
+            val currentEfx = _efx.value ?: run {
+                _message.value = Loc.str(R.string.efx_edit_view_model_5)
+                return@launch
+            }
+            val analysis = _analysis.value
+            if (analysis == null || analysis.engineInput == null) {
+                _message.value = if (_analyzing.value) Loc.str(R.string.efx_edit_view_model_6)
+                else Loc.str(R.string.efx_tablet_editor_screen_15)
+                return@launch
+            }
+            val range: LongRange = if (sectionIndex == null) {
+                0L..Long.MAX_VALUE
+            } else {
+                val sec = analysis.sections.getOrNull(sectionIndex) ?: run {
+                    _message.value = Loc.str(R.string.efx_edit_view_model_7)
+                    return@launch
+                }
+                sec.startMs until sec.endMs
+            }
+
+            _applying.value = true
+            try {
+                val generated = autoEfxGenerator.render(analysis, currentEfx.header.musicId, options)
+                val inRange = generated.filter { it.timestampMs in range }
+                replaceRange(currentEfx, range, inRange)
+                Log.d(TAG, "Applied sets: range=$range new=${inRange.size}")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Apply sets failed", e)
+                _message.value = e.message ?: Loc.str(R.string.efx_edit_view_model_8)
+            } finally {
+                _applying.value = false
+            }
+        }
+    }
+
+    /** [range] 안의 기존 엔트리를 [newEntries] 로 교체한다 (작업본에만 반영 — 저장은 [save]). */
+    private fun replaceRange(currentEfx: Efx, range: LongRange, newEntries: List<EfxEntry>) {
+        val kept = currentEfx.body.entries.filter { it.timestampMs !in range }
+        commitDraft(kept + newEntries)
+    }
+
     fun applySuggestedName() {
         _suggestedName.value?.let { suggested ->
             updateProjectName(suggested)
@@ -154,105 +334,197 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun addTimelineEntry(entry: EfxEntry) {
-        viewModelScope.launch {
-            val currentMetadata = _metadata.value ?: return@launch
-            val currentEfx = _efx.value ?: return@launch
+        val current = _efx.value ?: return
+        commitDraft(current.body.entries + entry)
+    }
 
-            val newEntries = currentEfx.body.entries + entry
-            val sortedEntries = newEntries.sortedBy { it.timestampMs }
-
-            // Effect Index 자동 부여 (1부터 시작)
-            val entriesWithIndex = sortedEntries.mapIndexed { index, efxEntry ->
-                val updatedPayload = efxEntry.payload.copy(effectIndex = index + 1)
-                efxEntry.copy(payload = updatedPayload)
-            }
-
-            val newBody = currentEfx.body.copy(entries = entriesWithIndex)
-            val newHeader = currentEfx.header.copy(entryCount = entriesWithIndex.size)
-            val updatedEfx = Efx(newHeader, newBody)
-
-            repository.saveEfx(currentMetadata.id, updatedEfx)
-            _efx.value = updatedEfx
-
-            // 메타데이터 업데이트
-            val updatedMetadata = currentMetadata.copy(
-                updatedAt = System.currentTimeMillis()
-            )
-            repository.saveProjectMetadata(updatedMetadata)
-            _metadata.value = updatedMetadata
-
-            Log.d(TAG, "Added timeline entry with auto Effect Index")
+    /**
+     * 여러 엔트리를 한 번에 넣는다. 같은 시각의 기존 엔트리는 교체하고,
+     * [replaceFromMs] 이상 [replaceToMs] 미만 구간의 기존 엔트리도 함께 지운다 (이펙트 길이만큼 교체).
+     * 실행 취소 한 번으로 모두 되돌린다.
+     */
+    fun addTimelineEntries(new: List<EfxEntry>, replaceFromMs: Long? = null, replaceToMs: Long? = null) {
+        val current = _efx.value ?: return
+        val times = new.map { it.timestampMs }.toSet()
+        val kept = current.body.entries.filterNot { e ->
+            e.timestampMs in times ||
+                (replaceFromMs != null && replaceToMs != null && e.timestampMs >= replaceFromMs && e.timestampMs < replaceToMs)
         }
+        commitDraft(kept + new)
     }
 
     fun updateTimelineEntry(index: Int, updatedEntry: EfxEntry) {
-        viewModelScope.launch {
-            val currentMetadata = _metadata.value ?: return@launch
-            val currentEfx = _efx.value ?: return@launch
+        val current = _efx.value ?: return
+        val list = current.body.entries.toMutableList()
+        if (index !in list.indices) return
+        list[index] = updatedEntry
+        _editingEntry.value = null
+        commitDraft(list)
+    }
 
-            val newEntries = currentEfx.body.entries.toMutableList()
-            newEntries[index] = updatedEntry
+    /** 선택한 여러 이펙트를 한 번에 지운다 (실행 취소 한 번으로 되돌린다) */
+    fun deleteTimelineEntries(indices: Collection<Int>) {
+        val current = _efx.value ?: return
+        val drop = indices.toSet()
+        if (drop.isEmpty()) return
+        _editingEntry.value = null
+        commitDraft(current.body.entries.filterIndexed { i, _ -> i !in drop })
+    }
 
-            val sortedEntries = newEntries.sortedBy { it.timestampMs }
+    /**
+     * 선택한 이펙트들을 [deltaMs] 만큼 함께 옮긴다 (상대 간격 유지, 0ms 아래로는 내려가지 않는다).
+     * - 하나를 옮기면: 옮겨진 자리에 있던 이펙트와 위치를 맞바꾼다.
+     * - 여러 개를 옮기면: 놓은 자리에 끼워 넣고, 그 자리 이후의 기존 이펙트들은 옮긴 이펙트들 길이만큼 뒤로 밀려 이어진다.
+     * 실행 취소 한 번으로 되돌린다.
+     * @return 옮겨진 이펙트들의 새 시각 (선택 표시를 유지하는 데 쓴다)
+     */
+    fun moveTimelineEntries(indices: Collection<Int>, deltaMs: Long): Set<Long> {
+        val current = _efx.value ?: return emptySet()
+        val move = indices.toSet()
+        val list = current.body.entries
+        // 가장 앞 이펙트가 0ms 아래로 내려가지 않도록 이동량을 제한한다
+        val minTs = list.filterIndexed { i, _ -> i in move }.minOfOrNull { it.timestampMs } ?: return emptySet()
+        val delta = maxOf(deltaMs, -minTs)
+        if (delta == 0L) return list.filterIndexed { i, _ -> i in move }.map { it.timestampMs }.toSet()
+        val moved = list.filterIndexed { i, _ -> i in move }.map { it.copy(timestampMs = it.timestampMs + delta) }
+        val newTimes = moved.map { it.timestampMs }.toSet()
 
-            // Effect Index 재계산 (1부터 시작)
-            val entriesWithIndex = sortedEntries.mapIndexed { idx, efxEntry ->
-                val updatedPayload = efxEntry.payload.copy(effectIndex = idx + 1)
-                efxEntry.copy(payload = updatedPayload)
+        // 여러 개를 옮기면 맞바꾸지 않고 "끼워 넣기": 옮긴 이펙트들이 놓인 위치부터 기존 이펙트들이 뒤로 밀려 이어진다
+        if (move.size >= 2) {
+            val oldFirst = list.filterIndexed { i, _ -> i in move }.minOf { it.timestampMs }
+            val oldLast = list.filterIndexed { i, _ -> i in move }.maxOf { it.timestampMs }
+            // 마지막 이펙트가 차지하던 길이: 다음 이펙트까지의 간격 (뒤에 없으면 곡 끝까지, 곡 길이를 모르면 0.5초)
+            val lastIdx = move.max()
+            val songEnd = _analysis.value?.durationMs
+            val lastDur = list.getOrNull(lastIdx + 1)?.let { (it.timestampMs - oldLast).coerceAtLeast(1L) }
+                ?: songEnd?.let { (it - oldLast).coerceAtLeast(1L) }
+                ?: 500L
+            val span = (oldLast - oldFirst) + lastDur
+            val firstNew = oldFirst + delta
+            val rest = list.filterIndexed { i, _ -> i !in move }.map { e ->
+                val t = e.timestampMs
+                val push = when {
+                    // 앞으로 옮기면: 놓은 자리부터 원래 자리 앞까지의 이펙트가 뒤로 밀려 비워진 자리를 채운다
+                    firstNew < oldFirst -> t >= firstNew && t < oldFirst
+                    // 뒤로 옮기면: 놓은 자리 이후의 이펙트가 밀린다
+                    else -> t >= firstNew
+                }
+                if (push) e.copy(timestampMs = t + span) else e
             }
-
-            val newBody = currentEfx.body.copy(entries = entriesWithIndex)
-            val newHeader = currentEfx.header.copy(entryCount = entriesWithIndex.size)
-            val updatedEfx = Efx(newHeader, newBody)
-
-            repository.saveEfx(currentMetadata.id, updatedEfx)
-            _efx.value = updatedEfx
             _editingEntry.value = null
-
-            // 메타데이터 업데이트
-            val updatedMetadata = currentMetadata.copy(
-                updatedAt = System.currentTimeMillis()
-            )
-            repository.saveProjectMetadata(updatedMetadata)
-            _metadata.value = updatedMetadata
-
-            Log.d(TAG, "Updated timeline entry with recalculated Effect Index")
+            commitDraft(rest + moved)
+            return newTimes
         }
+        val oldTimes = list.filterIndexed { i, _ -> i in move }.map { it.timestampMs }.toSet()
+        // 옮겨 간 자리에 있던 (선택되지 않은) 이펙트는 옮기는 쪽이 비운 자리로 보낸다. 시각 순서대로 짝지어 순서를 유지한다.
+        val displaced = list.filterIndexed { i, e -> i !in move && e.timestampMs in newTimes }.sortedBy { it.timestampMs }
+        val vacated = (oldTimes - newTimes).sorted()
+        val swapped = displaced.mapIndexed { n, e -> e.copy(timestampMs = vacated[n]) }
+        val displacedSet = displaced.map { it.timestampMs }.toSet()
+        val kept = list.filterIndexed { i, e -> i !in move && e.timestampMs !in displacedSet }
+        _editingEntry.value = null
+        commitDraft(kept + swapped + moved)
+        return newTimes
     }
 
     fun deleteTimelineEntry(index: Int) {
-        viewModelScope.launch {
-            val currentMetadata = _metadata.value ?: return@launch
-            val currentEfx = _efx.value ?: return@launch
+        val current = _efx.value ?: return
+        val list = current.body.entries.toMutableList()
+        if (index !in list.indices) return
+        list.removeAt(index)
+        _editingEntry.value = null
+        commitDraft(list)
+    }
 
-            val newEntries = currentEfx.body.entries.toMutableList()
-            newEntries.removeAt(index)
+    // ── Undo / Redo / 저장 ──────────────────────────────────────
 
-            val sortedEntries = newEntries.sortedBy { it.timestampMs }
-
-            // Effect Index 재계산 (1부터 시작)
-            val entriesWithIndex = sortedEntries.mapIndexed { idx, efxEntry ->
-                val updatedPayload = efxEntry.payload.copy(effectIndex = idx + 1)
-                efxEntry.copy(payload = updatedPayload)
-            }
-
-            val newBody = currentEfx.body.copy(entries = entriesWithIndex)
-            val newHeader = currentEfx.header.copy(entryCount = entriesWithIndex.size)
-            val updatedEfx = Efx(newHeader, newBody)
-
-            repository.saveEfx(currentMetadata.id, updatedEfx)
-            _efx.value = updatedEfx
-            _editingEntry.value = null
-
-            // 메타데이터 업데이트
-            val updatedMetadata = currentMetadata.copy(
-                updatedAt = System.currentTimeMillis()
-            )
-            repository.saveProjectMetadata(updatedMetadata)
-            _metadata.value = updatedMetadata
-
-            Log.d(TAG, "Deleted timeline entry with recalculated Effect Index")
+    /** 시각순으로 정렬하고 Effect Index 를 1부터 다시 매긴다 */
+    private fun normalize(entries: List<EfxEntry>): List<EfxEntry> =
+        entries.sortedBy { it.timestampMs }.mapIndexed { idx, e ->
+            e.copy(payload = e.payload.copy(effectIndex = idx + 1))
         }
+
+    private fun setDraftEntries(entries: List<EfxEntry>) {
+        val current = _efx.value ?: return
+        val normalized = normalize(entries)
+        _efx.value = Efx(current.header.copy(entryCount = normalized.size), current.body.copy(entries = normalized))
+    }
+
+    /** 편집 한 번 = 히스토리 한 칸. 새 편집은 Redo 기록을 지운다. */
+    private fun commitDraft(newEntries: List<EfxEntry>) {
+        val current = _efx.value ?: return
+        val normalized = normalize(newEntries)
+        if (normalized == current.body.entries) return
+        undoStack.addLast(current.body.entries)
+        if (undoStack.size > MAX_HISTORY) undoStack.removeFirst()
+        redoStack.clear()
+        setDraftEntries(normalized)
+        refreshHistoryFlags()
+    }
+
+    private fun refreshHistoryFlags() {
+        _canUndo.value = undoStack.isNotEmpty()
+        _canRedo.value = redoStack.isNotEmpty()
+        _dirty.value = _efx.value?.body?.entries != savedEfx?.body?.entries
+    }
+
+    fun undo() {
+        val current = _efx.value ?: return
+        val previous = undoStack.removeLastOrNull() ?: return
+        redoStack.addLast(current.body.entries)
+        setDraftEntries(previous)
+        _editingEntry.value = null
+        refreshHistoryFlags()
+    }
+
+    fun redo() {
+        val current = _efx.value ?: return
+        val next = redoStack.removeLastOrNull() ?: return
+        undoStack.addLast(current.body.entries)
+        setDraftEntries(next)
+        _editingEntry.value = null
+        refreshHistoryFlags()
+    }
+
+    /** 작업본을 실제 파일에 저장한다. 완료되면 [onSaved] 호출. */
+    fun save(onSaved: () -> Unit = {}) {
+        if (_saving.value) return
+        val meta = _metadata.value ?: return
+        val draft = _efx.value ?: return
+        viewModelScope.launch {
+            _saving.value = true
+            try {
+                val updatedMeta = meta.copy(updatedAt = System.currentTimeMillis())
+                withContext(Dispatchers.IO) {
+                    repository.saveEfx(meta.id, draft)
+                    repository.saveProjectMetadata(updatedMeta)
+                }
+                savedEfx = draft
+                _metadata.value = updatedMeta
+                refreshHistoryFlags()
+                _message.value = Loc.str(R.string.efx_edit_view_model_9)
+                onSaved()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Save failed", e)
+                _message.value = Loc.str(R.string.efx_edit_view_model_10, e.message)
+            } finally {
+                _saving.value = false
+            }
+        }
+    }
+
+    /**
+     * 음악 ID 는 프로젝트 설정이라 즉시 저장한다. 디스크(저장본)와 작업본의 헤더만 바꾸고
+     * 작업본의 엔트리(미저장 편집)는 건드리지 않는다.
+     */
+    private suspend fun persistMusicId(projectId: String, musicId: Int) {
+        val saved = savedEfx ?: return
+        val newSaved = Efx(saved.header.copy(musicId = musicId), saved.body)
+        withContext(Dispatchers.IO) { repository.saveEfx(projectId, newSaved) }
+        savedEfx = newSaved
+        _efx.value?.let { d -> _efx.value = Efx(d.header.copy(musicId = musicId), d.body) }
     }
 
     fun startEditingEntry(index: Int, entry: EfxEntry) {

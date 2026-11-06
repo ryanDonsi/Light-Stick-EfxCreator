@@ -1,0 +1,472 @@
+package com.efxcreator.viewmodel
+
+import android.app.Application
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.efxcreator.R
+import com.efxcreator.core.CountdownSoundPlayer
+import com.efxcreator.core.GameBgmPlayer
+import com.efxcreator.core.Loc
+import com.efxcreator.game.GameBleManager
+import com.efxcreator.model.GameDifficulty
+import com.efxcreator.model.GameMode
+import com.efxcreator.model.GameResultSummary
+import com.efxcreator.model.GameState
+import com.efxcreator.model.Team
+import com.efxcreator.model.WandResult
+import com.lightstick.game.GameMode as SdkGameMode
+import com.lightstick.game.GameResult
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+/** 게임 모드 (Light-Stick-Music 에서 이식). 설정 > 게임 화면이 사용한다. */
+class GameViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val gameBleManager = GameBleManager()
+
+    companion object {
+        private const val TAG = "GameVM"
+        private const val RESULT_COLLECT_WINDOW_MS = 4_000L
+        private const val AUTO_START_DELAY_MS = 2_000L
+        private const val TEAM_CONFIRM_DISPLAY_MS = 1_200L
+        private const val TEAM_ROUND_REST_MS = 1_000L
+        private const val TEAM_CONFIRM_TIMEOUT_MS = 8_000L
+        // 기기 실측 라운드 진행시간이 클라이언트 추정치보다 조금 길 수 있어, 로컬 타이머가
+        // 실제 결과 Notify보다 먼저 만료돼 0점으로 잘못 마감하지 않도록 여유를 둔다.
+        private const val TEAM_RESULT_GRACE_SEC = 4
+
+        private fun maxPlaySeconds(mode: GameMode, difficulty: GameDifficulty): Int =
+            (mode.toSdkMode().resultTimeoutMs(difficulty.toSdkLevel()) / 1000L).toInt()
+
+        /** Mode 4: 라운드 수 × (측정시간 + 라운드 간 휴식 1초) + 결과 수신 여유시간 */
+        private fun maxTeamPlaySeconds(rounds: Int, difficulty: GameDifficulty): Int =
+            rounds * (difficulty.teamMeasureMs / 1000 + (TEAM_ROUND_REST_MS / 1000L).toInt()) + TEAM_RESULT_GRACE_SEC
+    }
+
+    private val _selectedMode = MutableStateFlow<GameMode?>(null)
+    val selectedMode: StateFlow<GameMode?> = _selectedMode.asStateFlow()
+
+    private val _selectedDifficulty = MutableStateFlow(GameDifficulty.NORMAL)
+    val selectedDifficulty: StateFlow<GameDifficulty> = _selectedDifficulty.asStateFlow()
+
+    /** Mode 4 전용 — 라운드 수(1~3) */
+    private val _selectedRounds = MutableStateFlow(2)
+    val selectedRounds: StateFlow<Int> = _selectedRounds.asStateFlow()
+
+    private val _gameState = MutableStateFlow<GameState>(GameState.Idle)
+    val gameState: StateFlow<GameState> = _gameState.asStateFlow()
+
+    val bleConnectionState    = gameBleManager.connectionState
+    val isGameModeSupported   = gameBleManager.isGameModeSupported
+
+    private val _countdownSeconds = MutableStateFlow(0)
+    val countdownSeconds: StateFlow<Int> = _countdownSeconds.asStateFlow()
+
+    private val _playingElapsedSeconds = MutableStateFlow(0)
+    val playingElapsedSeconds: StateFlow<Int> = _playingElapsedSeconds.asStateFlow()
+    private val _playingMaxSeconds = MutableStateFlow(0)
+    val playingMaxSeconds: StateFlow<Int> = _playingMaxSeconds.asStateFlow()
+    private var timerJob: Job? = null
+
+    private val collectedResults = mutableListOf<WandResult>()
+    private var resultCollectJob: Job? = null
+    private var teamConfirmTimeoutJob: Job? = null
+
+    private val _partialResults = MutableStateFlow<List<WandResult>>(emptyList())
+    val partialResults: StateFlow<List<WandResult>> = _partialResults.asStateFlow()
+
+    private val countdownSoundPlayer = CountdownSoundPlayer()
+    private val gameBgmPlayer = GameBgmPlayer()
+    private var bgmSpeedLevel = 0   // 0=normal  1=×1.3(≤60%)  2=×1.5(≤30%)
+
+    init {
+        observeGameResults()
+    }
+
+    fun selectMode(mode: GameMode) {
+        _selectedMode.value = mode
+        _selectedDifficulty.value = mode.defaultDifficulty
+        if (_gameState.value is GameState.Finished || _gameState.value is GameState.Error) {
+            _gameState.value = GameState.Idle
+        }
+    }
+
+    fun selectDifficulty(difficulty: GameDifficulty) {
+        _selectedDifficulty.value = difficulty
+    }
+
+    fun selectRounds(rounds: Int) {
+        _selectedRounds.value = rounds.coerceIn(1, 3)
+    }
+
+    /** BLE 연결 (화면 진입 시 호출) */
+    fun connectIfNeeded() {
+        gameBleManager.connect()
+    }
+
+    /** 게임 시작. Mode 4는 수동 팀 배정(RED→BLUE)부터, 나머지는 곧바로 READY 전송 */
+    fun startGame() {
+        val mode = _selectedMode.value ?: return
+
+        resetRoundState()
+
+        if (mode == GameMode.MANUAL_TEAM) {
+            startTeamAssignFlow()
+            return
+        }
+
+        val difficulty = _selectedDifficulty.value
+        val ok = gameBleManager.startGame(mode, difficulty)
+        if (!ok) {
+            _gameState.value = GameState.Error(Loc.str(R.string.game_err_send_failed))
+            return
+        }
+        beginReadyCountdown(mode, maxPlaySeconds(mode, difficulty))
+    }
+
+    /** Mode 4 — RED팀 배정 시작(cmd=7, level=0) */
+    private fun startTeamAssignFlow() {
+        val ok = gameBleManager.startTeamAssign(Team.RED)
+        if (!ok) {
+            _gameState.value = GameState.Error(Loc.str(R.string.game_err_send_failed))
+            return
+        }
+        _gameState.value = GameState.TeamAssigning(Team.RED)
+    }
+
+    /** Mode 4 — 현재 팀 배정 종료(cmd=9) 버튼 클릭 시 호출 */
+    fun confirmTeamAssignment() {
+        val state = _gameState.value as? GameState.TeamAssigning ?: return
+        if (state.endSent) return // 이미 END 전송 후 집계 Notify 대기 중 — 중복 전송 방지
+
+        val ok = gameBleManager.endTeamAssign(state.team)
+        if (!ok) {
+            _gameState.value = GameState.Error(Loc.str(R.string.game_err_send_failed))
+            return
+        }
+        _gameState.value = state.copy(endSent = true)
+
+        // 집계 Notify가 일정 시간 내 오지 않으면 버튼을 다시 활성화해 재시도할 수 있게 함
+        teamConfirmTimeoutJob?.cancel()
+        teamConfirmTimeoutJob = viewModelScope.launch {
+            delay(TEAM_CONFIRM_TIMEOUT_MS)
+            val cur = _gameState.value as? GameState.TeamAssigning ?: return@launch
+            if (cur.team == state.team && cur.endSent && cur.confirmedCount == null) {
+                _gameState.value = cur.copy(endSent = false)
+            }
+        }
+    }
+
+    /** 게임 강제 중지 */
+    fun stopGame() {
+        gameBleManager.stopGame()
+        resultCollectJob?.cancel()
+        teamConfirmTimeoutJob?.cancel()
+        cancelTimer()
+        gameBgmPlayer.stop()
+        _partialResults.value = emptyList()
+        _gameState.value = GameState.Idle
+    }
+
+    /** 진행 중(카운트다운/팀 배정/플레이)일 때만 중지한다. 화면을 떠날 때 사용. */
+    fun stopIfRunning() {
+        when (_gameState.value) {
+            is GameState.Ready, is GameState.Playing, is GameState.TeamAssigning -> stopGame()
+            else -> Unit
+        }
+    }
+
+    /** 결과 화면 → 다시 모드 선택으로 */
+    fun resetToIdle() {
+        gameBleManager.clearGame()
+        collectedResults.clear()
+        resultCollectJob?.cancel()
+        teamConfirmTimeoutJob?.cancel()
+        cancelTimer()
+        gameBgmPlayer.stop()
+        _partialResults.value = emptyList()
+        _gameState.value = GameState.Idle
+    }
+
+    private fun resetRoundState() {
+        collectedResults.clear()
+        resultCollectJob?.cancel()
+        _partialResults.value = emptyList()
+        bgmSpeedLevel = 0
+    }
+
+    /** READY 전송 후 공통 흐름: 2초 카운트다운 → Playing 진입 → BGM/타이머 시작 */
+    private fun beginReadyCountdown(mode: GameMode, maxSecs: Int) {
+        _gameState.value = GameState.Ready
+
+        viewModelScope.launch {
+            for (sec in AUTO_START_DELAY_MS.toInt() / 1000 downTo 1) {
+                _countdownSeconds.value = sec
+                countdownSoundPlayer.playShortBeep()
+                delay(1_000L)
+            }
+            _countdownSeconds.value = 0
+            countdownSoundPlayer.playLongBeep()
+            _gameState.value = GameState.Playing
+            gameBgmPlayer.start(mode)
+            startPlayingTimer(maxSecs)
+        }
+    }
+
+    /** Mode 4 — 양 팀 배정 확정 후 READY(cmd=1) 전송 및 라운드 진행 시작 */
+    private fun beginTeamRounds() {
+        val rounds = _selectedRounds.value
+        val difficulty = _selectedDifficulty.value
+
+        val ok = gameBleManager.startTeamGame(rounds, difficulty)
+        if (!ok) {
+            _gameState.value = GameState.Error(Loc.str(R.string.game_err_send_failed))
+            return
+        }
+        beginReadyCountdown(GameMode.MANUAL_TEAM, maxTeamPlaySeconds(rounds, difficulty))
+    }
+
+    private fun startPlayingTimer(maxSecs: Int) {
+        timerJob?.cancel()
+        _playingElapsedSeconds.value = 0
+        _playingMaxSeconds.value = maxSecs
+        timerJob = viewModelScope.launch {
+            while (true) {
+                delay(1_000L)
+                val elapsed = _playingElapsedSeconds.value + 1
+                _playingElapsedSeconds.value = elapsed
+                if (maxSecs > 0) {
+                    val remaining = (maxSecs - elapsed).toFloat() / maxSecs
+                    when {
+                        bgmSpeedLevel < 2 && remaining <= 0.3f -> { bgmSpeedLevel = 2; gameBgmPlayer.setBpmMultiplier(1.5f) }
+                        bgmSpeedLevel < 1 && remaining <= 0.6f -> { bgmSpeedLevel = 1; gameBgmPlayer.setBpmMultiplier(1.3f) }
+                    }
+                }
+
+                // 시간 초과 → 현재까지 수집된 결과로 자동 종료
+                if (maxSecs > 0 && elapsed >= maxSecs && _gameState.value is GameState.Playing) {
+                    finalizeTimeout()
+                    break
+                }
+            }
+        }
+    }
+
+    private fun finalizeTimeout() {
+        cancelTimer()
+        gameBgmPlayer.stop()
+        gameBgmPlayer.playFanfare()
+
+        val mode = _selectedMode.value ?: return
+        val results = collectedResults.toList()
+        val summary = GameResultSummary(
+            mode           = mode,
+            wandResults    = results,
+            totalWandCount = results.size,
+            totalRedScore  = results.sumOf { it.redScore },
+            totalBlueScore = results.sumOf { it.blueScore }
+        )
+        sendWinnerIfApplicable(mode, summary)
+
+        // TEAM_BATTLE/MANUAL_TEAM은 결과가 단일 합산 Notify로만 오므로, 그게 아직
+        // 안 온 상태에서 로컬 타이머가 먼저 만료된 것 — 실제 결과가 뒤이어 도착하면
+        // 아래 onLateSummaryReceived()가 이 잠정 결과를 교체한다.
+        val isTeamSummaryMode = mode == GameMode.TEAM_BATTLE || mode == GameMode.MANUAL_TEAM
+        _gameState.value = GameState.Finished(summary, isProvisional = isTeamSummaryMode && results.isEmpty())
+    }
+
+    private fun cancelTimer() {
+        timerJob?.cancel()
+        timerJob = null
+    }
+
+    private fun observeGameResults() {
+        viewModelScope.launch {
+            gameBleManager.gameResultFlow.collect { result ->
+                val state = _gameState.value
+                Log.d(
+                    TAG,
+                    "gameResult received: mode=${result.mode} cmdIndex=${result.cmdIndex} " +
+                        "redScore=${result.redScore} blueScore=${result.blueScore} " +
+                        "totalCount=${result.totalCount} wandId=${result.wandId} state=${state::class.simpleName}"
+                )
+                when {
+                    state is GameState.Playing || state is GameState.Ready ->
+                        onResultReceived(result)
+                    state is GameState.Finished && result.isWandIdValid ->
+                        onLateResultReceived(result)
+                    state is GameState.Finished && !result.isWandIdValid && state.isProvisional ->
+                        onLateSummaryReceived(result)
+                    state is GameState.TeamAssigning ->
+                        onTeamConfirmReceived(state, result)
+                }
+            }
+        }
+    }
+
+    /** Mode 4 — TEAM_ASSIGN_END 전송 후 도착하는 집계 Notify(cmd=8) 처리 */
+    private fun onTeamConfirmReceived(state: GameState.TeamAssigning, result: GameResult) {
+        if (result.cmdIndex != GameResult.CMD_TEAM_CONFIRM) return
+        if (state.confirmedCount != null) return // 이미 처리된 집계
+
+        // wandId 필드가 팀ID로 재해석됨: 0=RED / 1=BLUE
+        val confirmedTeam = if (result.wandId == Team.BLUE.teamId) Team.BLUE else Team.RED
+        if (confirmedTeam != state.team) return
+
+        teamConfirmTimeoutJob?.cancel()
+        _gameState.value = state.copy(confirmedCount = result.totalCount)
+
+        viewModelScope.launch {
+            delay(TEAM_CONFIRM_DISPLAY_MS)
+            if (state.team == Team.RED) {
+                val ok = gameBleManager.startTeamAssign(Team.BLUE)
+                if (!ok) {
+                    _gameState.value = GameState.Error(Loc.str(R.string.game_err_send_failed))
+                    return@launch
+                }
+                _gameState.value = GameState.TeamAssigning(Team.BLUE)
+            } else {
+                beginTeamRounds()
+            }
+        }
+    }
+
+    private fun onResultReceived(result: GameResult) {
+        if (!result.isWandIdValid) {
+            resultCollectJob?.cancel()
+            finalizeSummaryPacket(result)
+            return
+        }
+
+        val wandResult = WandResult(
+            wandId = result.wandId,
+            redScore = result.redScore,
+            blueScore = result.blueScore
+        )
+
+        if (collectedResults.none { it.wandId == wandResult.wandId }) {
+            collectedResults.add(wandResult)
+            val mode = _selectedMode.value
+            if (mode == GameMode.SPEED_REACTION || mode == GameMode.TEMPO) {
+                _partialResults.value = collectedResults.toList()
+            }
+        }
+
+        resultCollectJob?.cancel()
+        resultCollectJob = viewModelScope.launch {
+            delay(RESULT_COLLECT_WINDOW_MS)
+            finalizeResults(result.mode)
+        }
+    }
+
+    private fun onLateResultReceived(result: GameResult) {
+        val wandResult = WandResult(
+            wandId = result.wandId,
+            redScore = result.redScore,
+            blueScore = result.blueScore
+        )
+        val current = _gameState.value as? GameState.Finished ?: return
+        if (current.summary.wandResults.any { it.wandId == wandResult.wandId }) return
+
+        collectedResults.add(wandResult)
+        val updated = current.summary.wandResults + wandResult
+        _gameState.value = GameState.Finished(
+            current.summary.copy(
+                wandResults    = updated,
+                totalWandCount = updated.size,
+                totalRedScore  = updated.sumOf { it.redScore },
+                totalBlueScore = updated.sumOf { it.blueScore }
+            )
+        )
+    }
+
+    /**
+     * 로컬 타이머 만료로 잠정(0점) 마감된 뒤, 뒤늦게 도착한 진짜 합산 결과 Notify로
+     * 화면을 교체한다. (TEAM_BATTLE/MANUAL_TEAM처럼 결과가 단일 Notify로만 오는 모드에서
+     * 기기 쪽 실제 라운드 진행 시간이 클라이언트 추정치보다 살짝 길 때 발생)
+     */
+    private fun onLateSummaryReceived(result: GameResult) {
+        val mode = GameMode.fromSdkMode(result.mode) ?: _selectedMode.value ?: return
+        val summary = GameResultSummary(
+            mode           = mode,
+            wandResults    = emptyList(),
+            totalWandCount = result.totalCount,
+            totalRedScore  = result.redScore,
+            totalBlueScore = result.blueScore
+        )
+        sendWinnerIfApplicable(mode, summary)
+        _gameState.value = GameState.Finished(summary, isProvisional = false)
+    }
+
+    private fun finalizeSummaryPacket(result: GameResult) {
+        cancelTimer()
+        gameBgmPlayer.stop()
+        gameBgmPlayer.playFanfare()
+        val mode = GameMode.fromSdkMode(result.mode) ?: _selectedMode.value ?: return
+        val accumulated = collectedResults.toList()
+
+        val summary = if (accumulated.isNotEmpty()) {
+            GameResultSummary(
+                mode           = mode,
+                wandResults    = accumulated,
+                totalWandCount = result.totalCount.takeIf { it > 0 } ?: accumulated.size,
+                totalRedScore  = accumulated.sumOf { it.redScore },
+                totalBlueScore = accumulated.sumOf { it.blueScore }
+            )
+        } else {
+            GameResultSummary(
+                mode           = mode,
+                wandResults    = emptyList(),
+                totalWandCount = result.totalCount,
+                totalRedScore  = result.redScore,
+                totalBlueScore = result.blueScore
+            )
+        }
+
+        sendWinnerIfApplicable(mode, summary)
+        _gameState.value = GameState.Finished(summary)
+    }
+
+    private fun finalizeResults(sdkMode: SdkGameMode) {
+        cancelTimer()
+        gameBgmPlayer.stop()
+        gameBgmPlayer.playFanfare()
+        val mode = GameMode.fromSdkMode(sdkMode) ?: _selectedMode.value ?: return
+
+        val results = collectedResults.toList()
+        if (results.isEmpty()) {
+            _gameState.value = GameState.Error(Loc.str(R.string.game_err_no_result))
+            return
+        }
+
+        val summary = GameResultSummary(
+            mode = mode,
+            wandResults = results,
+            totalWandCount = results.size,
+            totalRedScore = results.sumOf { it.redScore },
+            totalBlueScore = results.sumOf { it.blueScore }
+        )
+
+        sendWinnerIfApplicable(mode, summary)
+        _gameState.value = GameState.Finished(summary)
+    }
+
+    private fun sendWinnerIfApplicable(mode: GameMode, summary: GameResultSummary) {
+        if (mode == GameMode.TEAM_BATTLE || mode == GameMode.MANUAL_TEAM) return
+        val winner = summary.soloWinner ?: return
+        val sent = gameBleManager.sendWinner(mode, winner.wandId)
+        if (!sent) Log.w(TAG, "sendWinner skipped: mode=$mode, wandId=${winner.wandId}")
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        countdownSoundPlayer.release()
+        gameBgmPlayer.release()
+        gameBleManager.disconnect()
+    }
+}

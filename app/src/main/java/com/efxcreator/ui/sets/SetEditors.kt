@@ -1,0 +1,532 @@
+package com.efxcreator.ui.sets
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.AlertDialog
+import com.efxcreator.ui.editor.formatBeatsLabel
+import com.efxcreator.ui.components.NumberTextField
+import com.efxcreator.music.sets.RuleCase
+import com.efxcreator.music.effect.EffectMatchingEngine.FgEngine
+import com.efxcreator.model.EffectPattern
+import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Checkbox
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.efxcreator.ui.components.HsvColorPicker
+import com.efxcreator.ui.device.activityBleViewModel
+import com.efxcreator.music.sets.EffectRuleSet
+import com.efxcreator.music.sets.PaletteSet
+import com.efxcreator.music.sets.RgbColor
+import com.efxcreator.music.sets.SetCatalog
+import kotlin.math.roundToInt
+import com.efxcreator.R
+import com.efxcreator.core.Loc
+
+/** 색 빠른 선택용 (Light-Stick-Music 팔레트 색 계열) */
+private val QUICK_COLORS = listOf(
+    RgbColor(255, 0, 0), RgbColor(255, 117, 0), RgbColor(255, 249, 0), RgbColor(0, 255, 36),
+    RgbColor(0, 255, 255), RgbColor(0, 0, 255), RgbColor(164, 0, 255), RgbColor(255, 0, 155),
+    RgbColor(255, 255, 255)
+)
+
+/**
+ * 팔레트 세트 추가/수정. [initial] 의 id 로 저장되므로 새 세트는 새 id 를 가진 값을 넘긴다.
+ */
+@Composable
+fun PaletteSetEditorDialog(
+    initial: PaletteSet,
+    isNew: Boolean,
+    onSave: (PaletteSet) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initial.name) }
+    val colors = remember { initial.colors.toMutableStateList() }
+    var selectedSlot by remember { mutableIntStateOf(0) }
+    val current = colors[selectedSlot]
+
+    // 연결된 디바이스에 편집 중인 색을 실시간으로 표시한다 (닫을 때 끈다)
+    val bleVm = activityBleViewModel()
+    val connectedDevice by bleVm.connected.collectAsState()
+    val deviceConnected = connectedDevice != null
+    LaunchedEffect(current, deviceConnected) { bleVm.previewColor(current.r, current.g, current.b) }
+    DisposableEffect(Unit) { onDispose { bleVm.stopPreview() } }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isNew) Loc.str(R.string.set_editors_1) else Loc.str(R.string.set_editors_2)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .width(460.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(Loc.str(R.string.set_editors_3)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(Loc.str(R.string.set_editors_4), style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    colors.forEachIndexed { i, c ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .background(c.toComposeColor(), MaterialTheme.shapes.large)
+                                    .border(
+                                        if (i == selectedSlot) 3.dp else 1.dp,
+                                        if (i == selectedSlot) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline,
+                                        MaterialTheme.shapes.large
+                                    )
+                                    .clickable { selectedSlot = i }
+                            )
+                            Text(PaletteSet.COLOR_ROLES[i], style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+
+                Text(
+                    "${PaletteSet.COLOR_ROLES[selectedSlot]}: RGB(${current.r}, ${current.g}, ${current.b})",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                HsvColorPicker(color = current, onChange = { colors[selectedSlot] = it })
+                Text(
+                    if (deviceConnected) Loc.str(R.string.timeline_entry_dialog_15)
+                    else Loc.str(R.string.timeline_entry_dialog_16),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (deviceConnected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(Loc.str(R.string.set_editors_5), style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    QUICK_COLORS.forEach { q ->
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .background(q.toComposeColor(), MaterialTheme.shapes.extraSmall)
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), MaterialTheme.shapes.extraSmall)
+                                .clickable { colors[selectedSlot] = q }
+                        )
+                    }
+                }
+                Text(
+                    Loc.str(R.string.set_editors_6),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank(),
+                onClick = {
+                    onSave(
+                        initial.copy(
+                            name = name.trim(),
+                            main = colors[0], step1 = colors[1], step2 = colors[2], step3 = colors[3],
+                            builtIn = false
+                        )
+                    )
+                }
+            ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
+    )
+}
+
+@Composable
+private fun ChannelSlider(label: String, value: Int, onChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, modifier = Modifier.width(20.dp), style = MaterialTheme.typography.labelMedium)
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onChange(it.roundToInt().coerceIn(0, 255)) },
+            valueRange = 0f..255f,
+            modifier = Modifier.weight(1f)
+        )
+        Text(value.toString(), modifier = Modifier.width(36.dp), style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/**
+ * 이펙트 세트(섹션별 규칙) 추가/수정.
+ * 섹션마다 "자동"(엔진 기본 동작)이거나, 직접 지정한 규칙 목록을 쓴다. 규칙은 조건(마디 에너지, 섹션 에너지, 곡 분위기)과
+ * 이펙트(엔진 기본 패턴 또는 이펙트 라이브러리의 이펙트)로 이뤄지고, 위에서부터 조건이 맞는 첫 규칙이 적용된다.
+ */
+@Composable
+fun EffectSetEditorDialog(
+    initial: EffectRuleSet,
+    isNew: Boolean,
+    patterns: List<EffectPattern>,
+    onSave: (EffectRuleSet) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initial.name) }
+    // 섹션 -> 규칙 목록 (비어 있으면 "자동")
+    val sections = remember {
+        mutableStateMapOf<String, List<RuleCase>>().apply {
+            SetCatalog.EDITABLE_SECTIONS.forEach { (key, _) ->
+                val list = initial.casesFor(key).map { legacyMoodToGenres(it) }.ifEmpty {
+                    initial.rules[key]?.let { listOf(RuleCase(it)) }.orEmpty()
+                }
+                if (list.isNotEmpty()) put(key, list)
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isNew) Loc.str(R.string.set_editors_7) else Loc.str(R.string.set_editors_8)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .width(560.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(Loc.str(R.string.set_editors_3)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    Loc.str(R.string.set_editors_9),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                SetCatalog.EDITABLE_SECTIONS.forEach { (key, label) ->
+                    SectionRuleCard(
+                        sectionKey = key,
+                        sectionLabel = label,
+                        cases = sections[key].orEmpty(),
+                        patterns = patterns,
+                        onChange = { list -> if (list.isEmpty()) sections.remove(key) else sections[key] = list }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank(),
+                onClick = {
+                    // 조건 없이 엔진 기본 패턴 하나뿐인 섹션은 예전 형식(rules)으로, 나머지는 조건부 규칙(cases)으로 저장한다
+                    val rules = mutableMapOf<String, String>()
+                    val cases = mutableMapOf<String, List<RuleCase>>()
+                    sections.forEach { (key, list) ->
+                        val only = list.singleOrNull()
+                        if (only != null && !only.hasCondition && only.engine != null) rules[key] = only.effect
+                        else cases[key] = list
+                    }
+                    onSave(initial.copy(name = name.trim(), rules = rules, cases = cases.ifEmpty { null }, builtIn = false))
+                }
+            ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
+    )
+}
+
+/** 섹션 하나의 규칙 편집: 자동/직접 지정 전환, 기본 동작 표시, 규칙 목록 */
+@Composable
+private fun SectionRuleCard(
+    sectionKey: String,
+    sectionLabel: String,
+    cases: List<RuleCase>,
+    patterns: List<EffectPattern>,
+    onChange: (List<RuleCase>) -> Unit
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(sectionLabel, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                FilterChip(
+                    selected = cases.isEmpty(),
+                    onClick = { onChange(emptyList()) },
+                    label = { Text(Loc.str(R.string.effect_sets_18)) }
+                )
+                Spacer(Modifier.width(8.dp))
+                FilterChip(
+                    selected = cases.isNotEmpty(),
+                    onClick = {
+                        if (cases.isEmpty()) {
+                            val start = SetCatalog.DEFAULT_RULES[sectionKey] ?: FgEngine.BREATH.name
+                            onChange(listOf(RuleCase(start)))
+                        }
+                    },
+                    label = { Text(Loc.str(R.string.set_editors_10)) }
+                )
+            }
+            // 이 섹션이 곡의 어디인지
+            SetCatalog.SECTION_DESCRIPTIONS[sectionKey]?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            // 자동일 때 엔진이 실제로 하는 동작
+            Text(
+                Loc.str(R.string.set_editors_11) + (SetCatalog.DEFAULT_BEHAVIOR[sectionKey] ?: "-"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (cases.isNotEmpty()) {
+                cases.forEachIndexed { i, case ->
+                    CaseEditor(
+                        index = i,
+                        case = case,
+                        count = cases.size,
+                        patterns = patterns,
+                        onChange = { c -> onChange(cases.toMutableList().also { it[i] = c }) },
+                        onMove = { delta ->
+                            val j = i + delta
+                            if (j in cases.indices) {
+                                onChange(cases.toMutableList().also { val t = it[i]; it[i] = it[j]; it[j] = t })
+                            }
+                        },
+                        onDelete = { onChange(cases.toMutableList().also { it.removeAt(i) }) }
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onChange(cases + RuleCase(FgEngine.BREATH.name)) }) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(Loc.str(R.string.set_editors_12))
+                    }
+                    if (sectionKey == "VERSE") {
+                        TextButton(onClick = { onChange(SetCatalog.DEFAULT_VERSE_CASES) }) { Text(Loc.str(R.string.set_editors_13)) }
+                    }
+                }
+                Text(
+                    Loc.str(R.string.set_editors_14),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CaseEditor(
+    index: Int,
+    case: RuleCase,
+    count: Int,
+    patterns: List<EffectPattern>,
+    onChange: (RuleCase) -> Unit,
+    onMove: (Int) -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(Loc.str(R.string.set_editors_15, index + 1), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = { onMove(-1) }, enabled = index > 0) {
+                    Icon(Icons.Default.ArrowUpward, contentDescription = Loc.str(R.string.pattern_panel_20))
+                }
+                IconButton(onClick = { onMove(1) }, enabled = index < count - 1) {
+                    Icon(Icons.Default.ArrowDownward, contentDescription = Loc.str(R.string.pattern_panel_21))
+                }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = Loc.str(R.string.set_editors_16)) }
+            }
+            EffectChoice(case.effect, patterns) { onChange(case.copy(effect = it)) }
+
+            // 조건: 곡 분위기(장르). 아무것도 고르지 않은 "전체" 가 기본(그 외 모두)이고, 여러 장르를 함께 고를 수 있다.
+            // 칩이 한 줄에 다 들어가지 않으므로 줄바꿈이 되는 FlowRow 를 쓴다.
+            Text(Loc.str(R.string.set_editors_17), style = MaterialTheme.typography.labelMedium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                FilterChip(
+                    selected = case.genres == null,
+                    onClick = { onChange(case.copy(genres = null, mood = null)) },
+                    label = { Text(Loc.str(R.string.set_editors_18)) }
+                )
+                SetCatalog.GENRES.forEach { (key, label) ->
+                    val selected = case.genres?.contains(key) == true
+                    FilterChip(
+                        selected = selected,
+                        onClick = {
+                            val next = (case.genres.orEmpty()).let { if (selected) it - key else it + key }
+                            onChange(case.copy(genres = next.ifEmpty { null }, mood = null))
+                        },
+                        label = { Text(label) }
+                    )
+                }
+            }
+            // 조건: 마디 에너지 / 섹션 에너지
+            EnergyCondition(
+                label = Loc.str(R.string.set_editors_19),
+                hint = Loc.str(R.string.set_editors_20),
+                min = case.minBarEnergy, max = case.maxBarEnergy,
+                onChange = { mn, mx -> onChange(case.copy(minBarEnergy = mn, maxBarEnergy = mx)) }
+            )
+            EnergyCondition(
+                label = Loc.str(R.string.set_editors_21),
+                hint = Loc.str(R.string.set_editors_22),
+                min = case.minSectionEnergy, max = case.maxSectionEnergy,
+                onChange = { mn, mx -> onChange(case.copy(minSectionEnergy = mn, maxSectionEnergy = mx)) }
+            )
+            Text(
+                case.describe(patterns),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/** 에너지 범위 조건: 체크하면 이상/이하(%) 입력칸이 나타난다 */
+@Composable
+private fun EnergyCondition(label: String, hint: String, min: Int?, max: Int?, onChange: (Int?, Int?) -> Unit) {
+    val enabled = min != null || max != null
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = enabled, onCheckedChange = { on -> if (on) onChange(50, null) else onChange(null, null) })
+            Text(label, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.width(8.dp))
+            Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (enabled) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 40.dp)
+            ) {
+                NumberTextField(
+                    value = min ?: 0, onValueChange = { onChange(it, max) },
+                    label = Loc.str(R.string.set_editors_23), range = 0..100, modifier = Modifier.width(110.dp)
+                )
+                Text("~", style = MaterialTheme.typography.bodyMedium)
+                NumberTextField(
+                    value = max ?: 100, onValueChange = { onChange(min, it) },
+                    label = Loc.str(R.string.set_editors_24), range = 0..100, modifier = Modifier.width(110.dp)
+                )
+            }
+        }
+    }
+}
+
+/** 이펙트 선택: 엔진 기본 패턴 + 이펙트 라이브러리의 이펙트 */
+@Composable
+private fun EffectChoice(effect: String, patterns: List<EffectPattern>, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(effectLabel(effect, patterns), modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text(
+                Loc.str(R.string.set_editors_25), style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+            SetCatalog.PATTERNS.forEach { info ->
+                DropdownMenuItem(
+                    text = { Column { Text(info.label); Text(info.description, style = MaterialTheme.typography.labelSmall) } },
+                    onClick = { onSelect(info.engine.name); expanded = false }
+                )
+            }
+            if (patterns.isNotEmpty()) {
+                HorizontalDivider()
+                Text(
+                    Loc.str(R.string.settings_screen_17), style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+                patterns.forEach { p ->
+                    DropdownMenuItem(
+                        text = { Column { Text(p.name); Text(Loc.str(R.string.set_editors_26, p.steps.size, formatBeatsLabel(p.totalBeatsTenths)), style = MaterialTheme.typography.labelSmall) } },
+                        onClick = { onSelect(RuleCase.library(p.id)); expanded = false }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun effectLabel(effect: String, patterns: List<EffectPattern>): String {
+    if (effect.startsWith(RuleCase.PATTERN_PREFIX)) {
+        val id = effect.removePrefix(RuleCase.PATTERN_PREFIX)
+        return patterns.firstOrNull { it.id == id }?.let { Loc.str(R.string.set_editors_27, it.name) } ?: Loc.str(R.string.set_editors_28)
+    }
+    return SetCatalog.patternLabel(effect)
+}
+
+/** "마디 에너지 80% 이상 · 비발라드 → BLINK" */
+fun RuleCase.describe(patterns: List<EffectPattern>): String {
+    val conds = buildList {
+        if (minBarEnergy != null || maxBarEnergy != null) add(Loc.str(R.string.set_editors_29, rangeText(minBarEnergy, maxBarEnergy)))
+        if (minSectionEnergy != null || maxSectionEnergy != null) add(Loc.str(R.string.set_editors_30, rangeText(minSectionEnergy, maxSectionEnergy)))
+        genres?.let { add(it.joinToString("/") { g -> SetCatalog.genreLabel(g) }) }
+        when (mood) { "BALLAD" -> add(Loc.str(R.string.set_editors_31)); "NON_BALLAD" -> add(Loc.str(R.string.set_editors_32)) }
+    }
+    val target = effectLabel(effect, patterns)
+    return if (conds.isEmpty()) Loc.str(R.string.set_editors_33, target) else conds.joinToString(" · ") + " → $target"
+}
+
+private fun rangeText(min: Int?, max: Int?): String = when {
+    min != null && max != null -> "$min~$max%"
+    min != null -> Loc.str(R.string.set_editors_34, min)
+    else -> Loc.str(R.string.set_editors_35, max)
+}
+
+/** 이전 버전의 "발라드 / 발라드 외" 조건을 장르 선택으로 바꿔 편집할 수 있게 한다 */
+private fun legacyMoodToGenres(case: RuleCase): RuleCase = when (case.mood) {
+    "BALLAD" -> case.copy(mood = null, genres = SetCatalog.BALLAD_LIKE_GENRES)
+    "NON_BALLAD" -> case.copy(mood = null, genres = SetCatalog.GENRES.map { it.first } - SetCatalog.BALLAD_LIKE_GENRES.toSet())
+    else -> case
+}
