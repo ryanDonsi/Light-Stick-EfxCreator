@@ -23,6 +23,8 @@ import com.efxcreator.ui.components.HsvColorPicker
 import com.efxcreator.ui.components.NumberTextField
 import com.efxcreator.ui.device.activityBleViewModel
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.text.input.KeyboardType
 import com.efxcreator.model.EfxDurations
 import com.efxcreator.model.EfxOverwrite
@@ -154,18 +156,24 @@ fun TimelineEntryDialog(
         }
     }
 
+    val wide = LocalConfiguration.current.screenWidthDp >= 720
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = if (wide) Modifier.width(820.dp) else Modifier,
+        properties = DialogProperties(usePlatformDefaultWidth = !wide),
         title = { Text(title) },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 topContent?.invoke(this)
 
+                // 넓은 화면(태블릿)에서는 좌우 두 단으로 나눠 높이를 줄인다
+                // 왼쪽: 시작 시간 / 비트 스냅 / 지속 시간 / 덮어쓰기, 오른쪽: 종류 / 주기 / 색 / 고급 설정
+                val sectionLeft: @Composable ColumnScope.() -> Unit = {
                 // ========== Timestamp ==========
                 if (showTimestamp) Text(Loc.str(R.string.label_timestamp), style = MaterialTheme.typography.labelMedium)
                 if (showTimestamp) Row(
@@ -293,7 +301,8 @@ fun TimelineEntryDialog(
                     )
                 }
                 }
-
+                }
+                val sectionRight: @Composable ColumnScope.() -> Unit = {
                 // ========== Effect Type ==========
                 Text(Loc.str(R.string.label_effect_type), style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -412,22 +421,23 @@ fun TimelineEntryDialog(
                 // ========== Advanced Parameters ==========
                 Text(Loc.str(R.string.label_advanced_params), style = MaterialTheme.typography.titleSmall)
 
-                NumberTextField(
-                    value = spf,
-                    onValueChange = { spf = it },
-                    label = Loc.str(R.string.timeline_entry_dialog_6),
-                    range = 0..255,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NumberTextField(
+                        value = spf,
+                        onValueChange = { spf = it },
+                        label = Loc.str(R.string.timeline_entry_dialog_6),
+                        range = 0..255,
+                        modifier = Modifier.weight(1f)
+                    )
+                    NumberTextField(
+                        value = fade,
+                        onValueChange = { fade = it },
+                        label = Loc.str(R.string.timeline_entry_dialog_8),
+                        range = 0..100,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 UnitHint(TimelineMath.frameUnitLabel(spf) + Loc.str(R.string.timeline_entry_dialog_7))
-
-                NumberTextField(
-                    value = fade,
-                    onValueChange = { fade = it },
-                    label = Loc.str(R.string.timeline_entry_dialog_8),
-                    range = 0..100,
-                    modifier = Modifier.fillMaxWidth()
-                )
 
                 if (showTargetOptions) {
                 // Random Color Switch
@@ -452,6 +462,16 @@ fun TimelineEntryDialog(
                 UnitHint(if (randomDelay == 0) Loc.str(R.string.timeline_entry_dialog_10) else Loc.str(R.string.timeline_entry_dialog_11, TimelineMath.formatFrames(randomDelay, spf)))
 
                 GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
+                }
+                }
+                if (wide) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { sectionLeft() }
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { sectionRight() }
+                    }
+                } else {
+                    sectionLeft()
+                    sectionRight()
                 }
             }
         },
