@@ -83,8 +83,8 @@ private fun BeatBox(
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier = modifier
-            .width(88.dp)
-            .height(40.dp)
+            .width(72.dp)
+            .height(38.dp)
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
             .onFocusChanged { st -> if (st.isFocused) onFocusGained() else onFocusLost() },
         decorationBox = { inner -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { inner() } }
@@ -125,8 +125,8 @@ private fun TimeBox(
         ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier = modifier
-            .width((16 + 14 * maxDigits).dp)
-            .height(40.dp)
+            .width((12 + 12 * maxDigits).dp)
+            .height(38.dp)
             .border(1.dp, outline, RoundedCornerShape(8.dp))
             .onFocusChanged { st ->
                 if (st.isFocused) {
@@ -264,7 +264,7 @@ fun TimelineEntryDialog(
     val wide = LocalConfiguration.current.screenWidthDp >= 720
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = if (wide) Modifier.fillMaxWidth(0.92f).widthIn(max = 880.dp) else Modifier,
+        modifier = if (wide) Modifier.fillMaxWidth(0.85f).widthIn(max = 760.dp) else Modifier,
         properties = DialogProperties(usePlatformDefaultWidth = !wide),
         title = { Text(title) },
         text = {
@@ -306,13 +306,13 @@ fun TimelineEntryDialog(
                         // 비트 단위 조정: 스냅 ON 이면 1비트씩 다음/이전 비트로, OFF 면 0.1비트씩
                         OutlinedButton(
                             onClick = { focusManager.clearFocus(); stepStart(-1) },
-                            contentPadding = PaddingValues(horizontal = 10.dp),
-                            modifier = Modifier.height(40.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            modifier = Modifier.height(38.dp)
                         ) { Text(if (snapOn) "-1" else "-0.1") }
                         OutlinedButton(
                             onClick = { focusManager.clearFocus(); stepStart(+1) },
-                            contentPadding = PaddingValues(horizontal = 10.dp),
-                            modifier = Modifier.height(40.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            modifier = Modifier.height(38.dp)
                         ) { Text(if (snapOn) "+1" else "+0.1") }
                     }
                 }
@@ -371,8 +371,8 @@ fun TimelineEntryDialog(
                                 beatsText = fmtBeats(nb)
                                 duration = ticksOfBeats(nb)
                             },
-                            contentPadding = PaddingValues(horizontal = 10.dp),
-                            modifier = Modifier.height(40.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            modifier = Modifier.height(38.dp)
                         ) { Text("-0.1") }
                         OutlinedButton(
                             onClick = {
@@ -381,8 +381,8 @@ fun TimelineEntryDialog(
                                 beatsText = fmtBeats(nb)
                                 duration = ticksOfBeats(nb)
                             },
-                            contentPadding = PaddingValues(horizontal = 10.dp),
-                            modifier = Modifier.height(40.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            modifier = Modifier.height(38.dp)
                         ) { Text("+0.1") }
                     }
                 } else {
@@ -592,17 +592,17 @@ fun TimelineEntryDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp)
+                            .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.55f).dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // 각 단이 자기 스크롤을 가진다: 내용이 높이를 넘을 때만 스크롤되고, 한쪽을 스크롤해도 다른 쪽은 움직이지 않는다
                         Column(
-                            // 좌우 비율은 메인 화면(공연 목록 0.36 : 곡 목록 0.64)과 같게: 왼쪽은 시간 정보, 오른쪽은 이펙트 설정
-                            modifier = Modifier.weight(0.36f).verticalScroll(leftScroll),
+                            // 좌우 비율 4 : 6 — 왼쪽(시간 정보)이 오른쪽(이펙트 설정)보다 좁다
+                            modifier = Modifier.weight(0.4f).verticalScroll(leftScroll),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) { sectionLeft() }
                         Column(
-                            modifier = Modifier.weight(0.64f).verticalScroll(rightScroll),
+                            modifier = Modifier.weight(0.6f).verticalScroll(rightScroll),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) { sectionRight() }
                     }
