@@ -600,10 +600,6 @@
     <string name="auto_connect_desc">アプリ起動時にこの機器へ自動接続し、アプリ終了時に接続を解除します</string>
     <string name="auto_connect_devices_title">自動接続する機器</string>
     <string name="auto_connect_remove">解除</string>
-    <string name="exit_app_title">アプリを終了</string>
-    <string name="exit_app_message">アプリを終了しますか？</string>
-    <string name="exit_app_confirm">終了</string>
-    <string name="exit_app_cancel">キャンセル</string>
     <string name="label_duration">継続時間 (Duration)</string>
     <string name="duration_until_next">次のエフェクトまで (0)</string>
     <string name="broadcasting_ble_only">BLEモードのペンライトのみ設定できます（中継機は常に伝播）</string>
@@ -613,4 +609,5 @@
     <string name="bulk_delete_shows_message">公演 %1$d 件を削除します。\n公演内の曲は削除されず「未割り当て」に移動します。</string>
     <string name="bulk_delete_songs_title">曲を削除</string>
     <string name="bulk_delete_songs_message">曲 %1$d 件とエフェクトファイルを削除します。\nこの操作は取り消せません。</string>
+    <string name="exit_app_toast">もう一度押すと終了します</string>
 </resources>

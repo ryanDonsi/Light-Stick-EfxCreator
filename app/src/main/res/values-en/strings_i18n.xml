@@ -600,10 +600,6 @@
     <string name="auto_connect_desc">Connect to this device automatically when the app starts and disconnect when the app exits</string>
     <string name="auto_connect_devices_title">Auto-connect devices</string>
     <string name="auto_connect_remove">Remove</string>
-    <string name="exit_app_title">Exit app</string>
-    <string name="exit_app_message">Do you want to exit the app?</string>
-    <string name="exit_app_confirm">Exit</string>
-    <string name="exit_app_cancel">Cancel</string>
     <string name="label_duration">Duration</string>
     <string name="duration_until_next">Until next effect (0)</string>
     <string name="broadcasting_ble_only">Only available on BLE-mode light sticks (repeaters always relay)</string>
@@ -613,4 +609,5 @@
     <string name="bulk_delete_shows_message">Delete %1$d show(s)?\nSongs in them are not deleted; they move to Unassigned.</string>
     <string name="bulk_delete_songs_title">Delete songs</string>
     <string name="bulk_delete_songs_message">Delete %1$d song(s) and their effect files?\nThis cannot be undone.</string>
+    <string name="exit_app_toast">Press back again to exit</string>
 </resources>

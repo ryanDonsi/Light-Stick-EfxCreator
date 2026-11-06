@@ -10,7 +10,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.ui.window.DialogProperties
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -93,27 +92,24 @@ fun EfxListScreen(
         checkedSongIds = emptySet()
     }
 
-    // 메인 화면에서 시스템 뒤로 가기: 처음엔 종료 확인창, 확인창이 떠 있을 때 한 번 더 누르거나 [종료]를 누르면 앱 종료
-    var showExitConfirm by remember { mutableStateOf(false) }
+    // 메인 화면에서 시스템 뒤로 가기: 처음엔 "한 번 더 누르면 종료됩니다" 안내만 띄우고, 2초 안에 한 번 더 누르면 앱 종료
+    var lastBackAt by remember { mutableLongStateOf(0L) }
     val exitApp: () -> Unit = {
         var c = context
         while (c is ContextWrapper && c !is Activity) c = c.baseContext
         (c as? Activity)?.finish()
     }
-    BackHandler(enabled = !showExitConfirm && selectionMode == ListSelection.NONE) { showExitConfirm = true }
-    // 선택 모드에서는 뒤로 가기가 먼저 선택 모드를 해제한다
-    BackHandler(enabled = !showExitConfirm && selectionMode != ListSelection.NONE) { exitSelection() }
-    if (showExitConfirm) {
-        AlertDialog(
-            // 확인창이 떠 있는 동안의 뒤로 가기 = onDismissRequest. 바깥 터치로는 닫히지 않게 해 뒤로 가기만 종료로 이어지게 한다
-            onDismissRequest = exitApp,
-            properties = DialogProperties(dismissOnClickOutside = false),
-            title = { Text(Loc.str(R.string.exit_app_title)) },
-            text = { Text(Loc.str(R.string.exit_app_message)) },
-            confirmButton = { TextButton(onClick = exitApp) { Text(Loc.str(R.string.exit_app_confirm)) } },
-            dismissButton = { TextButton(onClick = { showExitConfirm = false }) { Text(Loc.str(R.string.exit_app_cancel)) } }
-        )
+    BackHandler(enabled = selectionMode == ListSelection.NONE) {
+        val now = System.currentTimeMillis()
+        if (now - lastBackAt <= 2_000L) {
+            exitApp()
+        } else {
+            lastBackAt = now
+            Toast.makeText(context, Loc.str(R.string.exit_app_toast), Toast.LENGTH_SHORT).show()
+        }
     }
+    // 선택 모드에서는 뒤로 가기가 먼저 선택 모드를 해제한다
+    BackHandler(enabled = selectionMode != ListSelection.NONE) { exitSelection() }
     val previewScope = rememberCoroutineScope()
 
     var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }

@@ -600,10 +600,6 @@
     <string name="auto_connect_desc">应用启动时自动连接此设备，应用退出时断开连接</string>
     <string name="auto_connect_devices_title">自动连接设备</string>
     <string name="auto_connect_remove">移除</string>
-    <string name="exit_app_title">退出应用</string>
-    <string name="exit_app_message">要退出应用吗？</string>
-    <string name="exit_app_confirm">退出</string>
-    <string name="exit_app_cancel">取消</string>
     <string name="label_duration">持续时间 (Duration)</string>
     <string name="duration_until_next">直到下一个效果 (0)</string>
     <string name="broadcasting_ble_only">仅BLE模式应援棒可设置（中继器始终传播）</string>
@@ -613,4 +609,5 @@
     <string name="bulk_delete_shows_message">将删除 %1$d 场演出。\n其中的歌曲不会被删除，而是移到“未分配”。</string>
     <string name="bulk_delete_songs_title">删除歌曲</string>
     <string name="bulk_delete_songs_message">将删除 %1$d 首歌曲及其效果文件。\n此操作无法撤销。</string>
+    <string name="exit_app_toast">再按一次退出</string>
 </resources>
