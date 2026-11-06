@@ -90,16 +90,17 @@ object EfxDurations {
      * 옮겨졌거나 새로 만든 이펙트는 건드리지 않는다. [new] 는 시각순으로 정렬되어 있어야 한다.
      */
     fun reconcile(old: List<EfxEntry>, new: List<EfxEntry>): List<EfxEntry> {
-        val full = HashSet<Pair<Long, LSEffectPayload>>()
+        // 키 → 편집 전 duration. 사용자가 duration 을 직접 바꾼 이펙트(값이 달라진 것)는 건드리지 않는다
+        val full = HashMap<Pair<Long, LSEffectPayload>, Int>()
         old.forEachIndexed { i, e ->
             val next = old.getOrNull(i + 1) ?: return@forEachIndexed
             val d = e.payload.duration
-            if (d > 0 && e.timestampMs + ticksToMs(d) >= next.timestampMs) full += keyOf(e)
+            if (d > 0 && e.timestampMs + ticksToMs(d) >= next.timestampMs) full[keyOf(e)] = d
         }
         if (full.isEmpty()) return new
         return new.mapIndexed { i, e ->
             val next = new.getOrNull(i + 1)
-            if (next != null && e.payload.effectType != EffectType.OFF && keyOf(e) in full) {
+            if (next != null && e.payload.effectType != EffectType.OFF && full[keyOf(e)] == e.payload.duration) {
                 val want = msToTicks(next.timestampMs - e.timestampMs)
                 if (want == e.payload.duration) e else e.copy(payload = e.payload.copy(duration = want))
             } else e
