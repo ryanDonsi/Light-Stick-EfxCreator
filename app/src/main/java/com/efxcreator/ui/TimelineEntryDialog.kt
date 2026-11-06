@@ -23,9 +23,6 @@ import com.efxcreator.ui.components.HsvColorPicker
 import com.efxcreator.ui.components.NumberTextField
 import com.efxcreator.ui.device.activityBleViewModel
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.ui.text.input.KeyboardType
 import com.efxcreator.model.EfxDurations
 import com.efxcreator.model.EfxOverwrite
@@ -137,22 +134,6 @@ fun TimelineEntryDialog(
         val ms = BeatGrid.msForBeats(beatTimesMs, effectiveTs.toDouble(), b)
         return ((ms + 5) / 10).toInt().coerceIn(1, EfxDurations.MAX_TICKS)
     }
-    fun setStart(ts: Long) {
-        minutes = (ts / 60000).toInt()
-        seconds = ((ts % 60000) / 1000).toInt()
-        millis = (ts % 1000).toInt()
-    }
-    // 시작 시각 ▲▼: 비트 스냅 ON 이면 다음/이전 비트로, 아니면 100ms 씩 (dir: +1 = 뒤로, -1 = 앞으로)
-    fun stepStart(dir: Int) {
-        val base = effectiveTs
-        val next: Long = if (snapOn && beatsAvailable) {
-            val f = BeatGrid.indexAt(beatTimesMs, base.toDouble())
-            // 비트 위에 있으면 한 박, 비트 사이에 있으면 그 방향의 가장 가까운 비트로 (0.01박 여유로 부동소수 오차 흡수)
-            val idx = if (dir > 0) kotlin.math.floor(f + 0.01) + 1 else kotlin.math.ceil(f - 0.01) - 1
-            Math.round(BeatGrid.timeAt(beatTimesMs, idx))
-        } else base + dir * 100L
-        setStart(next.coerceAtLeast(0L))
-    }
     // 단위를 바꾸거나 시작 위치가 바뀌면 저장될 값 기준으로 비트 표시를 다시 계산한다
     LaunchedEffect(beatUnit, effectiveTs) { beatsText = fmtBeats(beatsOfTicks(duration)) }
     // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 마스터 키/모든 그룹, bit(n-1) = 그룹 n)
@@ -217,25 +198,6 @@ fun TimelineEntryDialog(
                     )
                 }
 
-                if (showTimestamp) {
-                    // 시작 위치 조절: ▲ 뒤로 / ▼ 앞으로 (스냅 ON 이면 한 비트씩)
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            if (beatsAvailable) {
-                                Loc.str(R.string.dlg_start_beat, fmtBeats(BeatGrid.indexAt(beatTimesMs, effectiveTs.toDouble()) + 1))
-                            } else "",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { stepStart(-1) }) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = Loc.str(R.string.dlg_step_prev))
-                        }
-                        IconButton(onClick = { stepStart(+1) }) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = Loc.str(R.string.dlg_step_next))
-                        }
-                    }
-                }
                 if (showTimestamp && beatsAvailable) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(Loc.str(R.string.dlg_snap_label), modifier = Modifier.weight(1f))

@@ -623,7 +623,4 @@
     <string name="dlg_overwrite_summary">上書き: エフェクト %1$d 件削除 · %2$d 件開始調整</string>
     <string name="dlg_push_summary">後ろのエフェクト %1$d 件を %2$s 後ろへずらします</string>
     <string name="dlg_overlap_none">重なるエフェクトはありません</string>
-    <string name="dlg_start_beat">開始位置: ビート %1$s</string>
-    <string name="dlg_step_prev">前へ</string>
-    <string name="dlg_step_next">後ろへ</string>
 </resources>

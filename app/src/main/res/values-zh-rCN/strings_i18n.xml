@@ -623,7 +623,4 @@
     <string name="dlg_overwrite_summary">覆盖：删除 %1$d 个效果 · 调整 %2$d 个起点</string>
     <string name="dlg_push_summary">后面的 %1$d 个效果将向后推 %2$s</string>
     <string name="dlg_overlap_none">没有重叠的效果</string>
-    <string name="dlg_start_beat">起点：第 %1$s 拍</string>
-    <string name="dlg_step_prev">提前</string>
-    <string name="dlg_step_next">延后</string>
 </resources>

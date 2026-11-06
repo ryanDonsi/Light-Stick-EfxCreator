@@ -623,7 +623,4 @@
     <string name="dlg_overwrite_summary">덮어쓰기: 이펙트 %1$d개 삭제 · %2$d개 시작 조정</string>
     <string name="dlg_push_summary">뒤의 이펙트 %1$d개가 %2$s 뒤로 밀립니다</string>
     <string name="dlg_overlap_none">겹치는 이펙트가 없습니다</string>
-    <string name="dlg_start_beat">시작 위치: 비트 %1$s</string>
-    <string name="dlg_step_prev">이전 (앞으로)</string>
-    <string name="dlg_step_next">다음 (뒤로)</string>
 </resources>
