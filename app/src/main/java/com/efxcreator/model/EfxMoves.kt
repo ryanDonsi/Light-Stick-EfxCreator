@@ -15,7 +15,11 @@ import com.lightstick.efx.EfxEntry
 object EfxMoves {
 
     /** [entries] 는 옮긴 뒤의 목록, [movedTimes] 는 옮겨진 이펙트들의 새 시각 */
-    data class Result(val entries: List<EfxEntry>, val movedTimes: Set<Long>)
+    /**
+     * [entries] 는 옮긴 뒤의 목록, [movedTimes] 는 옮겨진 이펙트들의 새 시각,
+     * [origins] 는 [entries] 의 각 항목이 옮기기 전 목록에서 몇 번째였는지 (타임라인 애니메이션이 같은 이펙트를 추적하는 데 쓴다)
+     */
+    data class Result(val entries: List<EfxEntry>, val movedTimes: Set<Long>, val origins: List<Int> = emptyList())
 
     /** 이펙트가 차지하는 구간: 다음 이펙트까지의 간격 (마지막이면 duration, 없으면 기본 길이) */
     private fun slotMs(list: List<EfxEntry>, i: Int, songEndMs: Long?): Long {
@@ -34,12 +38,14 @@ object EfxMoves {
         val oldFirst = movedOld.minOf { it.timestampMs }
         val oldLast = movedOld.maxOf { it.timestampMs }
         val delta = maxOf(deltaMs, -oldFirst)
-        if (delta == 0L) return Result(list, movedOld.map { it.timestampMs }.toSet())
+        if (delta == 0L) return Result(list, movedOld.map { it.timestampMs }.toSet(), list.indices.toList())
 
         val songEnd = songEndMs?.takeIf { it > 0L }
         // 옮기는 묶음이 차지하던 구간의 길이: 처음~마지막 이펙트 간격 + 마지막 이펙트가 차지하던 구간
         val width = (oldLast - oldFirst) + slotMs(list, move.max(), songEnd)
-        val rest = list.filterIndexed { i, _ -> i !in move }
+        val restIdx = list.indices.filter { it !in move }
+        val movedIdx = list.indices.filter { it in move }
+        val rest = restIdx.map { list[it] }
 
         // 1) 빠진 자리 메우기: 묶음 뒤의 이펙트는 width 만큼 앞으로 당겨진다
         val closed = rest.map { e ->
@@ -65,13 +71,14 @@ object EfxMoves {
         // 4) 경계 이후의 이펙트는 width 만큼 뒤로 밀리고, 옮긴 이펙트가 그 자리에 들어간다
         val pushed = closed.map { e -> if (e.timestampMs >= b) e.copy(timestampMs = e.timestampMs + width) else e }
         val moved = movedOld.map { it.copy(timestampMs = b + (it.timestampMs - oldFirst)) }
-        return Result(pushed + moved, moved.map { it.timestampMs }.toSet())
+        return Result(pushed + moved, moved.map { it.timestampMs }.toSet(), restIdx + movedIdx)
     }
 
     /** 드래그 중 미리보기용: [move] 결과를 시각순으로 정렬하고 duration 을 정리해 타임라인에 바로 그릴 수 있게 한다 */
     fun preview(list: List<EfxEntry>, indices: Collection<Int>, deltaMs: Long, songEndMs: Long?): Result? {
         val r = move(list, indices, deltaMs, songEndMs) ?: return null
-        val sorted = r.entries.sortedBy { it.timestampMs }
-        return Result(EfxDurations.clamp(EfxDurations.reconcile(list, sorted)), r.movedTimes)
+        val order = r.entries.indices.sortedBy { r.entries[it].timestampMs }
+        val sorted = order.map { r.entries[it] }
+        return Result(EfxDurations.clamp(EfxDurations.reconcile(list, sorted)), r.movedTimes, order.map { r.origins[it] })
     }
 }
