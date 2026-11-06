@@ -268,10 +268,15 @@ fun TimelineEntryDialog(
         properties = DialogProperties(usePlatformDefaultWidth = !wide),
         title = { Text(title) },
         text = {
+            // 넓은 화면(두 단): 바깥은 스크롤하지 않고, 왼쪽(시간 정보)은 고정, 오른쪽만 따로 스크롤한다.
+            // 좁은 화면(한 단): 전체가 한 덩어리로 스크롤한다.
+            val singleScroll = rememberScrollState()
+            val leftScroll = rememberScrollState()
+            val rightScroll = rememberScrollState()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .then(if (wide) Modifier else Modifier.verticalScroll(singleScroll)),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 topContent?.invoke(this)
@@ -584,8 +589,15 @@ fun TimelineEntryDialog(
                 }
                 if (wide) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { sectionLeft() }
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { sectionRight() }
+                        // 각 단이 자기 스크롤을 가진다: 내용이 높이를 넘을 때만 스크롤되고, 한쪽을 스크롤해도 다른 쪽은 움직이지 않는다
+                        Column(
+                            modifier = Modifier.weight(1f).verticalScroll(leftScroll),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) { sectionLeft() }
+                        Column(
+                            modifier = Modifier.weight(1f).verticalScroll(rightScroll),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) { sectionRight() }
                     }
                 } else {
                     sectionLeft()
