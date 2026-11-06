@@ -607,4 +607,10 @@
     <string name="label_duration">지속시간 (Duration)</string>
     <string name="duration_until_next">다음 이펙트까지 (0)</string>
     <string name="broadcasting_ble_only">BLE 모드 응원봉에서만 설정할 수 있습니다 (중계기는 항상 전파)</string>
+    <string name="bulk_delete_all">전체 삭제</string>
+    <string name="bulk_delete_selected">선택 삭제 (%1$d)</string>
+    <string name="bulk_delete_shows_title">공연 삭제</string>
+    <string name="bulk_delete_shows_message">공연 %1$d개를 삭제합니다.\n공연 안의 곡은 삭제되지 않고 \'미배정\'으로 옮겨집니다.</string>
+    <string name="bulk_delete_songs_title">곡 삭제</string>
+    <string name="bulk_delete_songs_message">곡 %1$d개와 이펙트 파일을 삭제합니다.\n되돌릴 수 없습니다.</string>
 </resources>

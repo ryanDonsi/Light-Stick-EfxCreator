@@ -607,4 +607,10 @@
     <string name="label_duration">Duration</string>
     <string name="duration_until_next">Until next effect (0)</string>
     <string name="broadcasting_ble_only">Only available on BLE-mode light sticks (repeaters always relay)</string>
+    <string name="bulk_delete_all">Delete all</string>
+    <string name="bulk_delete_selected">Delete selected (%1$d)</string>
+    <string name="bulk_delete_shows_title">Delete shows</string>
+    <string name="bulk_delete_shows_message">Delete %1$d show(s)?\nSongs in them are not deleted; they move to Unassigned.</string>
+    <string name="bulk_delete_songs_title">Delete songs</string>
+    <string name="bulk_delete_songs_message">Delete %1$d song(s) and their effect files?\nThis cannot be undone.</string>
 </resources>

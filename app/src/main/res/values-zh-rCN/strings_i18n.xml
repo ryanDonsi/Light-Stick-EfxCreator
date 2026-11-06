@@ -607,4 +607,10 @@
     <string name="label_duration">持续时间 (Duration)</string>
     <string name="duration_until_next">直到下一个效果 (0)</string>
     <string name="broadcasting_ble_only">仅BLE模式应援棒可设置（中继器始终传播）</string>
+    <string name="bulk_delete_all">全部删除</string>
+    <string name="bulk_delete_selected">删除所选 (%1$d)</string>
+    <string name="bulk_delete_shows_title">删除演出</string>
+    <string name="bulk_delete_shows_message">将删除 %1$d 场演出。\n其中的歌曲不会被删除，而是移到“未分配”。</string>
+    <string name="bulk_delete_songs_title">删除歌曲</string>
+    <string name="bulk_delete_songs_message">将删除 %1$d 首歌曲及其效果文件。\n此操作无法撤销。</string>
 </resources>
