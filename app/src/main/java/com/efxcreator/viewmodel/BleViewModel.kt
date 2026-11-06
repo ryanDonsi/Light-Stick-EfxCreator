@@ -129,6 +129,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
+        Log.i(TAG, "BleViewModel created (seek-resync v2)")
         if (hasPermissions()) {
             runCatching { LSBluetooth.connectedDevices().firstOrNull() }
                 .getOrNull()?.let {
@@ -554,12 +555,20 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun updatePosition(positionMs: Long) {
         val device = connectedOrNull() ?: return
         val now = SystemClock.elapsedRealtime()
+        val prevPositionMs = lastPositionMs
+        val prevPositionAtMs = lastPositionAtMs
         lastPositionMs = positionMs
         lastPositionAtMs = now
 
         var jumped = false
         if (timelinePaused) {
-            anchorAtMs = 0L // 일시정지 중의 이동은 재개 때 처리한다
+            // 일시정지 중의 이동은 재개 때 처리한다. 재생 중인데 이 로그가 나오면 timelinePaused 상태가 잘못된 것이다
+            if (prevPositionAtMs != 0L &&
+                kotlin.math.abs(positionMs - (prevPositionMs + (now - prevPositionAtMs))) > SEEK_JUMP_MS
+            ) {
+                Log.d(TAG, "position jump ignored (timelinePaused=true): ${prevPositionMs}ms -> ${positionMs}ms")
+            }
+            anchorAtMs = 0L
         } else if (anchorAtMs == 0L) {
             anchorPosMs = positionMs
             anchorAtMs = now
