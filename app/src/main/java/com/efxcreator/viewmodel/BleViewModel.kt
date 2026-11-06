@@ -535,7 +535,14 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "loadTimeline: frames=${frames.size} ok=$ok")
     }
 
+    private var lastPositionForLog = 0L
+
     fun updatePosition(positionMs: Long) {
+        // Seek 진단용: 직전 위치와 크게 달라졌을 때만 기록한다 (정상 재생은 100ms 마다 호출되므로)
+        if (kotlin.math.abs(positionMs - lastPositionForLog) > 500L) {
+            Log.d(TAG, "updatePosition jump: ${lastPositionForLog}ms -> ${positionMs}ms")
+        }
+        lastPositionForLog = positionMs
         connectedOrNull()?.updatePlaybackPosition(positionMs)
     }
 
