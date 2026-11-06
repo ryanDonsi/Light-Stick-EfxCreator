@@ -112,9 +112,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "BleViewModel"
         private const val SCAN_SECONDS = 10
-        /** 재생 중 위치가 예상(기준점+경과시간)과 이만큼 넘게 다르면 Seek 로 본다 */
-        private const val SEEK_JUMP_MS = 200L
-        private const val SEEK_SETTLE_MS = 150L
+        /** 재생 중 위치가 예상(기준점+경과시간)보다 이만큼 넘게 뒤 / 앞이면 Seek 로 본다 */
+        private const val SEEK_BACKWARD_MS = 120L
+        private const val SEEK_FORWARD_MS = 250L
+        private const val SEEK_SETTLE_MS = 250L
         /** SDK 가 프레임 위치를 다시 계산하는 기준(앞으로 10초 초과)을 넘기는 값 */
         private const val FORCE_RESYNC_OFFSET_MS = 11_000L
         private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
@@ -564,7 +565,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         if (timelinePaused) {
             // 일시정지 중의 이동은 재개 때 처리한다. 재생 중인데 이 로그가 나오면 timelinePaused 상태가 잘못된 것이다
             if (prevPositionAtMs != 0L &&
-                kotlin.math.abs(positionMs - (prevPositionMs + (now - prevPositionAtMs))) > SEEK_JUMP_MS
+                (positionMs - (prevPositionMs + (now - prevPositionAtMs))).let { it < -SEEK_BACKWARD_MS || it > SEEK_FORWARD_MS }
             ) {
                 Log.d(TAG, "position jump ignored (timelinePaused=true): ${prevPositionMs}ms -> ${positionMs}ms")
             }
@@ -573,16 +574,17 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             anchorPosMs = positionMs
             anchorAtMs = now
         } else {
+            // 정상 재생이라면 있어야 할 위치(기준점 + 경과시간)와 비교한다.
+            // 재생은 앞으로만 흐르므로 뒤로 가는 이동은 작아도 Seek 로 본다.
             val deviation = positionMs - (anchorPosMs + (now - anchorAtMs))
-            if (kotlin.math.abs(deviation) <= SEEK_JUMP_MS) {
-                // 정상 재생: 기준점을 현재로 갱신해 시계 오차가 쌓이지 않게 한다
-                anchorPosMs = positionMs
-                anchorAtMs = now
-            } else {
-                // 기준점은 그대로 둔다 → 드래그처럼 조금씩 연속으로 움직여도 누적되어 Seek 로 잡힌다
+            // 판정 후에는 항상 기준점을 현재 위치로 옮긴다. (옮기지 않으면 이동이 끝난 뒤에도 100ms 위치 갱신이
+            // 계속 "Seek 중"으로 판정되어, 안정 대기 타이머가 계속 초기화되고 전송이 영영 실행되지 않는다)
+            anchorPosMs = positionMs
+            anchorAtMs = now
+            if (deviation < -SEEK_BACKWARD_MS || deviation > SEEK_FORWARD_MS) {
                 jumped = true
                 if (seekJob?.isActive != true) {
-                    Log.d(TAG, "seek detected: expected=${anchorPosMs + (now - anchorAtMs)}ms -> ${positionMs}ms")
+                    Log.d(TAG, "seek detected: deviation=${deviation}ms -> ${positionMs}ms")
                 }
             }
         }
