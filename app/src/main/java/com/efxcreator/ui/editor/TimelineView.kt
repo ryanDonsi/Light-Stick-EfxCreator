@@ -243,6 +243,8 @@ fun TimelineView(
     isPlaying: Boolean,
     emptyHint: String,
     onSeek: (Long) -> Unit,
+    /** 눈금자를 탭하거나 드래그를 놓아 위치가 확정됐다 (드래그 중에는 [onSeek] 만 불린다) */
+    onSeekFinished: (Long) -> Unit = {},
     onEntryClick: (Int) -> Unit,
     onEntryMove: (Int, Long) -> Unit,
     onEntryToggle: (Int) -> Unit = {},
@@ -301,6 +303,8 @@ fun TimelineView(
     val currentDuration by rememberUpdatedState(durationMs)
     val currentSnap by rememberUpdatedState(snapToBeats)
     val onSeekState by rememberUpdatedState(onSeek)
+    val onSeekFinishedState by rememberUpdatedState(onSeekFinished)
+    val lastSeekMs = remember { longArrayOf(0L) }
     val onEntryClickState by rememberUpdatedState(onEntryClick)
     val onEntryMoveState by rememberUpdatedState(onEntryMove)
     val selectModeState by rememberUpdatedState(selectMode)
@@ -409,7 +413,9 @@ fun TimelineView(
                         val idx = blockAt(o.x)
                         if (selectModeState) { if (idx >= 0) onEntryToggleState(idx) } else onEntryClickState(idx)
                     } else {
-                        onSeekState(state.msAtX(o.x).toLong().coerceAtLeast(0L))
+                        val ms = state.msAtX(o.x).toLong().coerceAtLeast(0L)
+                        onSeekState(ms)
+                        onSeekFinishedState(ms)
                     }
                 }
             }
@@ -435,14 +441,17 @@ fun TimelineView(
                             }
                         } else {
                             drag.mode = DragMode.SEEK
-                            onSeekState(state.msAtX(o.x).toLong().coerceAtLeast(0L))
+                            lastSeekMs[0] = state.msAtX(o.x).toLong().coerceAtLeast(0L)
+                            onSeekState(lastSeekMs[0])
                         }
                     },
                     onDrag = { change, amount ->
                         change.consume()
                         when (drag.mode) {
-                            DragMode.SEEK ->
-                                onSeekState(state.msAtX(change.position.x).toLong().coerceAtLeast(0L))
+                            DragMode.SEEK -> {
+                                lastSeekMs[0] = state.msAtX(change.position.x).toLong().coerceAtLeast(0L)
+                                onSeekState(lastSeekMs[0])
+                            }
                             DragMode.PAN -> state.panByMs(-amount.x / state.pxPerMs, currentDuration)
                             DragMode.MOVE, DragMode.GROUP -> dragDeltaMs += amount.x / state.pxPerMs
                             DragMode.MARQUEE -> marqueeB = state.msAtX(change.position.x)
@@ -450,6 +459,7 @@ fun TimelineView(
                         }
                     },
                     onDragEnd = {
+                        if (drag.mode == DragMode.SEEK) onSeekFinishedState(lastSeekMs[0])
                         if (drag.mode == DragMode.MOVE && dragIndex >= 0) {
                             val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
                             if (newMs != drag.originMs) onEntryMoveState(dragIndex, newMs)
@@ -475,6 +485,7 @@ fun TimelineView(
                         dragDeltaMs = 0f
                     },
                     onDragCancel = {
+                        if (drag.mode == DragMode.SEEK) onSeekFinishedState(lastSeekMs[0])
                         marqueeA = -1f
                         marqueeB = -1f
                         drag.mode = DragMode.NONE

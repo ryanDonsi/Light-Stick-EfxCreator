@@ -698,7 +698,7 @@ fun EfxProjectCard(
                 PlayerSeekBar(
                     currentPosition = if (active) preview.player.positionMs else 0L,
                     duration = total,
-                    onSeekTo = { if (active) preview.player.seekTo(it) },
+                    onSeekTo = { if (active) preview.seekTo(it) },
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .padding(end = 108.dp)

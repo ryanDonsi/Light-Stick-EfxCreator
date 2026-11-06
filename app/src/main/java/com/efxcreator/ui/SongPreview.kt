@@ -41,6 +41,15 @@ class SongPreviewState(private val repository: EfxRepository) {
     var entries by mutableStateOf<List<com.lightstick.efx.EfxEntry>>(emptyList())
         private set
 
+    /** 위치가 확정됐을 때 실기기에도 알린다 (rememberSongPreview 가 연결) */
+    var onDeviceSeek: ((Long) -> Unit)? = null
+
+    /** 진행 바에서 위치를 확정해 이동한다: 음악과 실기기 모두 그 위치로 맞춘다 */
+    fun seekTo(positionMs: Long) {
+        player.seekTo(positionMs)
+        onDeviceSeek?.invoke(positionMs)
+    }
+
     private fun reloadFrames(projectId: String) {
         val efx = repository.loadEfx(projectId)
         entries = efx?.body?.entries.orEmpty()
@@ -129,6 +138,7 @@ fun rememberSongPreview(bleVm: BleViewModel): SongPreviewState {
     val context = LocalContext.current
     val state = remember { SongPreviewState(EfxRepository(context.applicationContext)) }
     val connected by bleVm.connected.collectAsState()
+    state.onDeviceSeek = { bleVm.seekTimeline(it) }
 
     // 재생 위치 갱신
     LaunchedEffect(Unit) {

@@ -283,6 +283,7 @@ fun EfxTabletEditorScreen(
 
     // ── 실기기 동기화 ─────────────────────────────────────────
     val isPlaying = player.isPlaying
+    var scrubbing by remember { mutableStateOf(false) }
     LaunchedEffect(bleConnected) { deviceLoaded = false }
     LaunchedEffect(isPlaying, bleConnected) {
         if (bleConnected == null) return@LaunchedEffect
@@ -294,7 +295,8 @@ fun EfxTabletEditorScreen(
                 bleVm.resumeTimeline(player.positionMs)
             }
             while (isActive) {
-                bleVm.updatePosition(player.positionMs)
+                // 타임라인 눈금자를 드래그하는 동안에는 기기로 위치를 보내지 않고, 손을 떼면 한 번 보낸다
+                if (!scrubbing) bleVm.updatePosition(player.positionMs)
                 delay(100)
             }
         } else if (deviceLoaded) {
@@ -310,10 +312,17 @@ fun EfxTabletEditorScreen(
     }
 
     // ── 동작 ─────────────────────────────────────────────────
+    /** 위치를 확정해 이동한다: 음악과 실기기 모두 그 위치로 맞춘다 */
     fun seek(ms: Long) {
         val target = ms.coerceIn(0L, durationMs)
         player.seekTo(target)
-        if (deviceLoaded) bleVm.updatePosition(target)
+        if (deviceLoaded) bleVm.seekTimeline(target)
+    }
+
+    /** 드래그 중 이동: 음악 위치만 따라가고 실기기에는 보내지 않는다 (손을 떼면 [seek]) */
+    fun scrubTo(ms: Long) {
+        scrubbing = true
+        player.seekTo(ms.coerceIn(0L, durationMs))
     }
 
     fun snapAt(ms: Long): Long {
@@ -513,7 +522,8 @@ fun EfxTabletEditorScreen(
                                 musicFile == null -> Loc.str(R.string.efx_tablet_editor_screen_4)
                                 else -> Loc.str(R.string.efx_tablet_editor_screen_5)
                             },
-                            onSeek = { seek(it) },
+                            onSeek = { scrubTo(it) },
+                            onSeekFinished = { scrubbing = false; seek(it) },
                             onEntryClick = { selectedIndex = it },
                             onEntryMove = { index, newMs ->
                                 pendingSelectTs = newMs

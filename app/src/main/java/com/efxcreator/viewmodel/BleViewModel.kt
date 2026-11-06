@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
-import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -112,10 +111,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "BleViewModel"
         private const val SCAN_SECONDS = 10
-        /** 재생 중 위치가 예상(기준점+경과시간)보다 이만큼 넘게 뒤 / 앞이면 Seek 로 본다 */
-        private const val SEEK_BACKWARD_MS = 120L
-        private const val SEEK_FORWARD_MS = 250L
-        private const val SEEK_SETTLE_MS = 250L
         /** SDK 가 프레임 위치를 다시 계산하는 기준(앞으로 10초 초과)을 넘기는 값 */
         private const val FORCE_RESYNC_OFFSET_MS = 11_000L
         private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
@@ -539,66 +534,28 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         loadedFrames = frames
         val ok = device.playTimeline(frames)
         timelinePaused = false
-        lastPositionAtMs = 0L
-        anchorAtMs = 0L
         Log.d(TAG, "loadTimeline: frames=${frames.size} ok=$ok")
     }
 
-    private var lastPositionMs = 0L
-    private var lastPositionAtMs = 0L
-    /** 정상 재생의 기준점: 이 위치에서 시간이 흐른 만큼 진행하면 "예상 위치". 예상과 크게 다르면 Seek (0 = 기준점 없음) */
-    private var anchorPosMs = 0L
-    private var anchorAtMs = 0L
-    /** 일시정지 중이거나 타임라인이 멈춘 상태인지 (재생 중 Seek 감지에만 쓴다) */
+    /** 일시정지 중이거나 타임라인이 멈춘 상태인지 */
     private var timelinePaused = true
-    private var seekJob: Job? = null
 
+    /** 재생 위치를 SDK 에 알린다 (재생 중 100ms 마다) */
     fun updatePosition(positionMs: Long) {
+        connectedOrNull()?.updatePlaybackPosition(positionMs)
+    }
+
+    /**
+     * 사용자가 재생 위치를 확정했다 (진행 바/타임라인을 탭하거나 드래그를 놓음).
+     * 재생 중이면 그 위치의 이펙트를 바로 보내고, 일시정지 중이면 위치만 알린다 (재개 때 복원).
+     */
+    fun seekTimeline(positionMs: Long) {
         val device = connectedOrNull() ?: return
-        val now = SystemClock.elapsedRealtime()
-        val prevPositionMs = lastPositionMs
-        val prevPositionAtMs = lastPositionAtMs
-        lastPositionMs = positionMs
-        lastPositionAtMs = now
-
-        var jumped = false
+        Log.d(TAG, "seekTimeline: pos=${positionMs}ms paused=$timelinePaused")
         if (timelinePaused) {
-            // 일시정지 중의 이동은 재개 때 처리한다. 재생 중인데 이 로그가 나오면 timelinePaused 상태가 잘못된 것이다
-            if (prevPositionAtMs != 0L &&
-                (positionMs - (prevPositionMs + (now - prevPositionAtMs))).let { it < -SEEK_BACKWARD_MS || it > SEEK_FORWARD_MS }
-            ) {
-                Log.d(TAG, "position jump ignored (timelinePaused=true): ${prevPositionMs}ms -> ${positionMs}ms")
-            }
-            anchorAtMs = 0L
-        } else if (anchorAtMs == 0L) {
-            anchorPosMs = positionMs
-            anchorAtMs = now
+            device.updatePlaybackPosition(positionMs)
         } else {
-            // 정상 재생이라면 있어야 할 위치(기준점 + 경과시간)와 비교한다.
-            // 재생은 앞으로만 흐르므로 뒤로 가는 이동은 작아도 Seek 로 본다.
-            val deviation = positionMs - (anchorPosMs + (now - anchorAtMs))
-            // 판정 후에는 항상 기준점을 현재 위치로 옮긴다. (옮기지 않으면 이동이 끝난 뒤에도 100ms 위치 갱신이
-            // 계속 "Seek 중"으로 판정되어, 안정 대기 타이머가 계속 초기화되고 전송이 영영 실행되지 않는다)
-            anchorPosMs = positionMs
-            anchorAtMs = now
-            if (deviation < -SEEK_BACKWARD_MS || deviation > SEEK_FORWARD_MS) {
-                jumped = true
-                if (seekJob?.isActive != true) {
-                    Log.d(TAG, "seek detected: deviation=${deviation}ms -> ${positionMs}ms")
-                }
-            }
-        }
-
-        device.updatePlaybackPosition(positionMs)
-        if (jumped) {
-            // MediaPlayer.seekTo 는 비동기이고 드래그 중에는 계속 바뀐다 → 위치가 안정된 뒤 최신 위치로 한 번만 보낸다
-            seekJob?.cancel()
-            seekJob = viewModelScope.launch {
-                delay(SEEK_SETTLE_MS)
-                val d = connectedOrNull() ?: return@launch
-                if (timelinePaused) return@launch
-                resendFrameAt(d, lastPositionMs + (SystemClock.elapsedRealtime() - lastPositionAtMs))
-            }
+            resendFrameAt(device, positionMs)
         }
     }
 
@@ -617,8 +574,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         device.updatePlaybackPosition(positionMs + FORCE_RESYNC_OFFSET_MS)
         device.updatePlaybackPosition(positionMs)
         val resumed = device.resumeTimeline()
-        anchorPosMs = positionMs
-        anchorAtMs = SystemClock.elapsedRealtime()
         Log.d(TAG, "seek resend: pos=${positionMs}ms type=${payload.effectType} sent=$sent resumed=$resumed")
     }
 
@@ -626,7 +581,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun pauseTimeline() {
         val device = connectedOrNull() ?: return
         timelinePaused = true
-        seekJob?.cancel()
         val paused = device.pauseTimeline()
         val off = LSEffectPayload.Effects.off()
         val sent = device.sendEffect(off)
@@ -646,10 +600,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         if (needsReload) loadedFrames?.let { device.playTimeline(it) }
         val resumed = device.resumeTimeline()
         timelinePaused = false
-        lastPositionMs = positionMs
-        lastPositionAtMs = SystemClock.elapsedRealtime()
-        anchorPosMs = positionMs
-        anchorAtMs = lastPositionAtMs
         device.updatePlaybackPosition(positionMs) // Seek
         device.updatePlaybackPosition(positionMs) // 즉시 위치 업데이트
         Log.d(
@@ -663,7 +613,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun stopTimeline() {
         loadedFrames = null
         timelinePaused = true
-        seekJob?.cancel()
         connectedOrNull()?.stopTimeline()
     }
 
