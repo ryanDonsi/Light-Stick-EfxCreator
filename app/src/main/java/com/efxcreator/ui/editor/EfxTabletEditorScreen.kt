@@ -1136,7 +1136,7 @@ private fun formatDuration(entry: EfxEntry, beatTimesMs: List<Long>): String {
     val time = com.efxcreator.model.EfxDurations.formatMs(ms)
     if (beatTimesMs.size < 2) return "$time ($d)"
     val beats = BeatGrid.beatsBetween(beatTimesMs, entry.timestampMs.toDouble(), (entry.timestampMs + ms).toDouble())
-    val beatsText = "%.2f".format(java.util.Locale.US, beats).trimEnd('0').trimEnd('.').ifEmpty { "0" }
+    val beatsText = BeatGrid.formatBeats(beats)
     return "$beatsText ${Loc.str(R.string.dlg_beat_unit)} · $time ($d)"
 }
 

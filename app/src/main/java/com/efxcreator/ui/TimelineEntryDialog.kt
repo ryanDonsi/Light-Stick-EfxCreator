@@ -124,8 +124,7 @@ fun TimelineEntryDialog(
     val effectiveTs = snappedBeat ?: typedTs
     var beatUnit by remember { mutableStateOf(beatsAvailable) }
     var beatsText by remember { mutableStateOf("0") }
-    fun fmtBeats(b: Double): String =
-        "%.2f".format(java.util.Locale.US, b).trimEnd('0').trimEnd('.').ifEmpty { "0" }
+    fun fmtBeats(b: Double): String = BeatGrid.formatBeats(b)
     fun beatsOfTicks(ticks: Int): Double =
         if (!beatsAvailable || ticks == 0) 0.0
         else BeatGrid.beatsBetween(beatTimesMs, effectiveTs.toDouble(), effectiveTs + EfxDurations.ticksToMs(ticks).toDouble())

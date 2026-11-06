@@ -31,6 +31,17 @@ object BeatGrid {
         return beats[i] + (index - i) * (beats[i + 1] - beats[i])
     }
 
+    /**
+     * 비트 수 표시: 정수에 0.03비트 이내로 가까우면 정수로 보여 준다 (11.98 → 12).
+     * 길이는 10ms 단위로 저장되고 비트 시각도 ms 단위 분석값이라 정수 비트가 0.01~0.02 어긋나 보이는 것을 정리한다.
+     * 그 밖에는 소수점 2자리까지 (끝의 0 제거).
+     */
+    fun formatBeats(beats: Double): String {
+        val r = Math.round(beats)
+        if (kotlin.math.abs(beats - r) <= 0.03) return r.toString()
+        return "%.2f".format(java.util.Locale.US, beats).trimEnd('0').trimEnd('.').ifEmpty { "0" }
+    }
+
     /** [startMs] ~ [endMs] 사이가 몇 비트인가 */
     fun beatsBetween(beats: List<Long>, startMs: Double, endMs: Double): Double =
         indexAt(beats, endMs) - indexAt(beats, startMs)
