@@ -588,7 +588,13 @@ fun TimelineEntryDialog(
                 }
                 }
                 if (wide) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    // 스크롤 영역의 높이를 화면 높이에 묶어 둔다: 내용이 길면 이 안에서만 스크롤되고 삭제/저장 버튼은 항상 하단에 보인다
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
                         // 각 단이 자기 스크롤을 가진다: 내용이 높이를 넘을 때만 스크롤되고, 한쪽을 스크롤해도 다른 쪽은 움직이지 않는다
                         Column(
                             modifier = Modifier.weight(1f).verticalScroll(leftScroll),
