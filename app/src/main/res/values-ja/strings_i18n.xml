@@ -604,4 +604,7 @@
     <string name="exit_app_message">アプリを終了しますか？</string>
     <string name="exit_app_confirm">終了</string>
     <string name="exit_app_cancel">キャンセル</string>
+    <string name="label_duration">継続時間 (Duration)</string>
+    <string name="duration_until_next">次のエフェクトまで (0)</string>
+    <string name="broadcasting_ble_only">BLEモードのペンライトのみ設定できます（中継機は常に伝播）</string>
 </resources>

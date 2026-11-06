@@ -82,6 +82,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     /** Broadcasting Mode: 연결된 기기가 보내는 이펙트 신호를 주변 응원봉에도 전파할지 (기기 설정 + 기기별 저장) */
     val broadcasting: StateFlow<Boolean> = _broadcasting.asStateFlow()
 
+    private val _broadcastingSupported = MutableStateFlow(false)
+    /** Broadcasting(FF09) 설정 가능 여부: BLE 모드 응원봉(펌웨어 지원)만 가능하다. 중계기/구형 펌웨어는 항상 전파 */
+    val broadcastingSupported: StateFlow<Boolean> = _broadcastingSupported.asStateFlow()
+
     private val _groupAllowed = MutableStateFlow(true)
     /** BLE Only 모드 기기는 그룹 배정을 지원하지 않는다 */
     val groupAllowed: StateFlow<Boolean> = _groupAllowed.asStateFlow()
@@ -277,6 +281,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         _battery.value = null
         _groupAllowed.value = true
         _broadcasting.value = true
+        _broadcastingSupported.value = false
         _otaProgress.value = null
         _otaCheck.value = null
         pendingFirmware = null
@@ -287,11 +292,11 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     /** 연결 직후 정보를 읽고, 이후 5초마다 연결을 확인하며 30초마다 배터리를 다시 읽는다 */
     private fun startMonitoring(device: Device) {
         monitorJob?.cancel()
-        _broadcasting.value = prefs.getBroadcasting(device.mac)
+        _broadcasting.value = true
+        _broadcastingSupported.value = false
         monitorJob = viewModelScope.launch {
             refreshInfo()
             readMode(device)
-            readBroadcasting(device)
             readBattery(device)
             var elapsed = 0L
             while (true) {
@@ -320,29 +325,37 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         runCatching { device.readBattery { r -> r.onSuccess { _battery.value = it } } }
     }
 
-    /** SDK 2.1.0: Broadcasting Mode 는 기기 설정이다. 지원 기기는 기기 값을 읽어 반영하고, 미지원 기기는 저장된 값을 그대로 쓴다 */
-    private fun readBroadcasting(device: Device) {
-        if (!runCatching { device.supportsBroadcasting() }.getOrDefault(false)) return
-        runCatching {
-            device.readBroadcasting { r ->
-                r.onSuccess {
-                    if (_connected.value?.mac == device.mac) {
-                        _broadcasting.value = it
-                        prefs.setBroadcasting(device.mac, it)
-                    }
-                }
-            }
-        }
-    }
-
     private fun readMode(device: Device) {
         if (!runCatching { device.supportsDeviceMode() }.getOrDefault(false)) {
             _groupAllowed.value = true   // 구형 펌웨어는 중계기로 간주
+            applyBroadcasting(device, isBleMode = false)
             return
         }
         runCatching {
-            device.readDeviceMode { r -> r.onSuccess { _groupAllowed.value = it != DeviceMode.BLE } }
+            device.readDeviceMode { r ->
+                r.onSuccess {
+                    _groupAllowed.value = it != DeviceMode.BLE
+                    applyBroadcasting(device, isBleMode = it == DeviceMode.BLE)
+                }.onFailure { applyBroadcasting(device, isBleMode = false) }
+            }
+        }.onFailure { applyBroadcasting(device, isBleMode = false) }
+    }
+
+    /**
+     * Broadcasting(FF09): BLE 모드이고 펌웨어가 지원할 때만 설정할 수 있다.
+     * 응원봉은 연결할 때마다 true 로 초기화되므로, 저장된 값이 false 면 연결 직후 다시 기기에 적용한다.
+     */
+    private fun applyBroadcasting(device: Device, isBleMode: Boolean) {
+        if (_connected.value?.mac != device.mac) return
+        val supported = isBleMode && runCatching { device.supportsBroadcasting() }.getOrDefault(false)
+        _broadcastingSupported.value = supported
+        if (!supported) {
+            _broadcasting.value = true
+            return
         }
+        val saved = prefs.getBroadcasting(device.mac)
+        _broadcasting.value = saved
+        if (!saved) runCatching { device.setBroadcasting(false) }
     }
 
     // ── 기기 관리: FIND / 그룹 배정 ──────────────────────────────
@@ -448,11 +461,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setBroadcasting(enabled: Boolean) {
         val device = _connected.value ?: return
+        if (!_broadcastingSupported.value) return
         prefs.setBroadcasting(device.mac, enabled)
         _broadcasting.value = enabled
-        if (runCatching { device.supportsBroadcasting() }.getOrDefault(false)) {
-            runCatching { device.setBroadcasting(enabled) }
-        }
+        runCatching { device.setBroadcasting(enabled) }
     }
 
     fun setGroupCount(count: Int) {

@@ -329,6 +329,7 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     val groupAllowed by bleVm.groupAllowed.collectAsState()
     val groupCount by bleVm.groupCount.collectAsState()
     val broadcasting by bleVm.broadcasting.collectAsState()
+    val broadcastingSupported by bleVm.broadcastingSupported.collectAsState()
     val otaProgress by bleVm.otaProgress.collectAsState()
     val otaCheck by bleVm.otaCheck.collectAsState()
     val autoConnectDevices by bleVm.autoConnectDevices.collectAsState()
@@ -353,9 +354,18 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
         ListItem(
             headlineContent = { Text(Loc.str(R.string.label_broadcasting), style = MaterialTheme.typography.titleSmall) },
             supportingContent = {
-                Text(Loc.str(R.string.device_ui_11), style = MaterialTheme.typography.bodySmall)
+                Text(
+                    if (broadcastingSupported) Loc.str(R.string.device_ui_11) else Loc.str(R.string.broadcasting_ble_only),
+                    style = MaterialTheme.typography.bodySmall
+                )
             },
-            trailingContent = { Switch(checked = broadcasting, onCheckedChange = { bleVm.setBroadcasting(it) }) },
+            trailingContent = {
+                Switch(
+                    checked = broadcasting || !broadcastingSupported,
+                    enabled = broadcastingSupported,
+                    onCheckedChange = { bleVm.setBroadcasting(it) }
+                )
+            },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
         HorizontalDivider()

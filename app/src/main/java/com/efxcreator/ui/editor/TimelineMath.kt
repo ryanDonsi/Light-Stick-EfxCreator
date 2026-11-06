@@ -14,14 +14,19 @@ object TimelineMath {
     /** 마지막 엔트리 뒤에 곡 길이 정보가 없을 때 보여줄 최소 블록 길이 */
     const val TAIL_BLOCK_MS = 2_000L
 
-    /** 엔트리마다 [시작, 다음 엔트리 시작) 블록을 만든다. 마지막은 곡 끝(없으면 +[TAIL_BLOCK_MS])까지. */
+    /**
+     * 엔트리마다 블록을 만든다. duration(10ms 단위)이 있으면 [시작, 시작+duration) (다음 엔트리 시작을 넘지 않음),
+     * 0 이면 [시작, 다음 엔트리 시작). 마지막은 곡 끝(없으면 +[TAIL_BLOCK_MS])까지.
+     */
     fun blocks(entries: List<EfxEntry>, durationMs: Long): List<TimelineBlock> =
         entries.mapIndexed { i, e ->
-            val end = when {
+            val untilNext = when {
                 i + 1 < entries.size -> entries[i + 1].timestampMs
                 durationMs > e.timestampMs -> durationMs
                 else -> e.timestampMs + TAIL_BLOCK_MS
             }
+            val d = e.payload.duration
+            val end = if (d > 0) minOf(e.timestampMs + com.efxcreator.model.EfxDurations.ticksToMs(d), untilNext) else untilNext
             TimelineBlock(i, e.timestampMs, end, e)
         }
 

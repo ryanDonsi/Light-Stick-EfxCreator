@@ -604,4 +604,7 @@
     <string name="exit_app_message">要退出应用吗？</string>
     <string name="exit_app_confirm">退出</string>
     <string name="exit_app_cancel">取消</string>
+    <string name="label_duration">持续时间 (Duration)</string>
+    <string name="duration_until_next">直到下一个效果 (0)</string>
+    <string name="broadcasting_ble_only">仅BLE模式应援棒可设置（中继器始终传播）</string>
 </resources>

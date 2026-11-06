@@ -1141,7 +1141,12 @@ private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier) {
                 null
             ),
             Triple(Loc.str(R.string.label_random_color), if (p.randomColor != 0) "ON" else "OFF", null),
-            Triple(Loc.str(R.string.label_index), p.effectIndex.toString(), null)
+            Triple(
+                Loc.str(R.string.label_duration),
+                if (p.duration == 0) Loc.str(R.string.duration_until_next)
+                else "${p.duration} (${com.efxcreator.model.EfxDurations.formatMs(com.efxcreator.model.EfxDurations.ticksToMs(p.duration))})",
+                null
+            )
         )
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(9.dp)) {
             rows.forEach { (k, v, swatch) ->

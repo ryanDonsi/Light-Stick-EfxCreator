@@ -195,7 +195,12 @@ class EfxRepository(private val context: Context) {
                 val minor = efx.header.version and 0xFF
                 Log.d(TAG, "Loaded EFX with version: v$major.$minor (0x${efx.header.version.toString(16).padStart(4, '0').uppercase()})")
                 Log.d(TAG, "Loaded EFX with ${efx.body.entries.size} entries")
-                efx
+                // SDK 2.0 으로 저장한 옛 파일은 offset 18 의 effectIndex(순번)를 2.1 이 duration 으로 읽는다 → 정리
+                val cleaned = com.efxcreator.model.EfxDurations.sanitizeLegacy(efx.body.entries)
+                if (cleaned !== efx.body.entries) {
+                    Log.w(TAG, "Legacy EFX (SDK 2.0 layout) detected → duration/effectIndex reset")
+                    Efx(efx.header, efx.body.copy(entries = cleaned))
+                } else efx
             } else {
                 Log.w(TAG, "EFX file does not exist for project: $projectId")
                 null
@@ -311,7 +316,7 @@ class EfxRepository(private val context: Context) {
         Log.d(TAG, "Creating new EFX")
 
         val defaultPayload = LSEffectPayload(
-            effectIndex = 1,  // 첫 번째 Entry는 Index 1
+            effectIndex = 0,  // 재생 시 SDK 가 세션 값으로 덮어쓴다 (0~255 밖이면 예외)
             effectType = EffectType.ON,
             color = Color(255, 255, 255),
             backgroundColor = Color(0, 0, 0),

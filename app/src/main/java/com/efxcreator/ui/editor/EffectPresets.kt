@@ -51,7 +51,7 @@ data class EffectPreset(
             randomColor = 0,
             randomDelay = 0,
             duration = 0,
-            effectIndex = 0   // 실제 Effect Index 는 EfxEditViewModel 이 저장 시 1부터 재부여한다
+            effectIndex = 0   // 재생 시 SDK 가 세션 값으로 덮어쓴다 (0~255 밖이면 예외라 파일에는 0 으로 둔다)
         )
     )
 }

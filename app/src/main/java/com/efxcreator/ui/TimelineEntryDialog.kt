@@ -92,6 +92,8 @@ fun TimelineEntryDialog(
     var fade by remember { mutableIntStateOf((entry?.payload?.fade ?: 100).coerceIn(0, 100)) }
     var randomColor by remember { mutableIntStateOf(entry?.payload?.randomColor ?: 0) }
     var randomDelay by remember { mutableIntStateOf(entry?.payload?.randomDelay ?: 0) }
+    // Duration: 10ms 단위, 0 = 다음 이펙트까지 유지
+    var duration by remember { mutableIntStateOf(entry?.payload?.duration ?: 0) }
     // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 마스터 키/모든 그룹, bit(n-1) = 그룹 n)
     var groupMask by remember { mutableLongStateOf(entry?.payload?.groupMask ?: 0L) }
 
@@ -311,6 +313,18 @@ fun TimelineEntryDialog(
                 )
                 UnitHint(if (randomDelay == 0) Loc.str(R.string.timeline_entry_dialog_10) else Loc.str(R.string.timeline_entry_dialog_11, TimelineMath.formatFrames(randomDelay, spf)))
 
+                NumberTextField(
+                    value = duration,
+                    onValueChange = { duration = it },
+                    label = Loc.str(R.string.label_duration),
+                    range = 0..65535,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                UnitHint(
+                    if (duration == 0) Loc.str(R.string.duration_until_next)
+                    else com.efxcreator.model.EfxDurations.formatMs(com.efxcreator.model.EfxDurations.ticksToMs(duration))
+                )
+
                 GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
                 }
             }
@@ -339,7 +353,7 @@ fun TimelineEntryDialog(
                         fade = fade,
                         randomColor = randomColor,
                         randomDelay = randomDelay,
-                        duration = 0,
+                        duration = duration,
                         effectIndex = 0
                     )
                     onSave(EfxEntry(timestampMs, payload))
