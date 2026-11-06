@@ -600,4 +600,8 @@
     <string name="auto_connect_desc">Connect to this device automatically when the app starts and disconnect when the app exits</string>
     <string name="auto_connect_devices_title">Auto-connect devices</string>
     <string name="auto_connect_remove">Remove</string>
+    <string name="exit_app_title">Exit app</string>
+    <string name="exit_app_message">Do you want to exit the app?</string>
+    <string name="exit_app_confirm">Exit</string>
+    <string name="exit_app_cancel">Cancel</string>
 </resources>

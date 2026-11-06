@@ -600,4 +600,8 @@
     <string name="auto_connect_desc">应用启动时自动连接此设备，应用退出时断开连接</string>
     <string name="auto_connect_devices_title">自动连接设备</string>
     <string name="auto_connect_remove">移除</string>
+    <string name="exit_app_title">退出应用</string>
+    <string name="exit_app_message">要退出应用吗？</string>
+    <string name="exit_app_confirm">退出</string>
+    <string name="exit_app_cancel">取消</string>
 </resources>

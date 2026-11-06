@@ -2,7 +2,11 @@ package com.efxcreator.ui
 
 import android.content.Intent
 import android.widget.Toast
+import android.app.Activity
+import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.ui.window.DialogProperties
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -72,6 +76,26 @@ fun EfxListScreen(
     var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     val context = LocalContext.current
     val preview = rememberSongPreview(bleVm)
+
+    // 메인 화면에서 시스템 뒤로 가기: 처음엔 종료 확인창, 확인창이 떠 있을 때 한 번 더 누르거나 [종료]를 누르면 앱 종료
+    var showExitConfirm by remember { mutableStateOf(false) }
+    val exitApp: () -> Unit = {
+        var c = context
+        while (c is ContextWrapper && c !is Activity) c = c.baseContext
+        (c as? Activity)?.finish()
+    }
+    BackHandler(enabled = !showExitConfirm) { showExitConfirm = true }
+    if (showExitConfirm) {
+        AlertDialog(
+            // 확인창이 떠 있는 동안의 뒤로 가기 = onDismissRequest. 바깥 터치로는 닫히지 않게 해 뒤로 가기만 종료로 이어지게 한다
+            onDismissRequest = exitApp,
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = { Text(Loc.str(R.string.exit_app_title)) },
+            text = { Text(Loc.str(R.string.exit_app_message)) },
+            confirmButton = { TextButton(onClick = exitApp) { Text(Loc.str(R.string.exit_app_confirm)) } },
+            dismissButton = { TextButton(onClick = { showExitConfirm = false }) { Text(Loc.str(R.string.exit_app_cancel)) } }
+        )
+    }
     val previewScope = rememberCoroutineScope()
 
     var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }

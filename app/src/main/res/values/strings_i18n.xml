@@ -600,4 +600,8 @@
     <string name="auto_connect_desc">앱을 시작하면 이 기기에 자동으로 연결하고, 앱을 종료하면 연결을 해제합니다</string>
     <string name="auto_connect_devices_title">자동 연결 기기</string>
     <string name="auto_connect_remove">해제</string>
+    <string name="exit_app_title">앱 종료</string>
+    <string name="exit_app_message">앱을 종료할까요?</string>
+    <string name="exit_app_confirm">종료</string>
+    <string name="exit_app_cancel">취소</string>
 </resources>
