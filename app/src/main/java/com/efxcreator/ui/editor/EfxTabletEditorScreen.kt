@@ -1128,16 +1128,16 @@ private fun PreviewPanel(
     }
 }
 
-/** 지속시간 표시: 0 이면 "다음 이펙트까지", 아니면 "4 비트 · 1.85s (185)" (비트는 곡 분석이 있을 때만) */
+/** 지속시간 표시: 0 이면 "다음 이펙트까지", 아니면 "4 비트 (1.63s)" (비트는 곡 분석이 있을 때만, 없으면 "1.63s") */
 private fun formatDuration(entry: EfxEntry, beatTimesMs: List<Long>): String {
     val d = entry.payload.duration
     if (d == 0) return Loc.str(R.string.duration_until_next)
     val ms = com.efxcreator.model.EfxDurations.ticksToMs(d)
     val time = com.efxcreator.model.EfxDurations.formatMs(ms)
-    if (beatTimesMs.size < 2) return "$time ($d)"
+    if (beatTimesMs.size < 2) return time
     val beats = BeatGrid.beatsBetween(beatTimesMs, entry.timestampMs.toDouble(), (entry.timestampMs + ms).toDouble())
     val beatsText = BeatGrid.formatBeats(beats)
-    return "$beatsText ${Loc.str(R.string.dlg_beat_unit)} · $time ($d)"
+    return "$beatsText ${Loc.str(R.string.dlg_beat_unit)} ($time)"
 }
 
 /** 이펙트 한 개의 상세 항목 (시작 시간, 지속 시간, 종류, 색, 주기, SPF, 밝기, 그룹 마스크 …). 한 개 선택과 다중 선택의 펼침에서 함께 쓴다. */
