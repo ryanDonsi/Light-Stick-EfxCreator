@@ -22,7 +22,12 @@ import com.efxcreator.music.sets.RgbColor
 import com.efxcreator.ui.components.HsvColorPicker
 import com.efxcreator.ui.components.NumberTextField
 import com.efxcreator.ui.device.activityBleViewModel
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,6 +58,58 @@ private fun UnitHint(text: String) {
         text,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+/**
+ * 작은 숫자 박스 (시작 시간 0.00.00 의 한 칸). 포커스하면 비우고 바로 입력, 벗어나면 범위로 보정하고 자릿수를 채운다.
+ * @param minDigits 표시할 최소 자릿수 (모자라면 앞에 0 을 채운다)
+ */
+@Composable
+private fun TimeBox(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    range: IntRange,
+    minDigits: Int,
+    maxDigits: Int,
+    modifier: Modifier = Modifier
+) {
+    fun fmt(v: Int) = v.toString().padStart(minDigits, '0')
+    var focused by remember { mutableStateOf(false) }
+    var text by remember { mutableStateOf(fmt(value)) }
+    // 입력 중에는 건드리지 않고(자릿수 채우기가 타이핑을 방해하지 않도록), 포커스가 없을 때만 값에 맞춰 표시한다
+    LaunchedEffect(value, focused) { if (!focused) text = fmt(value) }
+    val outline = MaterialTheme.colorScheme.outline
+    BasicTextField(
+        value = text,
+        onValueChange = { raw ->
+            val f = raw.filter { it.isDigit() }.take(maxDigits)
+            text = f
+            f.toIntOrNull()?.let { if (it in range) onValueChange(it) }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        textStyle = MaterialTheme.typography.titleMedium.copy(
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        ),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        modifier = modifier
+            .width((16 + 14 * maxDigits).dp)
+            .height(40.dp)
+            .border(1.dp, outline, RoundedCornerShape(8.dp))
+            .onFocusChanged { st ->
+                if (st.isFocused) {
+                    focused = true
+                    text = ""
+                } else {
+                    focused = false
+                    val v = text.toIntOrNull()?.coerceIn(range) ?: value
+                    text = fmt(v)
+                    onValueChange(v)
+                }
+            },
+        decorationBox = { inner -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { inner() } }
     )
 }
 
@@ -135,6 +192,25 @@ fun TimelineEntryDialog(
         val ms = BeatGrid.msForBeats(beatTimesMs, effectiveTs.toDouble(), b)
         return ((ms + 5) / 10).toInt().coerceIn(1, EfxDurations.MAX_TICKS)
     }
+    val focusManager = LocalFocusManager.current
+    fun setStart(ts: Long) {
+        minutes = (ts / 60000).toInt()
+        seconds = ((ts % 60000) / 1000).toInt()
+        millis = (ts % 1000).toInt()
+    }
+    // 시작 시간 비트 조정: 스냅 ON 이면 다음/이전 비트로, OFF 면 0.1비트씩 (dir: +1 = 뒤로, -1 = 앞으로)
+    fun stepStart(dir: Int) {
+        if (!beatsAvailable) return
+        val f = BeatGrid.indexAt(beatTimesMs, effectiveTs.toDouble())
+        val next: Long = if (snapOn) {
+            // 비트 위에 있으면 한 박, 비트 사이에 있으면 그 방향의 가장 가까운 비트로 (0.01박 여유로 부동소수 오차 흡수)
+            val idx = if (dir > 0) kotlin.math.floor(f + 0.01) + 1 else kotlin.math.ceil(f - 0.01) - 1
+            Math.round(BeatGrid.timeAt(beatTimesMs, idx))
+        } else {
+            Math.round(BeatGrid.timeAt(beatTimesMs, f + dir * 0.1))
+        }
+        setStart(next.coerceAtLeast(0L))
+    }
     // 단위를 바꾸거나 시작 위치가 바뀌면 저장될 값 기준으로 비트 표시를 다시 계산한다
     LaunchedEffect(beatUnit, effectiveTs) { beatsText = fmtBeats(beatsOfTicks(duration)) }
     // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 마스터 키/모든 그룹, bit(n-1) = 그룹 n)
@@ -178,32 +254,38 @@ fun TimelineEntryDialog(
                 if (showTimestamp) Text(Loc.str(R.string.label_timestamp), style = MaterialTheme.typography.labelMedium)
                 if (showTimestamp) Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // ✅ 간결해진 코드 - NumberTextField 사용
-                    NumberTextField(
-                        value = minutes,
-                        onValueChange = { minutes = it },
-                        label = Loc.str(R.string.label_minutes),
-                        modifier = Modifier.weight(1f)
+                    // 0.00.00 = 분 . 초 . 1/100초 (10ms). 세 번째 칸은 바꿨을 때만 ms 에 반영해 원래 ms 값이 틀어지지 않게 한다
+                    TimeBox(value = minutes, onValueChange = { minutes = it }, range = 0..99, minDigits = 1, maxDigits = 2)
+                    Text(".", style = MaterialTheme.typography.titleMedium)
+                    TimeBox(value = seconds, onValueChange = { seconds = it }, range = 0..59, minDigits = 2, maxDigits = 2)
+                    Text(".", style = MaterialTheme.typography.titleMedium)
+                    TimeBox(
+                        value = millis / 10,
+                        onValueChange = { if (it != millis / 10) millis = it * 10 },
+                        range = 0..99, minDigits = 2, maxDigits = 2
                     )
-
-                    NumberTextField(
-                        value = seconds,
-                        onValueChange = { seconds = it },
-                        label = Loc.str(R.string.label_seconds),
-                        range = 0..59,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    NumberTextField(
-                        value = millis,
-                        onValueChange = { millis = it },
-                        label = Loc.str(R.string.label_millis),
-                        range = 0..999,
-                        modifier = Modifier.weight(1f)
-                    )
+                    if (beatsAvailable) {
+                        Spacer(Modifier.width(8.dp))
+                        // 비트 단위 조정: 스냅 ON 이면 1비트씩 다음/이전 비트로, OFF 면 0.1비트씩
+                        OutlinedButton(
+                            onClick = { focusManager.clearFocus(); stepStart(-1) },
+                            contentPadding = PaddingValues(horizontal = 10.dp),
+                            modifier = Modifier.height(40.dp)
+                        ) { Text(if (snapOn) "-1" else "-0.1") }
+                        OutlinedButton(
+                            onClick = { focusManager.clearFocus(); stepStart(+1) },
+                            contentPadding = PaddingValues(horizontal = 10.dp),
+                            modifier = Modifier.height(40.dp)
+                        ) { Text(if (snapOn) "+1" else "+0.1") }
+                    }
                 }
+                if (showTimestamp) UnitHint(
+                    Loc.str(R.string.dlg_time_units) +
+                        if (beatsAvailable) "  ·  " + Loc.str(if (snapOn) R.string.dlg_step_beat_snap else R.string.dlg_step_beat_fine) else ""
+                )
 
                 if (showTimestamp && beatsAvailable) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
