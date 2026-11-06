@@ -617,10 +617,19 @@ fun TimelineView(
         // ── 이펙트 레인 ───────────────────────────────────────
         drawRect(laneBg, Offset(0f, laneTop), Size(w, laneH))
         drawBeats(laneTop, laneTop + laneH, beatLight.copy(alpha = 0.09f), beatLight.copy(alpha = 0.25f), withNumbers = false)
-        val blocks = TimelineMath.blocks(entries, durationMs)
+        // 이펙트를 끌고 있으면 "놓았을 때의 결과"(끼워 넣어지고, 이웃이 끊기거나 밀리는 모습)를 그대로 미리 보여 주고 손을 떼면 확정한다
+        val movePreview = if (
+            dragIndex >= 0 && dragDeltaMs != 0f && (drag.mode == DragMode.MOVE || drag.mode == DragMode.GROUP)
+        ) {
+            val idxs: Collection<Int> = if (drag.mode == DragMode.GROUP) selectedIndices + dragIndex else listOf(dragIndex)
+            val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
+            com.efxcreator.model.EfxMoves.preview(entries, idxs, newMs - drag.originMs, durationMs)
+        } else null
+        val blocks = TimelineMath.blocks(movePreview?.entries ?: entries, durationMs)
         for (b in blocks) {
-            val moving = dragIndex >= 0 && (b.index == dragIndex || (drag.mode == DragMode.GROUP && b.index in selectedIndices))
-            val shift = if (moving) dragDeltaMs else 0f
+            val moving = movePreview?.let { b.startMs in it.movedTimes }
+                ?: (dragIndex >= 0 && (b.index == dragIndex || (drag.mode == DragMode.GROUP && b.index in selectedIndices)))
+            val shift = 0f
             val x0 = xOf(b.startMs + shift)
             val x1 = xOf(b.endMs + shift)
             if (x1 < 0f || x0 > w) continue
@@ -628,7 +637,7 @@ fun TimelineView(
             val p = b.entry.payload
             val left = max(-2f, x0)
             val width = max(2f, min(x1, w + 2f) - left - 1f)
-            val isPicked = if (selectMode) b.index in selectedIndices else b.index == selectedIndex
+            val isPicked = if (movePreview != null) moving else if (selectMode) b.index in selectedIndices else b.index == selectedIndex
             // 선택 모드에서는 선택되지 않은 블록을 흐리게 해서 선택된 것이 도드라지게 한다
             val alpha = when {
                 moving -> 0.7f

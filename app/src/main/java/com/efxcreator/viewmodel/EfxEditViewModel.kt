@@ -11,6 +11,7 @@ import com.efxcreator.music.AutoEfxGenerator
 import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.music.sets.GenerationOptions
 import com.efxcreator.model.EfxDurations
+import com.efxcreator.model.EfxMoves
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
 import com.lightstick.efx.EfxEntry
@@ -378,56 +379,16 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
      * - 놓은 지점에서 재생 중이던 이펙트 A 는 놓은 지점에서 끊기고, 옮긴 이펙트 뒤에서 남은 길이만큼 이어서 재생된다.
      * - 놓은 자리 이후의 기존 이펙트들은 옮긴 이펙트의 길이만큼 뒤로 밀린다.
      *   (앞으로 옮길 때는 놓은 자리부터 원래 자리 앞까지만 밀려 비워진 자리를 채운다.)
-     * 0ms 아래로는 내려가지 않으며, 실행 취소 한 번으로 되돌린다.
+     * 0ms 아래로는 내려가지 않으며, 실행 취소 한 번으로 되돌린다. 계산은 드래그 미리보기와 같은 [EfxMoves] 를 쓴다.
      * @return 옮겨진 이펙트들의 새 시각 (선택 표시를 유지하는 데 쓴다)
      */
     fun moveTimelineEntries(indices: Collection<Int>, deltaMs: Long): Set<Long> {
         val current = _efx.value ?: return emptySet()
-        val move = indices.toSet()
-        val list = current.body.entries
-        val movedOld = list.filterIndexed { i, _ -> i in move }
-        if (movedOld.isEmpty()) return emptySet()
-        // 가장 앞 이펙트가 0ms 아래로 내려가지 않도록 이동량을 제한한다
-        val oldFirst = movedOld.minOf { it.timestampMs }
-        val oldLast = movedOld.maxOf { it.timestampMs }
-        val delta = maxOf(deltaMs, -oldFirst)
-        if (delta == 0L) return movedOld.map { it.timestampMs }.toSet()
-
-        val songEnd = _analysis.value?.durationMs
-        // 옮기는 묶음이 차지하던 길이: 처음~마지막 이펙트 간격 + 마지막 이펙트의 길이(duration, 없으면 다음 이펙트까지)
-        val span = (oldLast - oldFirst) + EfxDurations.lengthMs(list, move.max(), songEnd)
-        val firstNew = oldFirst + delta
-        val moved = movedOld.map { it.copy(timestampMs = it.timestampMs + delta) }
-        val rest = list.filterIndexed { i, _ -> i !in move }
-
-        // 놓은 지점에서 재생 중이던 이펙트 A: 끊기고, 옮긴 이펙트 뒤에서 남은 길이만큼 이어서 재생한다
-        var tail: EfxEntry? = null
-        val k = rest.indexOfLast { it.timestampMs < firstNew }
-        if (k >= 0) {
-            val a = rest[k]
-            val aEnd = EfxDurations.playEndMs(rest, k)
-            val playingAtDrop = aEnd == null || aEnd > firstNew
-            if (playingAtDrop && (songEnd == null || firstNew < songEnd)) {
-                val remain = if (a.payload.duration > 0 && aEnd != null) EfxDurations.msToTicks(aEnd - firstNew) else 0
-                tail = a.copy(
-                    timestampMs = firstNew + span,
-                    payload = a.payload.copy(duration = remain)
-                )
-            }
-        }
-        val pushed = rest.map { e ->
-            val t = e.timestampMs
-            val push = when {
-                // 앞으로 옮기면: 놓은 자리부터 원래 자리 앞까지의 이펙트가 뒤로 밀려 비워진 자리를 채운다
-                firstNew < oldFirst -> t >= firstNew && t < oldFirst
-                // 뒤로 옮기면: 놓은 자리 이후의 이펙트가 밀린다
-                else -> t >= firstNew
-            }
-            if (push) e.copy(timestampMs = t + span) else e
-        }
+        val result = EfxMoves.move(current.body.entries, indices, deltaMs, _analysis.value?.durationMs)
+            ?: return emptySet()
         _editingEntry.value = null
-        commitDraft(pushed + listOfNotNull(tail) + moved)
-        return moved.map { it.timestampMs }.toSet()
+        commitDraft(result.entries)
+        return result.movedTimes
     }
 
     fun deleteTimelineEntry(index: Int) {
