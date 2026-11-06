@@ -264,7 +264,7 @@ fun TimelineEntryDialog(
     val wide = LocalConfiguration.current.screenWidthDp >= 720
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = if (wide) Modifier.width(820.dp) else Modifier,
+        modifier = if (wide) Modifier.fillMaxWidth(0.92f).widthIn(max = 880.dp) else Modifier,
         properties = DialogProperties(usePlatformDefaultWidth = !wide),
         title = { Text(title) },
         text = {
@@ -593,15 +593,16 @@ fun TimelineEntryDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        horizontalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
                         // 각 단이 자기 스크롤을 가진다: 내용이 높이를 넘을 때만 스크롤되고, 한쪽을 스크롤해도 다른 쪽은 움직이지 않는다
                         Column(
-                            modifier = Modifier.weight(1f).verticalScroll(leftScroll),
+                            // 좌우 비율은 메인 화면(공연 목록 0.36 : 곡 목록 0.64)과 같게: 왼쪽은 시간 정보, 오른쪽은 이펙트 설정
+                            modifier = Modifier.weight(0.36f).verticalScroll(leftScroll),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) { sectionLeft() }
                         Column(
-                            modifier = Modifier.weight(1f).verticalScroll(rightScroll),
+                            modifier = Modifier.weight(0.64f).verticalScroll(rightScroll),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) { sectionRight() }
                     }
