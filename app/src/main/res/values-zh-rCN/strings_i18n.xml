@@ -280,7 +280,7 @@
     <string name="efx_tablet_editor_screen_34">选择音乐后即可播放</string>
     <string name="efx_tablet_editor_screen_35">所选效果</string>
     <string name="efx_tablet_editor_screen_36">点击时间轴上的块可查看属性。\n拖动块可更改时间。</string>
-    <string name="efx_tablet_editor_screen_37">时间</string>
+    <string name="efx_tablet_editor_screen_37">开始时间</string>
     <string name="efx_tablet_editor_screen_38">类型</string>
     <string name="efx_tablet_editor_screen_39">颜色 (FG)</string>
     <string name="efx_tablet_editor_screen_40">背景 (BG)</string>
@@ -407,7 +407,7 @@
     <string name="language_settings_2">更改语言</string>
     <string name="language_settings_3">将显示语言更改为%1$s后，应用会重新启动，已连接设备的连接将被断开。要继续吗？</string>
     <string name="language_settings_4">自动（系统语言：%1$s）</string>
-    <string name="label_timestamp">时间戳</string>
+    <string name="label_timestamp">开始时间</string>
     <string name="label_minutes">分</string>
     <string name="label_seconds">秒</string>
     <string name="label_millis">毫秒</string>
@@ -600,7 +600,7 @@
     <string name="auto_connect_desc">应用启动时自动连接此设备，应用退出时断开连接</string>
     <string name="auto_connect_devices_title">自动连接设备</string>
     <string name="auto_connect_remove">移除</string>
-    <string name="label_duration">持续时间 (Duration)</string>
+    <string name="label_duration">持续时间</string>
     <string name="duration_until_next">直到下一个效果 (0)</string>
     <string name="broadcasting_ble_only">仅BLE模式应援棒可设置（中继器始终传播）</string>
     <string name="bulk_delete_all">全部删除</string>

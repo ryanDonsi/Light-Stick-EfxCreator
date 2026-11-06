@@ -280,7 +280,7 @@
     <string name="efx_tablet_editor_screen_34">음악을 선택하면 재생할 수 있습니다</string>
     <string name="efx_tablet_editor_screen_35">선택한 이펙트</string>
     <string name="efx_tablet_editor_screen_36">타임라인의 블록을 탭하면 속성을 볼 수 있습니다.\n블록을 끌면 시간을 옮길 수 있습니다.</string>
-    <string name="efx_tablet_editor_screen_37">시각</string>
+    <string name="efx_tablet_editor_screen_37">시작 시간</string>
     <string name="efx_tablet_editor_screen_38">종류</string>
     <string name="efx_tablet_editor_screen_39">색상 (FG)</string>
     <string name="efx_tablet_editor_screen_40">배경 (BG)</string>
@@ -407,7 +407,7 @@
     <string name="language_settings_2">언어 변경</string>
     <string name="language_settings_3">표시 언어를 %1$s(으)로 바꾸면 앱이 다시 시작되고, 연결된 디바이스의 연결이 해제됩니다. 계속할까요?</string>
     <string name="language_settings_4">자동 (시스템 언어: %1$s)</string>
-    <string name="label_timestamp">타임 스탬프</string>
+    <string name="label_timestamp">시작 시간</string>
     <string name="label_minutes">분</string>
     <string name="label_seconds">초</string>
     <string name="label_millis">밀리초</string>
@@ -600,7 +600,7 @@
     <string name="auto_connect_desc">앱을 시작하면 이 기기에 자동으로 연결하고, 앱을 종료하면 연결을 해제합니다</string>
     <string name="auto_connect_devices_title">자동 연결 기기</string>
     <string name="auto_connect_remove">해제</string>
-    <string name="label_duration">지속시간 (Duration)</string>
+    <string name="label_duration">지속 시간</string>
     <string name="duration_until_next">다음 이펙트까지 (0)</string>
     <string name="broadcasting_ble_only">BLE 모드 응원봉에서만 설정할 수 있습니다 (중계기는 항상 전파)</string>
     <string name="bulk_delete_all">전체 삭제</string>

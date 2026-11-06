@@ -280,7 +280,7 @@
     <string name="efx_tablet_editor_screen_34">音楽を選ぶと再生できます</string>
     <string name="efx_tablet_editor_screen_35">選択したエフェクト</string>
     <string name="efx_tablet_editor_screen_36">タイムラインのブロックをタップすると属性を確認できます。\nブロックをドラッグすると時間を移動できます。</string>
-    <string name="efx_tablet_editor_screen_37">時刻</string>
+    <string name="efx_tablet_editor_screen_37">開始時刻</string>
     <string name="efx_tablet_editor_screen_38">種類</string>
     <string name="efx_tablet_editor_screen_39">色 (FG)</string>
     <string name="efx_tablet_editor_screen_40">背景 (BG)</string>
@@ -407,7 +407,7 @@
     <string name="language_settings_2">言語を変更</string>
     <string name="language_settings_3">表示言語を%1$sに変更するとアプリが再起動し、接続中のデバイスの接続が解除されます。続行しますか?</string>
     <string name="language_settings_4">自動 (システム言語: %1$s)</string>
-    <string name="label_timestamp">タイムスタンプ</string>
+    <string name="label_timestamp">開始時刻</string>
     <string name="label_minutes">分</string>
     <string name="label_seconds">秒</string>
     <string name="label_millis">ミリ秒</string>
@@ -600,7 +600,7 @@
     <string name="auto_connect_desc">アプリ起動時にこの機器へ自動接続し、アプリ終了時に接続を解除します</string>
     <string name="auto_connect_devices_title">自動接続する機器</string>
     <string name="auto_connect_remove">解除</string>
-    <string name="label_duration">継続時間 (Duration)</string>
+    <string name="label_duration">継続時間</string>
     <string name="duration_until_next">次のエフェクトまで (0)</string>
     <string name="broadcasting_ble_only">BLEモードのペンライトのみ設定できます（中継機は常に伝播）</string>
     <string name="bulk_delete_all">すべて削除</string>

@@ -575,6 +575,7 @@ fun EfxTabletEditorScreen(
                     )
                     SelectedEntryPanel(
                         modifier = Modifier.weight(1f),
+                        beatTimesMs = analysis?.beatTimesMs.orEmpty(),
                         entry = if (selectMode) null else entries.getOrNull(selectedIndex),
                         multiEntries = if (selectMode) entries.filter { it.timestampMs in multiTimes } else emptyList(),
                         selectMode = selectMode,
@@ -1127,12 +1128,26 @@ private fun PreviewPanel(
     }
 }
 
-/** 이펙트 한 개의 상세 항목 (시간, 종류, 색, 주기, SPF, 밝기, 그룹 마스크 …). 한 개 선택과 다중 선택의 펼침에서 함께 쓴다. */
+/** 지속시간 표시: 0 이면 "다음 이펙트까지", 아니면 "4 비트 · 1.85s (185)" (비트는 곡 분석이 있을 때만) */
+private fun formatDuration(entry: EfxEntry, beatTimesMs: List<Long>): String {
+    val d = entry.payload.duration
+    if (d == 0) return Loc.str(R.string.duration_until_next)
+    val ms = com.efxcreator.model.EfxDurations.ticksToMs(d)
+    val time = com.efxcreator.model.EfxDurations.formatMs(ms)
+    if (beatTimesMs.size < 2) return "$time ($d)"
+    val beats = BeatGrid.beatsBetween(beatTimesMs, entry.timestampMs.toDouble(), (entry.timestampMs + ms).toDouble())
+    val beatsText = "%.2f".format(java.util.Locale.US, beats).trimEnd('0').trimEnd('.').ifEmpty { "0" }
+    return "$beatsText ${Loc.str(R.string.dlg_beat_unit)} · $time ($d)"
+}
+
+/** 이펙트 한 개의 상세 항목 (시작 시간, 지속 시간, 종류, 색, 주기, SPF, 밝기, 그룹 마스크 …). 한 개 선택과 다중 선택의 펼침에서 함께 쓴다. */
 @Composable
-private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier) {
+private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier, beatTimesMs: List<Long> = emptyList()) {
     val p = entry.payload
         val rows: List<Triple<String, String, Color?>> = listOf(
             Triple(Loc.str(R.string.efx_tablet_editor_screen_37), TimelineMath.formatTime(entry.timestampMs, withTenths = true), null),
+            // 지속시간: 시작 시간 바로 아래. 곡 분석이 있으면 비트 수도 함께 보여 준다
+            Triple(Loc.str(R.string.label_duration), formatDuration(entry, beatTimesMs), null),
             Triple(Loc.str(R.string.efx_tablet_editor_screen_38), p.effectType.name, null),
             Triple(Loc.str(R.string.efx_tablet_editor_screen_39), "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})", Color(p.color.r, p.color.g, p.color.b)),
             Triple(
@@ -1151,12 +1166,6 @@ private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier) {
                 null
             ),
             Triple(Loc.str(R.string.label_random_color), if (p.randomColor != 0) "ON" else "OFF", null),
-            Triple(
-                Loc.str(R.string.label_duration),
-                if (p.duration == 0) Loc.str(R.string.duration_until_next)
-                else "${p.duration} (${com.efxcreator.model.EfxDurations.formatMs(com.efxcreator.model.EfxDurations.ticksToMs(p.duration))})",
-                null
-            ),
             Triple(Loc.str(R.string.label_index), p.effectIndex.toString(), null)
         )
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -1198,7 +1207,8 @@ private fun SelectedEntryPanel(
     onClearSelection: () -> Unit = {},
     onDeleteSelected: () -> Unit = {},
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    beatTimesMs: List<Long> = emptyList()
 ) {
     Column(
         modifier = modifier
@@ -1268,7 +1278,7 @@ private fun SelectedEntryPanel(
                             }
                             if (open) {
                                 Spacer(Modifier.height(8.dp))
-                                EntryDetailRows(e)
+                                EntryDetailRows(e, beatTimesMs = beatTimesMs)
                                 Spacer(Modifier.height(2.dp))
                             }
                         }
@@ -1316,7 +1326,7 @@ private fun SelectedEntryPanel(
         val rowsScroll = rememberScrollState()
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxSize().padding(end = 10.dp).verticalScroll(rowsScroll)) {
-            EntryDetailRows(entry)
+            EntryDetailRows(entry, beatTimesMs = beatTimesMs)
         }
         SlimVerticalScrollBar(rowsScroll, Modifier.align(Alignment.CenterEnd))
         }

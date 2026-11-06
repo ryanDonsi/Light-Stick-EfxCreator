@@ -280,7 +280,7 @@
     <string name="efx_tablet_editor_screen_34">Choose music to play it</string>
     <string name="efx_tablet_editor_screen_35">Selected effect</string>
     <string name="efx_tablet_editor_screen_36">Tap a block on the timeline to see its properties.\nDrag a block to change its time.</string>
-    <string name="efx_tablet_editor_screen_37">Time</string>
+    <string name="efx_tablet_editor_screen_37">Start time</string>
     <string name="efx_tablet_editor_screen_38">Type</string>
     <string name="efx_tablet_editor_screen_39">Color (FG)</string>
     <string name="efx_tablet_editor_screen_40">Background (BG)</string>
@@ -407,7 +407,7 @@
     <string name="language_settings_2">Change language</string>
     <string name="language_settings_3">Changing the display language to %1$s restarts the app and disconnects the connected device. Continue?</string>
     <string name="language_settings_4">Auto (system language: %1$s)</string>
-    <string name="label_timestamp">Timestamp</string>
+    <string name="label_timestamp">Start time</string>
     <string name="label_minutes">min</string>
     <string name="label_seconds">sec</string>
     <string name="label_millis">ms</string>
