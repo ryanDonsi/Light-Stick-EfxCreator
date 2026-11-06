@@ -22,6 +22,11 @@ import com.efxcreator.music.sets.RgbColor
 import com.efxcreator.ui.components.HsvColorPicker
 import com.efxcreator.ui.components.NumberTextField
 import com.efxcreator.ui.device.activityBleViewModel
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.efxcreator.model.EfxDurations
+import com.efxcreator.model.EfxOverwrite
+import com.efxcreator.ui.editor.BeatGrid
 import com.efxcreator.ui.editor.TimelineMath
 import com.lightstick.types.Color
 import com.lightstick.types.Colors
@@ -63,6 +68,17 @@ fun TimelineEntryDialog(
     showTimestamp: Boolean = true,
     /** false 면 Random Color / Random Delay / 그룹 마스크를 숨긴다 (라이브러리에는 저장되지 않는 값) */
     showTargetOptions: Boolean = true,
+    /** 분석된 비트 시각(ms). 2개 이상이면 비트 스냅/비트 단위 입력을 쓸 수 있다 */
+    beatTimesMs: List<Long> = emptyList(),
+    /** 비트 스냅 ON/OFF (편집 화면의 설정과 같이 쓰려면 [onSnapChange] 도 넘긴다) */
+    snapToBeats: Boolean = true,
+    onSnapChange: ((Boolean) -> Unit)? = null,
+    /** 덮어쓰기/밀기 선택과 영향 안내를 보여 줄지 (편집 화면의 이펙트 편집에서만 true) */
+    showOverwrite: Boolean = false,
+    /** 편집 중인 이펙트를 뺀 나머지 이펙트 (덮어쓰기/밀기 영향 계산용) */
+    otherEntries: List<EfxEntry> = emptyList(),
+    /** [showOverwrite] 가 true 일 때 저장하면 [onSave] 대신 불린다: (이펙트, 덮어쓰기 여부) */
+    onSaveOverwrite: ((EfxEntry, Boolean) -> Unit)? = null,
     /** 맨 위에 끼워 넣을 내용 (예: 라이브러리 이름 입력) */
     topContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
@@ -94,6 +110,32 @@ fun TimelineEntryDialog(
     var randomDelay by remember { mutableIntStateOf(entry?.payload?.randomDelay ?: 0) }
     // Duration: 10ms 단위, 0 = 다음 이펙트까지 유지
     var duration by remember { mutableIntStateOf(entry?.payload?.duration ?: 0) }
+
+    // 비트 스냅 / 덮어쓰기 / 비트 단위 입력. 기본값: 스냅 ON, 덮어쓰기 ON, 비트 단위(분석된 곡)
+    val beatsAvailable = beatTimesMs.size >= 2
+    var snapLocal by remember { mutableStateOf(snapToBeats) }
+    val snapOn = if (onSnapChange != null) snapToBeats else snapLocal
+    var overwrite by remember { mutableStateOf(true) }
+    // 시작 시각은 사용자가 바꿨을 때만 비트에 붙인다 (다른 항목만 고쳐도 위치가 틀어지지 않도록)
+    val typedTs = minutes * 60000L + seconds * 1000L + millis
+    val tsChanged = typedTs != initialTimestamp
+    val snappedBeat: Long? =
+        if (showTimestamp && snapOn && beatsAvailable && tsChanged) TimelineMath.nearestBeat(typedTs, beatTimesMs) else null
+    val effectiveTs = snappedBeat ?: typedTs
+    var beatUnit by remember { mutableStateOf(beatsAvailable) }
+    var beatsText by remember { mutableStateOf("0") }
+    fun fmtBeats(b: Double): String =
+        "%.2f".format(java.util.Locale.US, b).trimEnd('0').trimEnd('.').ifEmpty { "0" }
+    fun beatsOfTicks(ticks: Int): Double =
+        if (!beatsAvailable || ticks == 0) 0.0
+        else BeatGrid.beatsBetween(beatTimesMs, effectiveTs.toDouble(), effectiveTs + EfxDurations.ticksToMs(ticks).toDouble())
+    fun ticksOfBeats(b: Double): Int {
+        if (b <= 0.0 || !beatsAvailable) return 0
+        val ms = BeatGrid.msForBeats(beatTimesMs, effectiveTs.toDouble(), b)
+        return ((ms + 5) / 10).toInt().coerceIn(1, EfxDurations.MAX_TICKS)
+    }
+    // 단위를 바꾸거나 시작 위치가 바뀌면 저장될 값 기준으로 비트 표시를 다시 계산한다
+    LaunchedEffect(beatUnit, effectiveTs) { beatsText = fmtBeats(beatsOfTicks(duration)) }
     // 그룹 마스크: 그룹 번호 토글로 편집 (0 = 마스터 키/모든 그룹, bit(n-1) = 그룹 n)
     var groupMask by remember { mutableLongStateOf(entry?.payload?.groupMask ?: 0L) }
 
@@ -154,6 +196,27 @@ fun TimelineEntryDialog(
                         range = 0..999,
                         modifier = Modifier.weight(1f)
                     )
+                }
+
+                if (showTimestamp && beatsAvailable) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(Loc.str(R.string.dlg_snap_label), modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = snapOn,
+                            onCheckedChange = { if (onSnapChange != null) onSnapChange(it) else snapLocal = it }
+                        )
+                    }
+                    if (snappedBeat != null) {
+                        UnitHint(
+                            Loc.str(
+                                R.string.dlg_snap_target,
+                                beatTimesMs.indexOf(snappedBeat) + 1,
+                                TimelineMath.formatTime(snappedBeat, withTenths = true)
+                            )
+                        )
+                    } else if (snapOn) {
+                        UnitHint(Loc.str(R.string.dlg_snap_hint))
+                    }
                 }
 
                 // ========== Effect Type ==========
@@ -313,17 +376,78 @@ fun TimelineEntryDialog(
                 )
                 UnitHint(if (randomDelay == 0) Loc.str(R.string.timeline_entry_dialog_10) else Loc.str(R.string.timeline_entry_dialog_11, TimelineMath.formatFrames(randomDelay, spf)))
 
-                NumberTextField(
-                    value = duration,
-                    onValueChange = { duration = it },
-                    label = Loc.str(R.string.label_duration),
-                    range = 0..65535,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // ── 지속시간: 비트 단위(소수점 2자리) 또는 10ms 단위로 입력. 0 = 다음 이펙트까지 ──
+                Text(Loc.str(R.string.label_duration), style = MaterialTheme.typography.labelMedium)
+                if (beatsAvailable) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = beatUnit, onClick = { beatUnit = true }, label = { Text(Loc.str(R.string.dlg_beat_unit)) })
+                        FilterChip(selected = !beatUnit, onClick = { beatUnit = false }, label = { Text(Loc.str(R.string.dlg_unit_10ms)) })
+                    }
+                }
+                if (beatUnit && beatsAvailable) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = beatsText,
+                            onValueChange = { raw ->
+                                val f = raw.replace(',', '.')
+                                if (Regex("""\d{0,4}(\.\d{0,2})?""").matches(f)) {
+                                    beatsText = f
+                                    duration = ticksOfBeats(f.toDoubleOrNull() ?: 0.0)
+                                }
+                            },
+                            label = { Text(Loc.str(R.string.dlg_beat_unit)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedButton(onClick = {
+                            val nb = ((beatsText.toDoubleOrNull() ?: 0.0) - 0.1).coerceAtLeast(0.0)
+                            beatsText = fmtBeats(nb)
+                            duration = ticksOfBeats(nb)
+                        }) { Text("-0.1") }
+                        OutlinedButton(onClick = {
+                            val nb = (beatsText.toDoubleOrNull() ?: 0.0) + 0.1
+                            beatsText = fmtBeats(nb)
+                            duration = ticksOfBeats(nb)
+                        }) { Text("+0.1") }
+                    }
+                } else {
+                    NumberTextField(
+                        value = duration,
+                        onValueChange = { duration = it },
+                        label = Loc.str(R.string.label_duration),
+                        range = 0..EfxDurations.MAX_TICKS,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                // 실제로 들어가는 값 안내
+                val durMs = EfxDurations.ticksToMs(duration)
                 UnitHint(
-                    if (duration == 0) Loc.str(R.string.duration_until_next)
-                    else com.efxcreator.model.EfxDurations.formatMs(com.efxcreator.model.EfxDurations.ticksToMs(duration))
+                    when {
+                        duration == 0 -> Loc.str(R.string.duration_until_next)
+                        beatsAvailable -> Loc.str(R.string.dlg_duration_ref_beats, fmtBeats(beatsOfTicks(duration)), EfxDurations.formatMs(durMs), duration)
+                        else -> Loc.str(R.string.dlg_duration_ref_ms, EfxDurations.formatMs(durMs), duration)
+                    }
                 )
+
+                // ── 덮어쓰기(ON) / 밀기(OFF) ──
+                if (showOverwrite) {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(Loc.str(R.string.dlg_overwrite_label))
+                            UnitHint(Loc.str(if (overwrite) R.string.dlg_overwrite_on_desc else R.string.dlg_overwrite_off_desc))
+                        }
+                        Switch(checked = overwrite, onCheckedChange = { overwrite = it })
+                    }
+                    val impact = EfxOverwrite.preview(otherEntries, effectiveTs, duration, overwrite)
+                    UnitHint(
+                        when {
+                            impact.removed > 0 || impact.trimmed > 0 -> Loc.str(R.string.dlg_overwrite_summary, impact.removed, impact.trimmed)
+                            impact.pushed > 0 -> Loc.str(R.string.dlg_push_summary, impact.pushed, EfxDurations.formatMs(impact.pushedByMs))
+                            else -> Loc.str(R.string.dlg_overlap_none)
+                        }
+                    )
+                }
 
                 GroupMaskPicker(mask = groupMask, onChange = { groupMask = it })
                 }
@@ -342,7 +466,7 @@ fun TimelineEntryDialog(
                     }
                 }
                 TextButton(onClick = {
-                    val timestampMs = (minutes * 60000L) + (seconds * 1000L) + millis
+                    val timestampMs = effectiveTs
                     val payload = LSEffectPayload(
                         groupMask = groupMask,
                         effectType = effectType,
@@ -356,7 +480,8 @@ fun TimelineEntryDialog(
                         duration = duration,
                         effectIndex = 0
                     )
-                    onSave(EfxEntry(timestampMs, payload))
+                    val saved = EfxEntry(timestampMs, payload)
+                    if (showOverwrite && onSaveOverwrite != null) onSaveOverwrite(saved, overwrite) else onSave(saved)
                 }) {
                     Text(Loc.str(R.string.efx_edit_screen_21))
                 }

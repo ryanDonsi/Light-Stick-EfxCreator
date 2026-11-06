@@ -610,4 +610,17 @@
     <string name="bulk_delete_songs_title">Delete songs</string>
     <string name="bulk_delete_songs_message">Delete %1$d song(s) and their effect files?\nThis cannot be undone.</string>
     <string name="exit_app_toast">Press back again to exit</string>
+    <string name="dlg_beat_unit">Beats</string>
+    <string name="dlg_unit_10ms">10ms</string>
+    <string name="dlg_snap_label">Snap to beat</string>
+    <string name="dlg_snap_target">→ Saved at beat %1$d (%2$s)</string>
+    <string name="dlg_snap_hint">Changing the start time snaps it to the nearest beat</string>
+    <string name="dlg_duration_ref_beats">= %1$s beats · %2$s · %3$d units (10ms)</string>
+    <string name="dlg_duration_ref_ms">= %1$s · %2$d units (10ms)</string>
+    <string name="dlg_overwrite_label">Overwrite</string>
+    <string name="dlg_overwrite_on_desc">On: overlapping effects are overwritten</string>
+    <string name="dlg_overwrite_off_desc">Off: overlapping effects are pushed back</string>
+    <string name="dlg_overwrite_summary">Overwrite: %1$d effect(s) removed · %2$d trimmed</string>
+    <string name="dlg_push_summary">%1$d later effect(s) pushed back by %2$s</string>
+    <string name="dlg_overlap_none">No overlapping effects</string>
 </resources>

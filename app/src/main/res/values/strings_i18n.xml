@@ -610,4 +610,17 @@
     <string name="bulk_delete_songs_title">곡 삭제</string>
     <string name="bulk_delete_songs_message">곡 %1$d개와 이펙트 파일을 삭제합니다.\n되돌릴 수 없습니다.</string>
     <string name="exit_app_toast">한 번 더 누르면 종료됩니다</string>
+    <string name="dlg_beat_unit">비트</string>
+    <string name="dlg_unit_10ms">10ms</string>
+    <string name="dlg_snap_label">비트 스냅</string>
+    <string name="dlg_snap_target">→ 비트 %1$d (%2$s)에 맞춰 저장됩니다</string>
+    <string name="dlg_snap_hint">시작 시각을 바꾸면 가까운 비트에 맞춰집니다</string>
+    <string name="dlg_duration_ref_beats">= %1$s비트 · %2$s · %3$d칸(10ms)</string>
+    <string name="dlg_duration_ref_ms">= %1$s · %2$d칸(10ms)</string>
+    <string name="dlg_overwrite_label">덮어쓰기</string>
+    <string name="dlg_overwrite_on_desc">켜짐: 겹치는 이펙트를 덮어씁니다</string>
+    <string name="dlg_overwrite_off_desc">꺼짐: 겹치면 뒤의 이펙트를 뒤로 밉니다</string>
+    <string name="dlg_overwrite_summary">덮어쓰기: 이펙트 %1$d개 삭제 · %2$d개 시작 조정</string>
+    <string name="dlg_push_summary">뒤의 이펙트 %1$d개가 %2$s 뒤로 밀립니다</string>
+    <string name="dlg_overlap_none">겹치는 이펙트가 없습니다</string>
 </resources>

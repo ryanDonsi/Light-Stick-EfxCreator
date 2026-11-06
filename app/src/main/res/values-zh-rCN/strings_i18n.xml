@@ -610,4 +610,17 @@
     <string name="bulk_delete_songs_title">删除歌曲</string>
     <string name="bulk_delete_songs_message">将删除 %1$d 首歌曲及其效果文件。\n此操作无法撤销。</string>
     <string name="exit_app_toast">再按一次退出</string>
+    <string name="dlg_beat_unit">节拍</string>
+    <string name="dlg_unit_10ms">10ms</string>
+    <string name="dlg_snap_label">吸附节拍</string>
+    <string name="dlg_snap_target">→ 将保存到第 %1$d 拍 (%2$s)</string>
+    <string name="dlg_snap_hint">修改开始时间后会吸附到最近的节拍</string>
+    <string name="dlg_duration_ref_beats">= %1$s 拍 · %2$s · %3$d 个单位(10ms)</string>
+    <string name="dlg_duration_ref_ms">= %1$s · %2$d 个单位(10ms)</string>
+    <string name="dlg_overwrite_label">覆盖</string>
+    <string name="dlg_overwrite_on_desc">开启：覆盖重叠的效果</string>
+    <string name="dlg_overwrite_off_desc">关闭：重叠时将后面的效果向后推</string>
+    <string name="dlg_overwrite_summary">覆盖：删除 %1$d 个效果 · 调整 %2$d 个起点</string>
+    <string name="dlg_push_summary">后面的 %1$d 个效果将向后推 %2$s</string>
+    <string name="dlg_overlap_none">没有重叠的效果</string>
 </resources>

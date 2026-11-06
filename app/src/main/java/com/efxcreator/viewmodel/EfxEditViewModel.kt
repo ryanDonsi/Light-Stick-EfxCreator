@@ -12,6 +12,7 @@ import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.music.sets.GenerationOptions
 import com.efxcreator.model.EfxDurations
 import com.efxcreator.model.EfxMoves
+import com.efxcreator.model.EfxOverwrite
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
 import com.lightstick.efx.EfxEntry
@@ -355,13 +356,17 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         commitDraft(kept + new)
     }
 
-    fun updateTimelineEntry(index: Int, updatedEntry: EfxEntry) {
+    /**
+     * 편집한 이펙트를 반영한다. 시작 시각/지속시간이 다른 이펙트와 겹치면
+     * [overwrite] 가 true 면 겹치는 이펙트를 덮어쓰고(삭제/시작 조정), false 면 뒤의 이펙트를 뒤로 민다 ([EfxOverwrite]).
+     */
+    fun updateTimelineEntry(index: Int, updatedEntry: EfxEntry, overwrite: Boolean = false) {
         val current = _efx.value ?: return
-        val list = current.body.entries.toMutableList()
+        val list = current.body.entries
         if (index !in list.indices) return
-        list[index] = updatedEntry
+        val others = list.filterIndexed { i, _ -> i != index }
         _editingEntry.value = null
-        commitDraft(list)
+        commitDraft(EfxOverwrite.apply(others, updatedEntry, overwrite).entries)
     }
 
     /** 선택한 여러 이펙트를 한 번에 지운다 (실행 취소 한 번으로 되돌린다) */

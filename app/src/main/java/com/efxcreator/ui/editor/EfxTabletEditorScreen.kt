@@ -630,6 +630,16 @@ fun EfxTabletEditorScreen(
                 pendingSelectTs = updated.timestampMs
                 editVm.updateTimelineEntry(index, updated)
             },
+            // 시작 시각/지속시간 편집: 비트 단위 입력, 비트 스냅(편집 화면 설정과 공유), 덮어쓰기/밀기
+            showOverwrite = true,
+            onSaveOverwrite = { updated, overwrite ->
+                pendingSelectTs = updated.timestampMs
+                editVm.updateTimelineEntry(index, updated, overwrite)
+            },
+            beatTimesMs = analysis?.beatTimesMs.orEmpty(),
+            snapToBeats = snapToBeats,
+            onSnapChange = { snapToBeats = it },
+            otherEntries = entries.filterIndexed { i, _ -> i != index },
             onDelete = {
                 editVm.deleteTimelineEntry(index)
                 selectedIndex = -1
