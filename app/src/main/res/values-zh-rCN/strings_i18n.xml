@@ -626,4 +626,6 @@
     <string name="dlg_time_units">分 . 秒 . 1/100秒</string>
     <string name="dlg_step_beat_snap">节拍按钮：1拍</string>
     <string name="dlg_step_beat_fine">节拍按钮：0.1拍</string>
+    <string name="dlg_snap_on_desc">开启：开始时间吸附到最近的节拍保存</string>
+    <string name="dlg_snap_off_desc">关闭：按输入的时间原样保存</string>
 </resources>

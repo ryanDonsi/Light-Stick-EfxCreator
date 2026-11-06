@@ -626,4 +626,6 @@
     <string name="dlg_time_units">분 . 초 . 1/100초</string>
     <string name="dlg_step_beat_snap">비트 버튼: 1비트씩</string>
     <string name="dlg_step_beat_fine">비트 버튼: 0.1비트씩</string>
+    <string name="dlg_snap_on_desc">켜짐: 시작 시간을 가까운 비트에 맞춰 저장합니다</string>
+    <string name="dlg_snap_off_desc">꺼짐: 입력한 시간 그대로 저장합니다</string>
 </resources>

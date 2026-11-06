@@ -626,4 +626,6 @@
     <string name="dlg_time_units">min . sec . 1/100s</string>
     <string name="dlg_step_beat_snap">Beat buttons: 1 beat</string>
     <string name="dlg_step_beat_fine">Beat buttons: 0.1 beat</string>
+    <string name="dlg_snap_on_desc">On: the start time snaps to the nearest beat</string>
+    <string name="dlg_snap_off_desc">Off: saved exactly as entered</string>
 </resources>

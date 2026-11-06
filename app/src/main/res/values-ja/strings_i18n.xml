@@ -626,4 +626,6 @@
     <string name="dlg_time_units">分 . 秒 . 1/100秒</string>
     <string name="dlg_step_beat_snap">ビートボタン: 1ビート</string>
     <string name="dlg_step_beat_fine">ビートボタン: 0.1ビート</string>
+    <string name="dlg_snap_on_desc">オン: 開始時刻を最も近いビートに合わせて保存します</string>
+    <string name="dlg_snap_off_desc">オフ: 入力した時刻のまま保存します</string>
 </resources>
