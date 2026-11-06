@@ -184,16 +184,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** 앱 종료 시 자동 연결 기기의 연결을 해제한다 (다음 실행 때 다시 자동 연결된다) */
-    override fun onCleared() {
-        autoConnectJob?.cancel()
-        val device = _connected.value
-        if (device != null && isAutoConnect(device.mac) && hasPermissions()) {
-            runCatching { device.stopTimeline(); device.disconnect() }
-        }
-        super.onCleared()
-    }
-
     fun hasPermissions(): Boolean = requiredPermissions().all {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
@@ -599,8 +589,14 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         return device
     }
 
+    /** 앱 종료 시: 스캔을 멈추고, 자동 연결 기기의 연결을 해제한다 (다음 실행 때 다시 자동 연결된다) */
     override fun onCleared() {
         stopScan()
+        autoConnectJob?.cancel()
+        val device = _connected.value
+        if (device != null && isAutoConnect(device.mac) && hasPermissions()) {
+            runCatching { device.stopTimeline(); device.disconnect() }
+        }
         super.onCleared()
     }
 }
