@@ -23,7 +23,9 @@ import com.lightstick.types.Color as LsColor
 import com.lightstick.types.Colors
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -87,6 +89,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     private val _groupCount = MutableStateFlow(prefs.groupCount)
     val groupCount: StateFlow<Int> = _groupCount.asStateFlow()
 
+    private val _autoConnectDevices = MutableStateFlow(prefs.getAutoConnectDevices())
+    /** 자동 연결로 등록된 기기 (mac, 이름) */
+    val autoConnectDevices: StateFlow<List<Pair<String, String?>>> = _autoConnectDevices.asStateFlow()
+
     private val _otaProgress = MutableStateFlow<Int?>(null)
     /** OTA 진행률(0~100). 진행 중이 아니면 null */
     val otaProgress: StateFlow<Int?> = _otaProgress.asStateFlow()
@@ -100,10 +106,12 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     private var scanJob: Job? = null
     private var monitorJob: Job? = null
+    private var autoConnectJob: Job? = null
 
     companion object {
         private const val TAG = "BleViewModel"
         private const val SCAN_SECONDS = 10
+        private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
 
         /** 현재 OS 버전에서 요청해야 하는 BLE 런타임 권한 */
         fun requiredPermissions(): Array<String> =
@@ -122,6 +130,66 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                     startMonitoring(it)
                 }
         }
+        tryAutoConnect()
+    }
+
+    // ── 자동 연결 ────────────────────────────────────────────────
+
+    fun isAutoConnect(mac: String): Boolean = _autoConnectDevices.value.any { it.first == mac }
+
+    fun setAutoConnect(device: Device, enabled: Boolean) = setAutoConnect(device.mac, device.name, enabled)
+
+    fun setAutoConnect(mac: String, name: String?, enabled: Boolean) {
+        prefs.setAutoConnect(mac, name, enabled)
+        _autoConnectDevices.value = prefs.getAutoConnectDevices()
+    }
+
+    /**
+     * 자동 연결로 등록된 기기에 스캔 없이 MAC 으로 바로 연결한다 (등록 순서대로, 하나가 연결되면 끝).
+     * 앱 시작 시 호출되며, 권한이 나중에 허용된 경우에도 다시 호출할 수 있다.
+     */
+    fun tryAutoConnect() {
+        if (_connected.value != null || autoConnectJob?.isActive == true) return
+        val targets = _autoConnectDevices.value
+        if (targets.isEmpty() || !hasPermissions()) return
+        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        if (btManager?.adapter?.isEnabled != true) return
+
+        autoConnectJob = viewModelScope.launch {
+            for ((mac, name) in targets) {
+                if (_connected.value != null) break
+                val device = runCatching { LSBluetooth.bondedDevices().firstOrNull { it.mac == mac } }.getOrNull()
+                    ?: Device(mac, name, null)
+                val result = CompletableDeferred<Boolean>()
+                _connectingMac.value = mac
+                Log.d(TAG, "autoConnect: $mac")
+                device.connect(onConnected = { result.complete(true) }, onFailed = { result.complete(false) })
+                val ok = withTimeoutOrNull(AUTO_CONNECT_TIMEOUT_MS) { result.await() } ?: false
+                _connectingMac.value = null
+                if (!ok) {
+                    runCatching { device.disconnect() }
+                    continue
+                }
+                if (_connected.value != null) { // 그 사이 사용자가 직접 다른 기기에 연결했다
+                    runCatching { device.disconnect() }
+                    break
+                }
+                _connected.value = device
+                startMonitoring(device)
+                _message.value = Loc.str(R.string.ble_view_model_4, device.name ?: name ?: device.mac)
+                break
+            }
+        }
+    }
+
+    /** 앱 종료 시 자동 연결 기기의 연결을 해제한다 (다음 실행 때 다시 자동 연결된다) */
+    override fun onCleared() {
+        autoConnectJob?.cancel()
+        val device = _connected.value
+        if (device != null && isAutoConnect(device.mac) && hasPermissions()) {
+            runCatching { device.stopTimeline(); device.disconnect() }
+        }
+        super.onCleared()
     }
 
     fun hasPermissions(): Boolean = requiredPermissions().all {

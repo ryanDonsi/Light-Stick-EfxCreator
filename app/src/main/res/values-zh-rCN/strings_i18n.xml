@@ -596,4 +596,8 @@
     <string name="multi_exit">退出选择模式</string>
     <string name="timeline_select_mode_badge">选择模式</string>
     <string name="song_palette_choose">选择这首歌的调色板</string>
+    <string name="label_auto_connect">自动连接</string>
+    <string name="auto_connect_desc">应用启动时自动连接此设备，应用退出时断开连接</string>
+    <string name="auto_connect_devices_title">自动连接设备</string>
+    <string name="auto_connect_remove">移除</string>
 </resources>

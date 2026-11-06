@@ -596,4 +596,8 @@
     <string name="multi_exit">선택 모드 끝내기</string>
     <string name="timeline_select_mode_badge">선택 모드</string>
     <string name="song_palette_choose">이 곡의 팔레트 선택</string>
+    <string name="label_auto_connect">자동 연결</string>
+    <string name="auto_connect_desc">앱을 시작하면 이 기기에 자동으로 연결하고, 앱을 종료하면 연결을 해제합니다</string>
+    <string name="auto_connect_devices_title">자동 연결 기기</string>
+    <string name="auto_connect_remove">해제</string>
 </resources>

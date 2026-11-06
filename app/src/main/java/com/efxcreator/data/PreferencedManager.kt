@@ -40,6 +40,22 @@ class PreferencesManager(context: Context) {
     fun setBroadcasting(mac: String, enabled: Boolean) =
         prefs.edit().putBoolean("broadcasting_$mac", enabled).apply()
 
+    // 기기별 자동 연결: 앱 시작 시 자동으로 연결하고 앱 종료 시 해제할 기기 (mac → 이름). 등록 순서를 유지한다
+    fun getAutoConnectDevices(): List<Pair<String, String?>> =
+        (prefs.getString("auto_connect_macs", "") ?: "").split(",").filter { it.isNotBlank() }
+            .map { it to prefs.getString("auto_connect_name_$it", null) }
+
+    fun isAutoConnect(mac: String): Boolean = getAutoConnectDevices().any { it.first == mac }
+
+    fun setAutoConnect(mac: String, name: String?, enabled: Boolean) {
+        val macs = getAutoConnectDevices().map { it.first }.filter { it != mac }.toMutableList()
+        if (enabled) macs += mac
+        prefs.edit().apply {
+            putString("auto_connect_macs", macs.joinToString(","))
+            if (enabled && name != null) putString("auto_connect_name_$mac", name) else remove("auto_connect_name_$mac")
+        }.apply()
+    }
+
     // 마지막으로 선택한 이펙트/팔레트 세트 id (빈 문자열 = 자동)
     var lastEffectSetId: String
         get() = prefs.getString("last_effect_set_id", "") ?: ""

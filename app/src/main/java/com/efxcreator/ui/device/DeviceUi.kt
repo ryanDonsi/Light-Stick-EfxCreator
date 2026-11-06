@@ -119,6 +119,7 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
     val connected by bleVm.connected.collectAsState()
     val connectingMac by bleVm.connectingMac.collectAsState()
     val hasScanned by bleVm.hasScanned.collectAsState()
+    val autoConnectDevices by bleVm.autoConnectDevices.collectAsState()
     var scanAfterPermission by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -170,6 +171,24 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+                if (autoConnectDevices.isNotEmpty()) {
+                    Text(Loc.str(R.string.auto_connect_devices_title), style = MaterialTheme.typography.labelMedium)
+                    autoConnectDevices.forEach { (mac, name) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                (name ?: mac) + if (name != null) "  $mac" else "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { bleVm.setAutoConnect(mac, name, false) }) {
+                                Text(Loc.str(R.string.auto_connect_remove))
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                    Spacer(Modifier.height(4.dp))
+                }
                 LazyColumn(modifier = Modifier.height(220.dp)) {
                     items(found, key = { it.mac }) { device ->
                         Row(
@@ -180,7 +199,11 @@ fun DeviceConnectDialog(bleVm: BleViewModel, onDismiss: () -> Unit) {
                                 .padding(vertical = 10.dp)
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(device.name ?: Loc.str(R.string.device_ui_6), style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    (device.name ?: Loc.str(R.string.device_ui_6)) +
+                                        if (autoConnectDevices.any { it.first == device.mac }) " · ${Loc.str(R.string.label_auto_connect)}" else "",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                                 Text(
                                     device.mac,
                                     style = MaterialTheme.typography.labelSmall,
@@ -308,6 +331,7 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     val broadcasting by bleVm.broadcasting.collectAsState()
     val otaProgress by bleVm.otaProgress.collectAsState()
     val otaCheck by bleVm.otaCheck.collectAsState()
+    val autoConnectDevices by bleVm.autoConnectDevices.collectAsState()
 
     var showInfo by remember { mutableStateOf(false) }
     var showFind by remember { mutableStateOf(false) }
@@ -332,6 +356,20 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                 Text(Loc.str(R.string.device_ui_11), style = MaterialTheme.typography.bodySmall)
             },
             trailingContent = { Switch(checked = broadcasting, onCheckedChange = { bleVm.setBroadcasting(it) }) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        HorizontalDivider()
+        ListItem(
+            headlineContent = { Text(Loc.str(R.string.label_auto_connect), style = MaterialTheme.typography.titleSmall) },
+            supportingContent = {
+                Text(Loc.str(R.string.auto_connect_desc), style = MaterialTheme.typography.bodySmall)
+            },
+            trailingContent = {
+                Switch(
+                    checked = autoConnectDevices.any { it.first == device.mac },
+                    onCheckedChange = { bleVm.setAutoConnect(device, it) }
+                )
+            },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
         HorizontalDivider()

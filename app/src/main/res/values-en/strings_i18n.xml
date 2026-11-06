@@ -596,4 +596,8 @@
     <string name="multi_exit">Exit select mode</string>
     <string name="timeline_select_mode_badge">Select mode</string>
     <string name="song_palette_choose">Choose palette for this song</string>
+    <string name="label_auto_connect">Auto connect</string>
+    <string name="auto_connect_desc">Connect to this device automatically when the app starts and disconnect when the app exits</string>
+    <string name="auto_connect_devices_title">Auto-connect devices</string>
+    <string name="auto_connect_remove">Remove</string>
 </resources>

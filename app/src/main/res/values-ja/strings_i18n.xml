@@ -596,4 +596,8 @@
     <string name="multi_exit">選択モードを終了</string>
     <string name="timeline_select_mode_badge">選択モード</string>
     <string name="song_palette_choose">この曲のパレットを選択</string>
+    <string name="label_auto_connect">自動接続</string>
+    <string name="auto_connect_desc">アプリ起動時にこの機器へ自動接続し、アプリ終了時に接続を解除します</string>
+    <string name="auto_connect_devices_title">自動接続する機器</string>
+    <string name="auto_connect_remove">解除</string>
 </resources>
