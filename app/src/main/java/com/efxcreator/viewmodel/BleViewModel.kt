@@ -112,8 +112,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "BleViewModel"
         private const val SCAN_SECONDS = 10
-        /** 재생 중 위치가 예상과 이만큼 다르면 Seek 로 본다 */
-        private const val SEEK_JUMP_MS = 700L
+        /** 재생 중 위치가 예상(기준점+경과시간)과 이만큼 넘게 다르면 Seek 로 본다 */
+        private const val SEEK_JUMP_MS = 200L
         private const val SEEK_SETTLE_MS = 150L
         /** SDK 가 프레임 위치를 다시 계산하는 기준(앞으로 10초 초과)을 넘기는 값 */
         private const val FORCE_RESYNC_OFFSET_MS = 11_000L
@@ -538,11 +538,15 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         val ok = device.playTimeline(frames)
         timelinePaused = false
         lastPositionAtMs = 0L
+        anchorAtMs = 0L
         Log.d(TAG, "loadTimeline: frames=${frames.size} ok=$ok")
     }
 
     private var lastPositionMs = 0L
     private var lastPositionAtMs = 0L
+    /** 정상 재생의 기준점: 이 위치에서 시간이 흐른 만큼 진행하면 "예상 위치". 예상과 크게 다르면 Seek (0 = 기준점 없음) */
+    private var anchorPosMs = 0L
+    private var anchorAtMs = 0L
     /** 일시정지 중이거나 타임라인이 멈춘 상태인지 (재생 중 Seek 감지에만 쓴다) */
     private var timelinePaused = true
     private var seekJob: Job? = null
@@ -550,16 +554,33 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun updatePosition(positionMs: Long) {
         val device = connectedOrNull() ?: return
         val now = SystemClock.elapsedRealtime()
-        // 직전 위치에서 경과 시간만큼 흐른 위치와 크게 다르면 재생 중 Seek 로 본다
-        val expected = lastPositionMs + (now - lastPositionAtMs)
-        val jumped = lastPositionAtMs != 0L && kotlin.math.abs(positionMs - expected) > SEEK_JUMP_MS
-        if (jumped) Log.d(TAG, "updatePosition jump: expected=${expected}ms -> ${positionMs}ms paused=$timelinePaused")
         lastPositionMs = positionMs
         lastPositionAtMs = now
 
+        var jumped = false
+        if (timelinePaused) {
+            anchorAtMs = 0L // 일시정지 중의 이동은 재개 때 처리한다
+        } else if (anchorAtMs == 0L) {
+            anchorPosMs = positionMs
+            anchorAtMs = now
+        } else {
+            val deviation = positionMs - (anchorPosMs + (now - anchorAtMs))
+            if (kotlin.math.abs(deviation) <= SEEK_JUMP_MS) {
+                // 정상 재생: 기준점을 현재로 갱신해 시계 오차가 쌓이지 않게 한다
+                anchorPosMs = positionMs
+                anchorAtMs = now
+            } else {
+                // 기준점은 그대로 둔다 → 드래그처럼 조금씩 연속으로 움직여도 누적되어 Seek 로 잡힌다
+                jumped = true
+                if (seekJob?.isActive != true) {
+                    Log.d(TAG, "seek detected: expected=${anchorPosMs + (now - anchorAtMs)}ms -> ${positionMs}ms")
+                }
+            }
+        }
+
         device.updatePlaybackPosition(positionMs)
-        if (jumped && !timelinePaused) {
-            // MediaPlayer.seekTo 는 비동기라 직후 잠깐 이전 위치가 읽힐 수 있다 → 위치가 안정된 뒤 최신 위치로 한 번만 보낸다
+        if (jumped) {
+            // MediaPlayer.seekTo 는 비동기이고 드래그 중에는 계속 바뀐다 → 위치가 안정된 뒤 최신 위치로 한 번만 보낸다
             seekJob?.cancel()
             seekJob = viewModelScope.launch {
                 delay(SEEK_SETTLE_MS)
@@ -585,6 +606,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         device.updatePlaybackPosition(positionMs + FORCE_RESYNC_OFFSET_MS)
         device.updatePlaybackPosition(positionMs)
         val resumed = device.resumeTimeline()
+        anchorPosMs = positionMs
+        anchorAtMs = SystemClock.elapsedRealtime()
         Log.d(TAG, "seek resend: pos=${positionMs}ms type=${payload.effectType} sent=$sent resumed=$resumed")
     }
 
@@ -614,6 +637,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         timelinePaused = false
         lastPositionMs = positionMs
         lastPositionAtMs = SystemClock.elapsedRealtime()
+        anchorPosMs = positionMs
+        anchorAtMs = lastPositionAtMs
         device.updatePlaybackPosition(positionMs) // Seek
         device.updatePlaybackPosition(positionMs) // 즉시 위치 업데이트
         Log.d(
