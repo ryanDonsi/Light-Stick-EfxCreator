@@ -19,6 +19,9 @@ object EfxDurations {
     /** 마지막 이펙트를 옮길 때 쓰는 기본 길이 */
     const val TAIL_MS = 2_000L
 
+    /** Effect Index: 1부터 매기되 255 를 넘으면 0 부터 다시 시작한다 (SDK 는 0~255 밖이면 예외) */
+    fun indexFor(position: Int): Int = (position + 1) % 256
+
     fun ticksToMs(ticks: Int): Long = ticks.toLong() * UNIT_MS
 
     /** ms → 10ms 단위(올림, 1~65535) */
@@ -60,7 +63,7 @@ object EfxDurations {
                 e.payload.effectType == EffectType.OFF || next == null -> 0
                 else -> msToTicks(next.timestampMs - e.timestampMs)
             }
-            if (want == e.payload.duration) e else e.copy(payload = e.payload.copy(duration = want))
+            e.copy(payload = e.payload.copy(duration = want, effectIndex = indexFor(i)))
         }
     }
 
@@ -105,13 +108,13 @@ object EfxDurations {
 
     /**
      * SDK 2.0 으로 저장한 옛 파일 정리. 2.0 은 offset 18 에 effectIndex(1부터 순번)를 넣었고 2.1 은 그 자리를 duration 으로 읽는다.
-     * 모든 항목의 duration 이 1,2,3 … 순번과 같으면 옛 파일로 보고 duration/effectIndex 를 0 으로 되돌린다.
+     * 모든 항목의 duration 이 1,2,3 … 순번과 같으면 옛 파일로 보고 duration 을 0 으로 되돌리고 effectIndex 를 순번으로 다시 매긴다.
      */
     fun sanitizeLegacy(entries: List<EfxEntry>): List<EfxEntry> {
         if (entries.isEmpty()) return entries
         val legacy = entries.withIndex().all { (i, e) -> e.payload.duration == i + 1 }
         if (!legacy) return entries
-        return entries.map { it.copy(payload = it.payload.copy(duration = 0, effectIndex = 0)) }
+        return entries.mapIndexed { i, e -> e.copy(payload = e.payload.copy(duration = 0, effectIndex = indexFor(i))) }
     }
 
     /** "다음 이펙트까지" 또는 "150 (1.5s)" 형태의 표시 문자열에 쓰는 초 단위 포맷 */

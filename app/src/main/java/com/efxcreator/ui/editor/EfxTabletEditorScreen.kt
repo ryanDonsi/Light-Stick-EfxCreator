@@ -1146,7 +1146,8 @@ private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier) {
                 if (p.duration == 0) Loc.str(R.string.duration_until_next)
                 else "${p.duration} (${com.efxcreator.model.EfxDurations.formatMs(com.efxcreator.model.EfxDurations.ticksToMs(p.duration))})",
                 null
-            )
+            ),
+            Triple(Loc.str(R.string.label_index), p.effectIndex.toString(), null)
         )
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(9.dp)) {
             rows.forEach { (k, v, swatch) ->

@@ -442,15 +442,16 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
     // ── Undo / Redo / 저장 ──────────────────────────────────────
 
     /**
-     * 시각순으로 정렬한다. effectIndex 는 재생 시 SDK 가 세션 값으로 덮어쓰고 0~255 밖이면 예외라서 파일에는 0 으로 둔다
-     * (화면의 순번은 목록 위치를 쓴다).
+     * 시각순으로 정렬하고 Effect Index 를 다시 매긴다. 1부터 증가하다가 255 를 넘으면 0 부터 다시 시작한다
+     * (SDK 는 effectIndex 가 0~255 밖이면 예외를 낸다).
      */
     private fun sortedIndexZero(entries: List<EfxEntry>): List<EfxEntry> =
-        entries.sortedBy { it.timestampMs }.map { e ->
-            if (e.payload.effectIndex == 0) e else e.copy(payload = e.payload.copy(effectIndex = 0))
+        entries.sortedBy { it.timestampMs }.mapIndexed { i, e ->
+            val idx = EfxDurations.indexFor(i)
+            if (e.payload.effectIndex == idx) e else e.copy(payload = e.payload.copy(effectIndex = idx))
         }
 
-    /** 정렬 + effectIndex 0 + duration 이 다음 이펙트 시각을 넘지 않게 정리 */
+    /** 정렬 + Effect Index 재부여 + duration 이 다음 이펙트 시각을 넘지 않게 정리 */
     private fun normalize(entries: List<EfxEntry>): List<EfxEntry> = EfxDurations.clamp(sortedIndexZero(entries))
 
     private fun setDraftEntries(entries: List<EfxEntry>) {

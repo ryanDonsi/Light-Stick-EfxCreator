@@ -316,7 +316,7 @@ class EfxRepository(private val context: Context) {
         Log.d(TAG, "Creating new EFX")
 
         val defaultPayload = LSEffectPayload(
-            effectIndex = 0,  // 재생 시 SDK 가 세션 값으로 덮어쓴다 (0~255 밖이면 예외)
+            effectIndex = 1,  // 첫 번째 Entry는 Index 1 (255 를 넘으면 0 부터 다시)
             effectType = EffectType.ON,
             color = Color(255, 255, 255),
             backgroundColor = Color(0, 0, 0),

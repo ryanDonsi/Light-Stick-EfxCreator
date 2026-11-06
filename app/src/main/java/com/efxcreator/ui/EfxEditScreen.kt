@@ -233,7 +233,6 @@ fun EfxEditScreen(
                             itemsIndexed(currentEfx.body.entries) { index, entry ->
                                 TimelineEntryCard(
                                     entry = entry,
-                                    position = index + 1,
                                     onClick = {
                                         viewModel.startEditingEntry(index, entry)
                                     },
@@ -354,7 +353,6 @@ fun EfxEditScreen(
 @Composable
 fun TimelineEntryCard(
     entry: EfxEntry,
-    position: Int,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -379,7 +377,7 @@ fun TimelineEntryCard(
             ) {
                 // Effect Index (최상단)
                 Text(
-                    text = "Index: $position",
+                    text = "Index: ${entry.payload.effectIndex}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
