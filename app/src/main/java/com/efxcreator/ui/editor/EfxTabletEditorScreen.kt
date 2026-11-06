@@ -291,7 +291,7 @@ fun EfxTabletEditorScreen(
                 bleVm.loadTimeline(frames)
                 deviceLoaded = true
             } else {
-                bleVm.resumeTimeline()
+                bleVm.resumeTimeline(player.positionMs)
             }
             while (isActive) {
                 bleVm.updatePosition(player.positionMs)

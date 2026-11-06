@@ -111,6 +111,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "BleViewModel"
         private const val SCAN_SECONDS = 10
+        /** SDK 가 앞으로 10초 넘게 이동한 것으로 보고 프레임 위치를 다시 계산하는 기준을 넘기는 값 */
+        private const val FORCE_RESYNC_OFFSET_MS = 11_000L
         private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
 
         /** 현재 OS 버전에서 요청해야 하는 BLE 런타임 권한 */
@@ -539,30 +541,46 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun loadTimeline(frames: List<Pair<Long, ByteArray>>) {
         val device = connectedOrNull() ?: return
         loadedFrames = frames
-        if (!device.playTimeline(frames)) Log.w(TAG, "playTimeline rejected")
+        val ok = device.playTimeline(frames)
+        Log.d(TAG, "loadTimeline: frames=${frames.size} ok=$ok")
     }
 
     fun updatePosition(positionMs: Long) {
         connectedOrNull()?.updatePlaybackPosition(positionMs)
     }
 
-    /** 일시정지: 타임라인을 멈추고, 마지막 이펙트가 기기에서 계속 반복되지 않도록 OFF 를 보낸다 */
+    /** 일시정지: 타임라인을 멈추고, 마지막 이펙트가 기기에서 계속 반복되지 않도록 OFF 를 보낸다 (Light-Stick-Music 과 동일) */
     fun pauseTimeline() {
         val device = connectedOrNull() ?: return
-        device.pauseTimeline()
-        device.sendEffect(solidPayload(EffectType.OFF, 0, 0, 0))
+        val paused = device.pauseTimeline()
+        val off = LSEffectPayload.Effects.off()
+        val sent = device.sendEffect(off)
+        Log.d(
+            TAG, "pauseTimeline: pause=$paused offSent=$sent loaded=${device.isTimelineLoaded()} " +
+                "playing=${device.isTimelinePlaying()} payload=${off.toByteArray().hex()}"
+        )
     }
 
     /**
-     * 재개: 기기에 타임라인이 남아 있지 않으면(연결 재시도 등) 다시 올린다.
-     * 이후 resumeTimeline() 과 재생 위치 갱신으로 SDK 가 현재 위치의 이펙트를 복원한다.
+     * 재개: 기기에 타임라인이 없으면(연결 재시도 등) 다시 올린다.
+     * SDK 의 updatePlaybackPosition 은 1초 넘게 뒤로 / 10초 넘게 앞으로 이동했을 때만 "현재 프레임 위치"를
+     * 다시 계산하므로, 일시정지 중 가까운 위치로 옮기면 이전 프레임(예: BLINK)이 그대로 재전송된다.
+     * 그래서 재개 직전에 먼 위치 → 실제 위치 순으로 두 번 갱신해 프레임 위치를 확실히 다시 계산한다.
      */
-    fun resumeTimeline() {
+    fun resumeTimeline(positionMs: Long) {
         val device = connectedOrNull() ?: return
         val needsReload = runCatching { !device.isTimelineLoaded() }.getOrDefault(true)
-        if (needsReload) loadedFrames?.let { if (!device.playTimeline(it)) Log.w(TAG, "playTimeline rejected") }
-        device.resumeTimeline()
+        if (needsReload) loadedFrames?.let { device.playTimeline(it) }
+        device.updatePlaybackPosition(positionMs + FORCE_RESYNC_OFFSET_MS)
+        device.updatePlaybackPosition(positionMs)
+        val resumed = device.resumeTimeline()
+        Log.d(
+            TAG, "resumeTimeline: pos=${positionMs}ms reload=$needsReload resumed=$resumed " +
+                "loaded=${device.isTimelineLoaded()} playing=${device.isTimelinePlaying()}"
+        )
     }
+
+    private fun ByteArray.hex(): String = joinToString(" ") { "%02X".format(it) }
 
     fun stopTimeline() {
         loadedFrames = null

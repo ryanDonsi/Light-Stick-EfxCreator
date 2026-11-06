@@ -150,7 +150,7 @@ fun rememberSongPreview(bleVm: BleViewModel): SongPreviewState {
                 bleVm.loadTimeline(state.frames)
                 loadedFor = activeId
             } else {
-                bleVm.resumeTimeline()
+                bleVm.resumeTimeline(state.player.positionMs)
             }
             while (isActive) {
                 bleVm.updatePosition(state.player.positionMs)
