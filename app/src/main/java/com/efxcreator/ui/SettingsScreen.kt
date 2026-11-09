@@ -3,6 +3,7 @@ package com.efxcreator.ui
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import java.io.File
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -55,6 +56,7 @@ fun SettingsScreen(
     val efxFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
+        android.util.Log.d("FolderPicker", "efx result uri=$uri")
         uri?.let {
             try {
                 // 지속적 권한 요청
@@ -84,6 +86,7 @@ fun SettingsScreen(
     val musicFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
+        android.util.Log.d("FolderPicker", "music result uri=$uri")
         uri?.let {
             try {
                 context.contentResolver.takePersistableUriPermission(
@@ -105,6 +108,13 @@ fun SettingsScreen(
                 ).show()
             }
         }
+    }
+
+    // 폴더 선택기를 루트가 아닌 Music 폴더에서 시작시킨다 (루트는 시스템이 막아 "이 폴더를 사용할 수 없음" 이 나옴)
+    fun pickerStartUri(tag: String): Uri {
+        val uri = DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Music")
+        android.util.Log.d("FolderPicker", "launch($tag) initial=$uri sdk=${android.os.Build.VERSION.SDK_INT} model=${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
+        return uri
     }
 
     // ── 폴더 선택기 없이 GlowSync 폴더 바로 쓰기: "모든 파일 접근"을 허용받은 뒤 폴더를 만들어 적용한다 ──
@@ -271,7 +281,7 @@ fun SettingsScreen(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        FilledTonalIconButton(onClick = { efxFolderPicker.launch(null) }) {
+                        FilledTonalIconButton(onClick = { efxFolderPicker.launch(pickerStartUri("efx")) }) {
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
@@ -340,7 +350,7 @@ fun SettingsScreen(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        FilledTonalIconButton(onClick = { musicFolderPicker.launch(null) }) {
+                        FilledTonalIconButton(onClick = { musicFolderPicker.launch(pickerStartUri("music")) }) {
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
