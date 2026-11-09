@@ -350,24 +350,23 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             description = Loc.str(R.string.device_ui_10),
             onClick = { bleVm.refreshInfo(); showInfo = true }
         )
-        HorizontalDivider()
-        ListItem(
-            headlineContent = { Text(Loc.str(R.string.label_broadcasting), style = MaterialTheme.typography.titleSmall) },
-            supportingContent = {
-                Text(
-                    if (broadcastingSupported) Loc.str(R.string.device_ui_11) else Loc.str(R.string.broadcasting_ble_only),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            },
-            trailingContent = {
-                Switch(
-                    checked = broadcasting || !broadcastingSupported,
-                    enabled = broadcastingSupported,
-                    onCheckedChange = { bleVm.setBroadcasting(it) }
-                )
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-        )
+        // Broadcasting: BLE 모드이고 펌웨어(FF09)가 지원할 때만 메뉴를 보여 준다 (미지원/UUID 없음이면 숨김)
+        if (broadcastingSupported) {
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text(Loc.str(R.string.label_broadcasting), style = MaterialTheme.typography.titleSmall) },
+                supportingContent = {
+                    Text(Loc.str(R.string.device_ui_11), style = MaterialTheme.typography.bodySmall)
+                },
+                trailingContent = {
+                    Switch(
+                        checked = broadcasting,
+                        onCheckedChange = { bleVm.setBroadcasting(it) }
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+        }
         HorizontalDivider()
         ListItem(
             headlineContent = { Text(Loc.str(R.string.label_auto_connect), style = MaterialTheme.typography.titleSmall) },
