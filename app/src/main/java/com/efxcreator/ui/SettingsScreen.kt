@@ -1,6 +1,9 @@
 package com.efxcreator.ui
 
+import android.Manifest
+import android.content.Intent
 import android.net.Uri
+import java.io.File
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -101,6 +104,58 @@ fun SettingsScreen(
                     Toast.LENGTH_SHORT
                 ).show()
             }
+        }
+    }
+
+    // ── 폴더 선택기 없이 GlowSync 폴더 바로 쓰기: "모든 파일 접근"을 허용받은 뒤 폴더를 만들어 적용한다 ──
+    var pendingFolderPath by rememberSaveable { mutableStateOf<String?>(null) }
+    fun hasAllFilesAccess(): Boolean =
+        if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager()
+        else androidx.core.content.ContextCompat.checkSelfPermission(
+            context, Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    fun applyFolder(dir: File) {
+        val ok = viewModel.changeEfxStoragePathToFolder(dir)
+        Toast.makeText(
+            context,
+            if (ok) Loc.str(R.string.settings_screen_1) else Loc.str(R.string.settings_folder_failed),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+    val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val dir = pendingFolderPath?.let { File(it) }
+        pendingFolderPath = null
+        if (dir != null) {
+            if (hasAllFilesAccess()) applyFolder(dir)
+            else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
+        }
+    }
+    val legacyPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val dir = pendingFolderPath?.let { File(it) }
+        pendingFolderPath = null
+        if (dir != null) {
+            if (granted) applyFolder(dir)
+            else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
+        }
+    }
+    fun requestFolder(dir: File) {
+        if (hasAllFilesAccess()) {
+            applyFolder(dir)
+            return
+        }
+        pendingFolderPath = dir.absolutePath
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            val intent = Intent(
+                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                Uri.parse("package:${context.packageName}")
+            )
+            try {
+                allFilesLauncher.launch(intent)
+            } catch (e: Exception) {
+                allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+            }
+        } else {
+            legacyPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
     }
 
@@ -219,6 +274,33 @@ fun SettingsScreen(
                         FilledTonalIconButton(onClick = { efxFolderPicker.launch(null) }) {
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
+                    }
+                    // 폴더 선택기가 막힌 기기용: 선택기 없이 GlowSync 폴더를 바로 만들어 쓴다
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = Loc.str(R.string.settings_folder_quick_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = {
+                            requestFolder(File(android.os.Environment.getExternalStorageDirectory(), "GlowSync"))
+                        }) { Text(Loc.str(R.string.settings_folder_root)) }
+                        OutlinedButton(onClick = {
+                            requestFolder(
+                                File(
+                                    android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
+                                    "GlowSync"
+                                )
+                            )
+                        }) { Text(Loc.str(R.string.settings_folder_music)) }
+                        TextButton(onClick = {
+                            viewModel.resetEfxStoragePath()
+                            Toast.makeText(context, Loc.str(R.string.settings_screen_1), Toast.LENGTH_SHORT).show()
+                        }) { Text(Loc.str(R.string.settings_folder_reset)) }
                     }
                 }
             }

@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
+import java.io.File
 import androidx.lifecycle.AndroidViewModel
 import com.efxcreator.data.EfxRepository
 import com.efxcreator.data.PreferencesManager
@@ -33,6 +34,37 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         private const val TAG = "SettingsViewModel"
+    }
+
+    /**
+     * 일반 폴더(예: /storage/emulated/0/GlowSync)를 EFX 사본 저장 위치로 쓴다.
+     * 폴더를 만들고 실제로 쓸 수 있는지 확인한 뒤에만 적용한다 (모든 파일 접근 권한이 있어야 한다).
+     */
+    fun changeEfxStoragePathToFolder(dir: File): Boolean = try {
+        val writable = (dir.isDirectory || dir.mkdirs()) && runCatching {
+            File(dir, ".glowsync_write_test").apply { writeText("ok"); delete() }
+        }.isSuccess
+        if (writable) {
+            val path = dir.absolutePath
+            Log.d(TAG, "Changing EFX storage to folder: $path")
+            repository.changeEfxStoragePath(path)
+            _efxStoragePath.value = path
+            _efxStorageInfo.value = repository.getEfxStorageInfo()
+            true
+        } else {
+            Log.e(TAG, "Cannot create/write folder: ${dir.absolutePath}")
+            false
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error changing EFX path to folder", e)
+        false
+    }
+
+    /** EFX 저장 위치를 기본(앱 내부)으로 되돌린다 */
+    fun resetEfxStoragePath() {
+        repository.changeEfxStoragePath("default_internal")
+        _efxStoragePath.value = "default_internal"
+        _efxStorageInfo.value = repository.getEfxStorageInfo()
     }
 
     /**
