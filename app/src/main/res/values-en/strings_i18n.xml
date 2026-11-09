@@ -154,7 +154,7 @@
     <string name="settings_screen_9">Loading music files</string>
     <string name="settings_screen_10">Current load location</string>
     <string name="settings_screen_11">ℹ️ Folder settings guide</string>
-    <string name="settings_screen_12">• Tap the folder icon to choose a folder\n• The chosen folder is kept after the app restarts\n• Folder permissions are managed automatically\n• If you see \"Can\'t use this folder\", Android protects that folder (storage root, Download, etc.).\n   Create a new folder inside Music (e.g. GlowSync) and choose that folder\n• The app works fine without choosing a folder. The chosen folder only receives per-show .efx copies; you can also export from the song menu (Save/Share)\n• If folder selection is blocked, use a \"GlowSync\" button to create the folder directly without the picker (needs All files access)</string>
+    <string name="settings_screen_12">• Tap the folder icon to choose a folder\n• The chosen folder is kept after the app restarts\n• Folder permissions are managed automatically\n• If you see \"Can\'t use this folder\", Android protects that folder (storage root, Download, etc.).\n   Create a new folder inside Music (e.g. Effects) and choose that folder\n• The app works fine without choosing a folder. The chosen folder only receives per-show .efx copies; you can also export from the song menu (Save/Share)\n• If folder selection is blocked, use a \"Effects\" button to create the folder directly without the picker (needs All files access)</string>
     <string name="settings_screen_13">Devices</string>
     <string name="settings_screen_14">Language</string>
     <string name="settings_screen_15">EFX save location · music load location</string>
@@ -629,8 +629,8 @@
     <string name="dlg_snap_on_desc">On: the start time snaps to the nearest beat</string>
     <string name="dlg_snap_off_desc">Off: saved exactly as entered</string>
     <string name="settings_folder_quick_title">Use without the picker (needs All files access)</string>
-    <string name="settings_folder_root">Internal storage/GlowSync</string>
-    <string name="settings_folder_music">Music/GlowSync</string>
+    <string name="settings_folder_root">Internal storage/Effects</string>
+    <string name="settings_folder_music">Music/Effects</string>
     <string name="settings_folder_reset">Default (Music/Effects)</string>
     <string name="settings_folder_failed">Cannot create or write the folder</string>
     <string name="settings_folder_perm_denied">All files access was not granted</string>

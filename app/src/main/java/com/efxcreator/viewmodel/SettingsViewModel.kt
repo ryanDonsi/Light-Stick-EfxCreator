@@ -37,7 +37,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * 일반 폴더(예: /storage/emulated/0/GlowSync)를 EFX 사본 저장 위치로 쓴다.
+     * 일반 폴더(예: /storage/emulated/0/Effects)를 EFX 사본 저장 위치로 쓴다.
      * 폴더를 만들고 실제로 쓸 수 있는지 확인한 뒤에만 적용한다 (모든 파일 접근 권한이 있어야 한다).
      */
     fun changeEfxStoragePathToFolder(dir: File): Boolean = try {

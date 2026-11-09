@@ -154,7 +154,7 @@
     <string name="settings_screen_9">音楽ファイルの読み込み</string>
     <string name="settings_screen_10">現在の読み込み場所</string>
     <string name="settings_screen_11">ℹ️ フォルダ設定のご案内</string>
-    <string name="settings_screen_12">• フォルダアイコンをタップして、使いたいフォルダを選んでください\n• 選んだフォルダはアプリを再起動しても維持されます\n• フォルダの権限は自動で管理されます\n• 「このフォルダは使用できません」と表示された場合は、Androidが保護しているフォルダです（ストレージの最上位、Downloadなど）。\n   Music の中に新しいフォルダ（例: GlowSync）を作って、そのフォルダを選んでください\n• フォルダを指定しなくてもアプリは正常に動作します。指定したフォルダには公演ごとの .efx のコピーが作られるだけで、曲メニューの保存/共有でも書き出せます\n• フォルダ選択がブロックされる場合は、「GlowSync」ボタンでピッカーなしにフォルダを作って使えます（すべてのファイルへのアクセスの許可が必要）</string>
+    <string name="settings_screen_12">• フォルダアイコンをタップして、使いたいフォルダを選んでください\n• 選んだフォルダはアプリを再起動しても維持されます\n• フォルダの権限は自動で管理されます\n• 「このフォルダは使用できません」と表示された場合は、Androidが保護しているフォルダです（ストレージの最上位、Downloadなど）。\n   Music の中に新しいフォルダ（例: Effects）を作って、そのフォルダを選んでください\n• フォルダを指定しなくてもアプリは正常に動作します。指定したフォルダには公演ごとの .efx のコピーが作られるだけで、曲メニューの保存/共有でも書き出せます\n• フォルダ選択がブロックされる場合は、「Effects」ボタンでピッカーなしにフォルダを作って使えます（すべてのファイルへのアクセスの許可が必要）</string>
     <string name="settings_screen_13">デバイス管理</string>
     <string name="settings_screen_14">言語設定</string>
     <string name="settings_screen_15">EFX保存場所 · 音楽読み込み場所</string>
@@ -629,8 +629,8 @@
     <string name="dlg_snap_on_desc">オン: 開始時刻を最も近いビートに合わせて保存します</string>
     <string name="dlg_snap_off_desc">オフ: 入力した時刻のまま保存します</string>
     <string name="settings_folder_quick_title">ピッカーなしで使う（すべてのファイルへのアクセスが必要）</string>
-    <string name="settings_folder_root">内部ストレージ/GlowSync</string>
-    <string name="settings_folder_music">Music/GlowSync</string>
+    <string name="settings_folder_root">内部ストレージ/Effects</string>
+    <string name="settings_folder_music">Music/Effects</string>
     <string name="settings_folder_reset">デフォルト (Music/Effects)</string>
     <string name="settings_folder_failed">フォルダを作成または書き込みできません</string>
     <string name="settings_folder_perm_denied">すべてのファイルへのアクセスが許可されていません</string>

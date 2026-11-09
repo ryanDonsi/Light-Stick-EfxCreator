@@ -117,7 +117,7 @@ fun SettingsScreen(
         return uri
     }
 
-    // ── 폴더 선택기 없이 GlowSync 폴더 바로 쓰기: "모든 파일 접근"을 허용받은 뒤 폴더를 만들어 적용한다 ──
+    // ── 폴더 선택기 없이 Effects 폴더 바로 쓰기: "모든 파일 접근"을 허용받은 뒤 폴더를 만들어 적용한다 ──
     var pendingFolderPath by rememberSaveable { mutableStateOf<String?>(null) }
     fun hasAllFilesAccess(): Boolean =
         if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager()
@@ -285,7 +285,7 @@ fun SettingsScreen(
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
-                    // 폴더 선택기가 막힌 기기용: 선택기 없이 GlowSync 폴더를 바로 만들어 쓴다
+                    // 폴더 선택기가 막힌 기기용: 선택기 없이 Effects 폴더를 바로 만들어 쓴다
                     Spacer(modifier = Modifier.height(12.dp))
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))
@@ -297,13 +297,13 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(onClick = {
-                            requestFolder(File(android.os.Environment.getExternalStorageDirectory(), "GlowSync"))
+                            requestFolder(File(android.os.Environment.getExternalStorageDirectory(), "Effects"))
                         }) { Text(Loc.str(R.string.settings_folder_root)) }
                         OutlinedButton(onClick = {
                             requestFolder(
                                 File(
                                     android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
-                                    "GlowSync"
+                                    "Effects"
                                 )
                             )
                         }) { Text(Loc.str(R.string.settings_folder_music)) }
@@ -370,14 +370,14 @@ fun SettingsScreen(
                             Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
                         }) { Text(Loc.str(R.string.settings_music_default)) }
                         OutlinedButton(onClick = {
-                            viewModel.setMusicLoadPath(File(android.os.Environment.getExternalStorageDirectory(), "GlowSync").absolutePath)
+                            viewModel.setMusicLoadPath(File(android.os.Environment.getExternalStorageDirectory(), "Effects").absolutePath)
                             Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
                         }) { Text(Loc.str(R.string.settings_folder_root)) }
                         OutlinedButton(onClick = {
                             viewModel.setMusicLoadPath(
                                 File(
                                     android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
-                                    "GlowSync"
+                                    "Effects"
                                 ).absolutePath
                             )
                             Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()

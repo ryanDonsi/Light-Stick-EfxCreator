@@ -154,7 +154,7 @@
     <string name="settings_screen_9">加载音乐文件</string>
     <string name="settings_screen_10">当前加载位置</string>
     <string name="settings_screen_11">ℹ️ 文件夹设置说明</string>
-    <string name="settings_screen_12">• 点击文件夹图标选择所需的文件夹\n• 所选文件夹在应用重启后仍会保留\n• 文件夹权限会自动管理\n• 如果出现“无法使用此文件夹”，说明该文件夹受 Android 保护（存储根目录、Download 等）。\n   请在 Music 中新建文件夹（例如 GlowSync）并选择该文件夹\n• 不选择文件夹应用也能正常使用。所选文件夹只会生成按演出分类的 .efx 副本，也可以通过歌曲菜单的保存/分享导出\n• 如果无法选择文件夹，可使用“GlowSync”按钮不经选择器直接创建并使用文件夹（需要“所有文件访问”权限）</string>
+    <string name="settings_screen_12">• 点击文件夹图标选择所需的文件夹\n• 所选文件夹在应用重启后仍会保留\n• 文件夹权限会自动管理\n• 如果出现“无法使用此文件夹”，说明该文件夹受 Android 保护（存储根目录、Download 等）。\n   请在 Music 中新建文件夹（例如 Effects）并选择该文件夹\n• 不选择文件夹应用也能正常使用。所选文件夹只会生成按演出分类的 .efx 副本，也可以通过歌曲菜单的保存/分享导出\n• 如果无法选择文件夹，可使用“Effects”按钮不经选择器直接创建并使用文件夹（需要“所有文件访问”权限）</string>
     <string name="settings_screen_13">设备管理</string>
     <string name="settings_screen_14">语言设置</string>
     <string name="settings_screen_15">EFX保存位置 · 音乐加载位置</string>
@@ -629,8 +629,8 @@
     <string name="dlg_snap_on_desc">开启：开始时间吸附到最近的节拍保存</string>
     <string name="dlg_snap_off_desc">关闭：按输入的时间原样保存</string>
     <string name="settings_folder_quick_title">不使用选择器直接使用（需要“所有文件访问”权限）</string>
-    <string name="settings_folder_root">内部存储/GlowSync</string>
-    <string name="settings_folder_music">Music/GlowSync</string>
+    <string name="settings_folder_root">内部存储/Effects</string>
+    <string name="settings_folder_music">Music/Effects</string>
     <string name="settings_folder_reset">默认 (Music/Effects)</string>
     <string name="settings_folder_failed">无法创建或写入文件夹</string>
     <string name="settings_folder_perm_denied">未授予“所有文件访问”权限</string>

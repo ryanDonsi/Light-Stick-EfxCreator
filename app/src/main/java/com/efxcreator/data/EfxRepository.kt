@@ -49,7 +49,7 @@ class EfxRepository(private val context: Context) {
                 context.filesDir
             }
             else -> {
-                // 일반 폴더 경로(예: /storage/emulated/0/GlowSync): 작업 파일은 내부 저장소에 두고
+                // 일반 폴더 경로(예: /storage/emulated/0/Effects): 작업 파일은 내부 저장소에 두고
                 // 그 폴더에는 EfxFolderMirror 가 `공연명/곡명.efx` 사본만 만든다 (폴더 선택기와 같은 방식)
                 context.filesDir
             }
