@@ -70,10 +70,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _musicLoadInfo.value = repository.getMusicLoadInfo()
     }
 
-    /** EFX 저장 위치를 기본(앱 내부)으로 되돌린다 */
+    /** EFX 저장 위치를 기본(Music/Effects)으로 되돌린다 */
     fun resetEfxStoragePath() {
-        repository.changeEfxStoragePath("default_internal")
-        _efxStoragePath.value = "default_internal"
+        repository.changeEfxStoragePath(com.efxcreator.data.PreferencesManager.EFX_PATH_DEFAULT)
+        _efxStoragePath.value = com.efxcreator.data.PreferencesManager.EFX_PATH_DEFAULT
         _efxStorageInfo.value = repository.getEfxStorageInfo()
     }
 

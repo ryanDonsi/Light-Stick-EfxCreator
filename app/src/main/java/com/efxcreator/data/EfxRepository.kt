@@ -39,8 +39,8 @@ class EfxRepository(private val context: Context) {
         val path = prefs.efxStoragePath
 
         return when {
-            path == "default_internal" || path.isEmpty() -> {
-                // 기본: 내부 저장소
+            path == PreferencesManager.EFX_PATH_INTERNAL -> {
+                // 앱 내부 저장소
                 context.filesDir
             }
             path.startsWith("content://") -> {
@@ -473,7 +473,11 @@ class EfxRepository(private val context: Context) {
     fun changeEfxStoragePath(newPath: String) {
         val oldPath = prefs.efxStoragePath
 
-        if (oldPath == newPath) return
+        if (oldPath == newPath) {
+            // 같은 위치라도 (예: 권한을 방금 허용함) 사본을 다시 맞춘다
+            EfxFolderMirror(context).syncAll()
+            return
+        }
 
         Log.d(TAG, "Changing EFX storage from $oldPath to $newPath")
 
@@ -573,8 +577,13 @@ class EfxRepository(private val context: Context) {
         val path = prefs.efxStoragePath
 
         return when {
-            path == "default_internal" || path.isEmpty() -> {
+            path == PreferencesManager.EFX_PATH_INTERNAL -> {
                 Loc.str(R.string.efx_repository_3, context.filesDir.absolutePath)
+            }
+            path == PreferencesManager.EFX_PATH_DEFAULT || path.isEmpty() -> {
+                val base = Loc.str(R.string.efx_repository_3, friendlyPath(PreferencesManager.defaultEfxDir().absolutePath))
+                if (PreferencesManager.canWriteFolders(context)) base
+                else base + "\n" + Loc.str(R.string.efx_default_need_permission)
             }
             path.startsWith("content://") -> {
                 Loc.str(R.string.efx_repository_4, describeTreeUri(path))

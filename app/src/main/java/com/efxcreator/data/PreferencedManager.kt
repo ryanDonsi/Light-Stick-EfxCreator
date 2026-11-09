@@ -8,6 +8,23 @@ class PreferencesManager(context: Context) {
         context.getSharedPreferences("efx_creator_prefs", Context.MODE_PRIVATE)
 
     companion object {
+        /** EFX 저장 위치 기본값: Music/Effects 에 `공연명/곡명.efx` 사본을 둔다 (모든 파일 접근이 허용돼야 만들어짐) */
+        const val EFX_PATH_DEFAULT = "default_efx"
+        /** 앱 내부에만 저장 (사본 없음) */
+        const val EFX_PATH_INTERNAL = "default_internal"
+
+        /** Music/Effects 폴더 */
+        fun defaultEfxDir(): java.io.File = java.io.File(
+            android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC), "Effects"
+        )
+
+        /** 폴더 경로로 직접 쓰기 위한 권한 (Android 11+ 모든 파일 접근, 그 이전은 쓰기 권한) */
+        fun canWriteFolders(context: Context): Boolean =
+            if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager()
+            else androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
         // EFX 저장 경로
         private const val KEY_EFX_STORAGE_PATH = "efx_storage_path"
 
@@ -15,7 +32,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_MUSIC_LOAD_PATH = "music_load_path"
 
         // 기본값 (최초 실행 시)
-        private const val DEFAULT_EFX_PATH = "default_internal"
+        private const val DEFAULT_EFX_PATH = EFX_PATH_DEFAULT
         private const val DEFAULT_MUSIC_PATH = "default_music"
     }
 

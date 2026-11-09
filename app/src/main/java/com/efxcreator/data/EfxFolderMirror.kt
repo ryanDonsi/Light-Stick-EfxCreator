@@ -38,7 +38,12 @@ class EfxFolderMirror(private val context: Context) {
     private fun resolveRoot(): Root? {
         val path = prefs.efxStoragePath
         return when {
-            path.isEmpty() || path == "default_internal" -> null
+            path == PreferencesManager.EFX_PATH_INTERNAL -> null
+            // 기본값: Music/Effects (권한이 없으면 사본은 만들지 않고, 앱은 내부 저장소로 정상 동작)
+            path.isEmpty() || path == PreferencesManager.EFX_PATH_DEFAULT ->
+                if (PreferencesManager.canWriteFolders(context))
+                    PreferencesManager.defaultEfxDir().takeIf { it.isDirectory || it.mkdirs() }?.let { Root.Path(it) }
+                else null
             path.startsWith("content://") -> DocumentFile.fromTreeUri(context, Uri.parse(path))
                 ?.takeIf { it.canWrite() }?.let { Root.Tree(it) }
             else -> File(path).takeIf { it.isDirectory || it.mkdirs() }?.let { Root.Path(it) }
