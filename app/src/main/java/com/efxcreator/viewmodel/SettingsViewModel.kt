@@ -60,6 +60,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         false
     }
 
+    /**
+     * 음악 불러오기 시작 위치를 경로로 바로 지정한다 ("default_music" 이면 기본 Music 폴더).
+     * 이 값은 곡 추가 때 파일 선택기가 처음 열리는 위치(힌트)로만 쓰여서 권한이나 폴더 생성이 필요 없다.
+     */
+    fun setMusicLoadPath(path: String) {
+        repository.changeMusicLoadPath(path)
+        _musicLoadPath.value = path
+        _musicLoadInfo.value = repository.getMusicLoadInfo()
+    }
+
     /** EFX 저장 위치를 기본(앱 내부)으로 되돌린다 */
     fun resetEfxStoragePath() {
         repository.changeEfxStoragePath("default_internal")

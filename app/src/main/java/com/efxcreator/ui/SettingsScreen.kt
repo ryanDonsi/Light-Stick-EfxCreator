@@ -344,6 +344,35 @@ fun SettingsScreen(
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
+                    // 폴더 선택기가 막힌 기기용: 선택기 없이 시작 위치를 바로 지정한다 (곡 추가 때 파일 선택기가 열리는 위치. 권한 불필요)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = Loc.str(R.string.settings_music_quick_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = {
+                            viewModel.setMusicLoadPath("default_music")
+                            Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
+                        }) { Text(Loc.str(R.string.settings_music_default)) }
+                        OutlinedButton(onClick = {
+                            viewModel.setMusicLoadPath(File(android.os.Environment.getExternalStorageDirectory(), "GlowSync").absolutePath)
+                            Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
+                        }) { Text(Loc.str(R.string.settings_folder_root)) }
+                        OutlinedButton(onClick = {
+                            viewModel.setMusicLoadPath(
+                                File(
+                                    android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
+                                    "GlowSync"
+                                ).absolutePath
+                            )
+                            Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
+                        }) { Text(Loc.str(R.string.settings_folder_music)) }
+                    }
                 }
             }
 

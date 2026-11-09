@@ -634,4 +634,6 @@
     <string name="settings_folder_reset">默认（应用内部）</string>
     <string name="settings_folder_failed">无法创建或写入文件夹</string>
     <string name="settings_folder_perm_denied">未授予“所有文件访问”权限</string>
+    <string name="settings_music_quick_title">不使用选择器直接指定起始位置（添加歌曲时文件选择器打开的位置 · 无需权限）</string>
+    <string name="settings_music_default">Music（默认）</string>
 </resources>

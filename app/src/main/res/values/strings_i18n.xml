@@ -634,4 +634,6 @@
     <string name="settings_folder_reset">기본값 (앱 내부)</string>
     <string name="settings_folder_failed">폴더를 만들거나 쓸 수 없습니다</string>
     <string name="settings_folder_perm_denied">모든 파일 접근이 허용되지 않았습니다</string>
+    <string name="settings_music_quick_title">선택기 없이 시작 위치 지정 (곡 추가 때 파일 선택기가 열리는 위치 · 권한 불필요)</string>
+    <string name="settings_music_default">Music (기본)</string>
 </resources>
