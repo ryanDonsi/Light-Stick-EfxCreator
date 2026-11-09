@@ -154,7 +154,7 @@
     <string name="settings_screen_9">음악 파일 불러오기</string>
     <string name="settings_screen_10">현재 불러오기 위치</string>
     <string name="settings_screen_11">ℹ️ 폴더 설정 안내</string>
-    <string name="settings_screen_12">• 폴더 아이콘을 눌러 원하는 폴더를 선택하세요\n• 선택한 폴더는 앱 재시작 후에도 유지됩니다\n• 폴더 권한은 자동으로 관리됩니다\n• \"이 폴더를 사용할 수 없음\"이 나오면 Android 가 보호하는 폴더입니다 (저장소 최상위, Download 등).\n   Music 안에 새 폴더(예: GlowSync)를 만들어 그 폴더를 선택하세요</string>
+    <string name="settings_screen_12">• 폴더 아이콘을 눌러 원하는 폴더를 선택하세요\n• 선택한 폴더는 앱 재시작 후에도 유지됩니다\n• 폴더 권한은 자동으로 관리됩니다\n• \"이 폴더를 사용할 수 없음\"이 나오면 Android 가 보호하는 폴더입니다 (저장소 최상위, Download 등).\n   Music 안에 새 폴더(예: GlowSync)를 만들어 그 폴더를 선택하세요\n• 폴더를 지정하지 않아도 앱은 정상 동작합니다. 지정한 폴더에는 공연별 .efx 사본만 만들어지며, 곡 메뉴의 저장/공유로도 내보낼 수 있습니다</string>
     <string name="settings_screen_13">디바이스 관리</string>
     <string name="settings_screen_14">언어 설정</string>
     <string name="settings_screen_15">EFX 저장 위치 · 음악 불러오기 위치</string>
