@@ -114,6 +114,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "BleViewModel"
+        private const val BROADCASTING_RETRIES = 2
+        private const val BROADCASTING_RETRY_DELAY_MS = 1_500L
         private const val SCAN_SECONDS = 10
         /** SDK 가 프레임 위치를 다시 계산하는 기준(앞으로 10초 초과)을 넘기는 값 */
         private const val FORCE_RESYNC_OFFSET_MS = 11_000L
@@ -325,20 +327,48 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         runCatching { device.readBattery { r -> r.onSuccess { _battery.value = it } } }
     }
 
-    private fun readMode(device: Device) {
+    /**
+     * 기기 모드를 읽고 Broadcasting 지원 여부를 판정한다.
+     * SDK 의 supports*() / readDeviceMode 실패는 "미지원" 뿐 아니라 "아직 확정 전"(서비스 탐색 직후, GATT 캐시)일 때도
+     * 같은 값이라서, 미지원으로 보이면 잠시 뒤 두 번까지 다시 확인하고 그래도 아니면 메뉴를 숨긴 채로 둔다.
+     */
+    private fun readMode(device: Device, attempt: Int = 0) {
+        fun retryOrGiveUp(reason: String) {
+            if (_connected.value?.mac != device.mac) return
+            if (attempt < BROADCASTING_RETRIES) {
+                Log.d(TAG, "Broadcasting check: $reason → retry ${attempt + 1}/$BROADCASTING_RETRIES")
+                viewModelScope.launch {
+                    delay(BROADCASTING_RETRY_DELAY_MS)
+                    if (_connected.value?.mac == device.mac) readMode(device, attempt + 1)
+                }
+            } else {
+                Log.d(TAG, "Broadcasting check: $reason → unsupported (menu hidden)")
+                applyBroadcasting(device, isBleMode = false)
+            }
+        }
         if (!runCatching { device.supportsDeviceMode() }.getOrDefault(false)) {
             _groupAllowed.value = true   // 구형 펌웨어는 중계기로 간주
-            applyBroadcasting(device, isBleMode = false)
+            retryOrGiveUp("supportsDeviceMode=false")
             return
         }
         runCatching {
             device.readDeviceMode { r ->
                 r.onSuccess {
                     _groupAllowed.value = it != DeviceMode.BLE
-                    applyBroadcasting(device, isBleMode = it == DeviceMode.BLE)
-                }.onFailure { applyBroadcasting(device, isBleMode = false) }
+                    if (it == DeviceMode.BLE) {
+                        if (runCatching { device.supportsBroadcasting() }.getOrDefault(false)) {
+                            applyBroadcasting(device, isBleMode = true)
+                        } else {
+                            retryOrGiveUp("BLE mode but supportsBroadcasting=false")
+                        }
+                    } else {
+                        // 중계기: FF09 가 원래 없다 (확정)
+                        Log.d(TAG, "Broadcasting check: device mode=$it → unsupported")
+                        applyBroadcasting(device, isBleMode = false)
+                    }
+                }.onFailure { retryOrGiveUp("readDeviceMode failed: ${it.message}") }
             }
-        }.onFailure { applyBroadcasting(device, isBleMode = false) }
+        }.onFailure { retryOrGiveUp("readDeviceMode threw: ${it.message}") }
     }
 
     /**
@@ -355,7 +385,19 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
         val saved = prefs.getBroadcasting(device.mac)
         _broadcasting.value = saved
-        if (!saved) runCatching { device.setBroadcasting(false) }
+        if (!saved) writeBroadcasting(device, false, retry = true)
+    }
+
+    /** setBroadcasting 의 반환값은 "쓰기 요청 제출 여부"다. 실패(false)면 한 번 더 시도하고 결과를 로그로 남긴다 */
+    private fun writeBroadcasting(device: Device, enabled: Boolean, retry: Boolean) {
+        val ok = runCatching { device.setBroadcasting(enabled) }.getOrDefault(false)
+        Log.d(TAG, "setBroadcasting($enabled) submitted=$ok")
+        if (!ok && retry) {
+            viewModelScope.launch {
+                delay(BROADCASTING_RETRY_DELAY_MS)
+                if (_connected.value?.mac == device.mac) writeBroadcasting(device, enabled, retry = false)
+            }
+        }
     }
 
     // ── 기기 관리: FIND / 그룹 배정 ──────────────────────────────
@@ -464,7 +506,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         if (!_broadcastingSupported.value) return
         prefs.setBroadcasting(device.mac, enabled)
         _broadcasting.value = enabled
-        runCatching { device.setBroadcasting(enabled) }
+        writeBroadcasting(device, enabled, retry = true)
     }
 
     fun setGroupCount(count: Int) {
