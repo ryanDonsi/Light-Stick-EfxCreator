@@ -297,20 +297,20 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(onClick = {
-                            requestFolder(File(android.os.Environment.getExternalStorageDirectory(), "Effects"))
-                        }) { Text(Loc.str(R.string.settings_folder_root)) }
+                            viewModel.resetEfxStoragePath()
+                            Toast.makeText(context, Loc.str(R.string.settings_screen_1), Toast.LENGTH_SHORT).show()
+                        }) { Text(Loc.str(R.string.settings_folder_reset)) }
                         OutlinedButton(onClick = {
                             requestFolder(
                                 File(
                                     android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
-                                    "Effects"
+                                    "GlowSync"
                                 )
                             )
                         }) { Text(Loc.str(R.string.settings_folder_music)) }
-                        TextButton(onClick = {
-                            viewModel.resetEfxStoragePath()
-                            Toast.makeText(context, Loc.str(R.string.settings_screen_1), Toast.LENGTH_SHORT).show()
-                        }) { Text(Loc.str(R.string.settings_folder_reset)) }
+                        OutlinedButton(onClick = {
+                            requestFolder(File(android.os.Environment.getExternalStorageDirectory(), "Effects"))
+                        }) { Text(Loc.str(R.string.settings_folder_root)) }
                     }
                 }
             }
@@ -370,18 +370,18 @@ fun SettingsScreen(
                             Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
                         }) { Text(Loc.str(R.string.settings_music_default)) }
                         OutlinedButton(onClick = {
-                            viewModel.setMusicLoadPath(File(android.os.Environment.getExternalStorageDirectory(), "Effects").absolutePath)
-                            Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
-                        }) { Text(Loc.str(R.string.settings_folder_root)) }
-                        OutlinedButton(onClick = {
                             viewModel.setMusicLoadPath(
                                 File(
                                     android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
-                                    "Effects"
+                                    "GlowSync"
                                 ).absolutePath
                             )
                             Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
                         }) { Text(Loc.str(R.string.settings_folder_music)) }
+                        OutlinedButton(onClick = {
+                            viewModel.setMusicLoadPath(File(android.os.Environment.getExternalStorageDirectory(), "GlowSync").absolutePath)
+                            Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
+                        }) { Text(Loc.str(R.string.settings_music_root)) }
                     }
                 }
             }

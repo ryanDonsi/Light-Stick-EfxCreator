@@ -630,11 +630,12 @@
     <string name="dlg_snap_off_desc">オフ: 入力した時刻のまま保存します</string>
     <string name="settings_folder_quick_title">ピッカーなしで使う（すべてのファイルへのアクセスが必要）</string>
     <string name="settings_folder_root">内部ストレージ/Effects</string>
-    <string name="settings_folder_music">Music/Effects</string>
+    <string name="settings_folder_music">Music/GlowSync</string>
     <string name="settings_folder_reset">デフォルト (Music/Effects)</string>
     <string name="settings_folder_failed">フォルダを作成または書き込みできません</string>
     <string name="settings_folder_perm_denied">すべてのファイルへのアクセスが許可されていません</string>
     <string name="settings_music_quick_title">ピッカーなしで開始位置を指定（曲追加時にファイル選択が開く場所・権限不要）</string>
     <string name="settings_music_default">Music（デフォルト）</string>
     <string name="efx_default_need_permission">既定の場所（Music/Effects）にコピーを作るには「すべてのファイルへのアクセス」の許可が必要です。設定の下のボタンから許可できます。</string>
+    <string name="settings_music_root">内部ストレージ/GlowSync</string>
 </resources>
