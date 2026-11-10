@@ -25,6 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.efxcreator.core.Loc
+import android.provider.DocumentsContract
+import android.widget.Toast
+import androidx.documentfile.provider.DocumentFile
+import com.efxcreator.data.EfxRepository
 import com.efxcreator.data.PreferencesManager
 
 class MainActivity : ComponentActivity() {
@@ -37,39 +41,32 @@ class MainActivity : ComponentActivity() {
             if (result.values.all { it }) bleVm.tryAutoConnect()
         }
 
-    // 기본 저장 위치(Music/Effects)에 필요한 "모든 파일 접근" 안내 팝업. 한 번만 보여 준다
-    private var showStoragePrompt by mutableStateOf(false)
+    // EFX 저장 폴더 안내 팝업 (Light-Stick-Music 과 같은 방식): 폴더가 지정될 때까지 앱을 열 때마다 보여 준다
+    private var showFolderGuide by mutableStateOf(false)
 
-    // 권한 화면에서 돌아오면 허용됐을 때 기본 폴더를 만든다
-    private val allFilesLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            PreferencesManager.ensureDefaultEfxDir(this)
-        }
-    private val legacyStorageLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            PreferencesManager.ensureDefaultEfxDir(this)
-        }
-
-    private fun requestStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            val intent = Intent(
-                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
+    // 폴더 선택기: Music/Effects 에서 시작해 사용자가 고른 폴더에 읽기/쓰기 접근권을 영구 저장한다
+    private val efxFolderPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            uri ?: return@registerForActivityResult
             try {
-                allFilesLauncher.launch(intent)
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                if (DocumentFile.fromTreeUri(this, uri)?.canWrite() == true) {
+                    EfxRepository(this).changeEfxStoragePath(uri.toString())
+                    Toast.makeText(this, Loc.str(R.string.settings_screen_1), Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, Loc.str(R.string.settings_screen_2), Toast.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
-                allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                Toast.makeText(this, Loc.str(R.string.settings_screen_2), Toast.LENGTH_SHORT).show()
             }
-        } else {
-            legacyStorageLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
-    }
 
-    override fun onResume() {
-        super.onResume()
-        // 설정 화면 등에서 권한을 허용하고 돌아온 경우에도 기본 폴더를 만들어 둔다
-        PreferencesManager.ensureDefaultEfxDir(this)
+    private fun requestEfxFolder() {
+        val start = DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Music/Effects")
+        efxFolderPicker.launch(start)
     }
 
     // 저장된 표시 언어를 이 화면에도 적용한다
@@ -83,11 +80,7 @@ class MainActivity : ComponentActivity() {
             blePermissionLauncher.launch(BleViewModel.requiredPermissions())
         }
         val prefs = PreferencesManager(this)
-        if (PreferencesManager.isDefaultEfxPath(prefs.efxStoragePath) &&
-            !PreferencesManager.canWriteFolders(this) && !prefs.storagePermissionPromptShown
-        ) {
-            showStoragePrompt = true
-        }
+        if (PreferencesManager.isDefaultEfxPath(prefs.efxStoragePath)) showFolderGuide = true
         // 어두운 배경에서 상태바/내비게이션바 아이콘이 밝게 보이도록 고정
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -100,26 +93,21 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     EfxCreatorApp()
-                    if (showStoragePrompt) {
+                    if (showFolderGuide) {
                         AlertDialog(
-                            onDismissRequest = {
-                                prefs.storagePermissionPromptShown = true
-                                showStoragePrompt = false
-                            },
-                            title = { Text(Loc.str(R.string.storage_perm_title)) },
-                            text = { Text(Loc.str(R.string.storage_perm_message)) },
+                            onDismissRequest = { showFolderGuide = false },
+                            title = { Text(Loc.str(R.string.folder_guide_title)) },
+                            text = { Text(Loc.str(R.string.folder_guide_message)) },
                             confirmButton = {
                                 TextButton(onClick = {
-                                    prefs.storagePermissionPromptShown = true
-                                    showStoragePrompt = false
-                                    requestStoragePermission()
-                                }) { Text(Loc.str(R.string.storage_perm_allow)) }
+                                    showFolderGuide = false
+                                    requestEfxFolder()
+                                }) { Text(Loc.str(R.string.folder_guide_confirm)) }
                             },
                             dismissButton = {
-                                TextButton(onClick = {
-                                    prefs.storagePermissionPromptShown = true
-                                    showStoragePrompt = false
-                                }) { Text(Loc.str(R.string.storage_perm_later)) }
+                                TextButton(onClick = { showFolderGuide = false }) {
+                                    Text(Loc.str(R.string.folder_guide_later))
+                                }
                             }
                         )
                     }
