@@ -2,6 +2,13 @@ package com.efxcreator.ui
 
 import android.content.Intent
 import android.widget.Toast
+import android.app.Activity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -72,9 +79,41 @@ fun EfxListScreen(
     var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     val context = LocalContext.current
     val preview = rememberSongPreview(bleVm)
+
+    // 선택 삭제: 카드를 길게 누르면 선택 모드. 공연 목록과 곡 목록 중 한쪽만 선택 모드가 된다
+    var selectionMode by remember { mutableStateOf(ListSelection.NONE) }
+    var checkedShowIds by remember { mutableStateOf(emptySet<String>()) }
+    var checkedSongIds by remember { mutableStateOf(emptySet<String>()) }
+    var bulkDelete by remember { mutableStateOf<BulkDelete?>(null) }
+    val haptic = LocalHapticFeedback.current
+    fun exitSelection() {
+        selectionMode = ListSelection.NONE
+        checkedShowIds = emptySet()
+        checkedSongIds = emptySet()
+    }
+
+    // 메인 화면에서 시스템 뒤로 가기: 처음엔 "한 번 더 누르면 종료됩니다" 안내만 띄우고, 2초 안에 한 번 더 누르면 앱 종료
+    var lastBackAt by remember { mutableLongStateOf(0L) }
+    val exitApp: () -> Unit = {
+        var c = context
+        while (c is ContextWrapper && c !is Activity) c = c.baseContext
+        (c as? Activity)?.finish()
+    }
+    BackHandler(enabled = selectionMode == ListSelection.NONE) {
+        val now = System.currentTimeMillis()
+        if (now - lastBackAt <= 2_000L) {
+            exitApp()
+        } else {
+            lastBackAt = now
+            Toast.makeText(context, Loc.str(R.string.exit_app_toast), Toast.LENGTH_SHORT).show()
+        }
+    }
+    // 선택 모드에서는 뒤로 가기가 먼저 선택 모드를 해제한다
+    BackHandler(enabled = selectionMode != ListSelection.NONE) { exitSelection() }
     val previewScope = rememberCoroutineScope()
 
     var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(selectedShowId) { if (selectionMode == ListSelection.SONGS) exitSelection() }
     var showCreateDialog by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf<Show?>(null) }       // 이름 변경 대상
     var newShowDialog by remember { mutableStateOf(false) }
@@ -199,6 +238,32 @@ fun EfxListScreen(
                 }) { Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { deleteShowTarget = null }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
+        )
+    }
+
+    bulkDelete?.let { req ->
+        val isShows = req.target == ListSelection.SHOWS
+        AlertDialog(
+            onDismissRequest = { bulkDelete = null },
+            title = { Text(Loc.str(if (isShows) R.string.bulk_delete_shows_title else R.string.bulk_delete_songs_title)) },
+            text = {
+                Text(Loc.str(if (isShows) R.string.bulk_delete_shows_message else R.string.bulk_delete_songs_message, req.ids.size))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (isShows) {
+                        showViewModel.deleteShows(req.ids)
+                        if (selectedShowId in req.ids) selectedShowId = null
+                    } else {
+                        if (preview.activeId?.let { it in req.ids } == true) preview.stop()
+                        viewModel.deleteProjects(req.ids)
+                        showViewModel.removeSongsEverywhere(req.ids)
+                    }
+                    bulkDelete = null
+                    exitSelection()
+                }) { Text(Loc.str(R.string.efx_edit_screen_15), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { bulkDelete = null }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
 
@@ -352,10 +417,20 @@ fun EfxListScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(Loc.str(R.string.efx_list_screen_20), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        FilledTonalButton(onClick = { newShowDialog = true }) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(Loc.str(R.string.efx_list_screen_21))
+                        if (selectionMode == ListSelection.SHOWS) {
+                            BulkDeleteButtons(
+                                allCount = shows.size,
+                                checkedCount = checkedShowIds.size,
+                                onCancel = { exitSelection() },
+                                onDeleteAll = { bulkDelete = BulkDelete(ListSelection.SHOWS, shows.map { it.id }) },
+                                onDeleteSelected = { bulkDelete = BulkDelete(ListSelection.SHOWS, checkedShowIds.toList()) }
+                            )
+                        } else {
+                            FilledTonalButton(onClick = { newShowDialog = true }) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(Loc.str(R.string.efx_list_screen_21))
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -378,9 +453,21 @@ fun EfxListScreen(
                                         Loc.str(R.string.efx_list_screen_14, show.songIds.count { id -> projects.any { it.id == id } })
                                     ).joinToString(" · "),
                                     selected = show.id == selectedShowId,
-                                    onClick = { selectedShowId = show.id },
+                                    onClick = {
+                                        if (selectionMode == ListSelection.SHOWS) {
+                                            checkedShowIds = if (show.id in checkedShowIds) checkedShowIds - show.id else checkedShowIds + show.id
+                                        } else selectedShowId = show.id
+                                    },
                                     onRename = { showNameDialog = show },
                                     onDelete = { deleteShowTarget = show },
+                                    checkMode = selectionMode == ListSelection.SHOWS,
+                                    checked = show.id in checkedShowIds,
+                                    onLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        selectionMode = ListSelection.SHOWS
+                                        checkedSongIds = emptySet()
+                                        checkedShowIds = checkedShowIds + show.id
+                                    },
                                     modifier = Modifier.animateItem()
                                 )
                             }
@@ -391,7 +478,7 @@ fun EfxListScreen(
                                         image = null,
                                         subtitle = Loc.str(R.string.efx_list_screen_14, unassigned.size),
                                         selected = inUnassigned,
-                                        onClick = { selectedShowId = UNASSIGNED_ID },
+                                        onClick = { if (selectionMode != ListSelection.SHOWS) selectedShowId = UNASSIGNED_ID },
                                         onRename = null,
                                         onDelete = null,
                                         modifier = Modifier.animateItem()
@@ -440,10 +527,20 @@ fun EfxListScreen(
                             }
                         }
                         // 공연을 선택해야 곡을 추가할 수 있다
-                        Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(Loc.str(R.string.efx_list_screen_3))
+                        if (selectionMode == ListSelection.SONGS) {
+                            BulkDeleteButtons(
+                                allCount = songs.size,
+                                checkedCount = checkedSongIds.size,
+                                onCancel = { exitSelection() },
+                                onDeleteAll = { bulkDelete = BulkDelete(ListSelection.SONGS, songs.map { it.id }) },
+                                onDeleteSelected = { bulkDelete = BulkDelete(ListSelection.SONGS, checkedSongIds.toList()) }
+                            )
+                        } else {
+                            Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(Loc.str(R.string.efx_list_screen_3))
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -485,7 +582,18 @@ fun EfxListScreen(
                                         viewModel.deleteProject(project.id)
                                         showViewModel.removeSongEverywhere(project.id)
                                     },
-                                    onMove = { moveSongTarget = project }
+                                    onMove = { moveSongTarget = project },
+                                    selectionMode = selectionMode == ListSelection.SONGS,
+                                    checked = project.id in checkedSongIds,
+                                    onToggleCheck = {
+                                        checkedSongIds = if (project.id in checkedSongIds) checkedSongIds - project.id else checkedSongIds + project.id
+                                    },
+                                    onLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        selectionMode = ListSelection.SONGS
+                                        checkedShowIds = emptySet()
+                                        checkedSongIds = checkedSongIds + project.id
+                                    }
                                 )
                             }
                         }
@@ -512,7 +620,7 @@ private fun EmptyHint(text: String) {
 }
 
 /** 공연 목록의 한 줄. 선택되면 secondaryContainer 색으로 강조된다. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ShowRow(
     name: String,
@@ -522,12 +630,14 @@ private fun ShowRow(
     onClick: () -> Unit,
     onRename: (() -> Unit)?,
     onDelete: (() -> Unit)?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    checkMode: Boolean = false,
+    checked: Boolean = false,
+    onLongClick: (() -> Unit)? = null
 ) {
     var menu by remember { mutableStateOf(false) }
     Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = MaterialTheme.shapes.medium,
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer
         else MaterialTheme.colorScheme.surfaceContainerHigh
@@ -536,6 +646,10 @@ private fun ShowRow(
             modifier = Modifier.height(LIST_ITEM_HEIGHT).padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (checkMode) {
+                Checkbox(checked = checked, onCheckedChange = null)
+                Spacer(Modifier.width(12.dp))
+            }
             if (image != null) {
                 image()
                 Spacer(Modifier.width(12.dp))
@@ -583,6 +697,7 @@ private fun ShowRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EfxProjectCard(
     modifier: Modifier = Modifier,
@@ -596,7 +711,11 @@ fun EfxProjectCard(
     onShare: (String, String) -> File,
     onFileSaved: (File, android.net.Uri) -> Unit,
     onDelete: () -> Unit,
-    onMove: (() -> Unit)? = null
+    onMove: (() -> Unit)? = null,
+    selectionMode: Boolean = false,
+    checked: Boolean = false,
+    onToggleCheck: () -> Unit = {},
+    onLongClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
@@ -642,10 +761,14 @@ fun EfxProjectCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = LIST_ITEM_HEIGHT)
-                    .clickable(onClick = onEdit)
+                    .combinedClickable(onClick = { if (selectionMode) onToggleCheck() else onEdit() }, onLongClick = onLongClick)
                     .padding(start = 16.dp, end = if (preview != null) 316.dp else 56.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (selectionMode) {
+                    Checkbox(checked = checked, onCheckedChange = null)
+                    Spacer(Modifier.width(12.dp))
+                }
                 // 음악 파일의 메타데이터(앨범 아트)
                 SongArt(musicUriString = project.musicUriString, size = 64.dp) {
                     // 재생 중이면 현재 이펙트 이름과 LED 색을 앨범 아트 위에 실시간으로 보여 준다 (Light-Stick-Music 과 같은 배지)
@@ -698,7 +821,7 @@ fun EfxProjectCard(
                 PlayerSeekBar(
                     currentPosition = if (active) preview.player.positionMs else 0L,
                     duration = total,
-                    onSeekTo = { if (active) preview.player.seekTo(it) },
+                    onSeekTo = { if (active) preview.seekTo(it) },
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .padding(end = 108.dp)
@@ -850,5 +973,38 @@ private fun shareEfxFile(context: android.content.Context, file: File) {
         )
     } catch (e: Exception) {
         android.util.Log.e("EfxListScreen", "Error sharing file", e)
+    }
+}
+
+/** 선택 삭제 모드가 켜진 목록 */
+private enum class ListSelection { NONE, SHOWS, SONGS }
+
+/** 확인 후 삭제할 대상 */
+private data class BulkDelete(val target: ListSelection, val ids: List<String>)
+
+/** 선택 모드 헤더 버튼: 취소 / 전체 삭제 / 선택 삭제(N) */
+@Composable
+private fun BulkDeleteButtons(
+    allCount: Int,
+    checkedCount: Int,
+    onCancel: () -> Unit,
+    onDeleteAll: () -> Unit,
+    onDeleteSelected: () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        TextButton(onClick = onCancel) { Text(Loc.str(R.string.efx_edit_screen_16)) }
+        OutlinedButton(
+            onClick = onDeleteAll,
+            enabled = allCount > 0,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) { Text(Loc.str(R.string.bulk_delete_all)) }
+        Button(
+            onClick = onDeleteSelected,
+            enabled = checkedCount > 0,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError
+            )
+        ) { Text(Loc.str(R.string.bulk_delete_selected, checkedCount)) }
     }
 }

@@ -23,7 +23,9 @@ import com.lightstick.types.Color as LsColor
 import com.lightstick.types.Colors
 import com.lightstick.types.EffectType
 import com.lightstick.types.LSEffectPayload
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -77,8 +79,12 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     val battery: StateFlow<Int?> = _battery.asStateFlow()
 
     private val _broadcasting = MutableStateFlow(true)
-    /** Broadcasting Mode: 연결된 기기가 보내는 이펙트 신호를 주변 응원봉에도 전파할지 (기기별 저장) */
+    /** Broadcasting Mode: 연결된 기기가 보내는 이펙트 신호를 주변 응원봉에도 전파할지 (기기 설정 + 기기별 저장) */
     val broadcasting: StateFlow<Boolean> = _broadcasting.asStateFlow()
+
+    private val _broadcastingSupported = MutableStateFlow(false)
+    /** Broadcasting(FF09) 설정 가능 여부: BLE 모드 응원봉(펌웨어 지원)만 가능하다. 중계기/구형 펌웨어는 항상 전파 */
+    val broadcastingSupported: StateFlow<Boolean> = _broadcastingSupported.asStateFlow()
 
     private val _groupAllowed = MutableStateFlow(true)
     /** BLE Only 모드 기기는 그룹 배정을 지원하지 않는다 */
@@ -86,6 +92,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _groupCount = MutableStateFlow(prefs.groupCount)
     val groupCount: StateFlow<Int> = _groupCount.asStateFlow()
+
+    private val _autoConnectDevices = MutableStateFlow(prefs.getAutoConnectDevices())
+    /** 자동 연결로 등록된 기기 (mac, 이름) */
+    val autoConnectDevices: StateFlow<List<Pair<String, String?>>> = _autoConnectDevices.asStateFlow()
 
     private val _otaProgress = MutableStateFlow<Int?>(null)
     /** OTA 진행률(0~100). 진행 중이 아니면 null */
@@ -100,10 +110,16 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     private var scanJob: Job? = null
     private var monitorJob: Job? = null
+    private var autoConnectJob: Job? = null
 
     companion object {
         private const val TAG = "BleViewModel"
+        private const val BROADCASTING_RETRIES = 2
+        private const val BROADCASTING_RETRY_DELAY_MS = 1_500L
         private const val SCAN_SECONDS = 10
+        /** SDK 가 프레임 위치를 다시 계산하는 기준(앞으로 10초 초과)을 넘기는 값 */
+        private const val FORCE_RESYNC_OFFSET_MS = 11_000L
+        private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
 
         /** 현재 OS 버전에서 요청해야 하는 BLE 런타임 권한 */
         fun requiredPermissions(): Array<String> =
@@ -115,12 +131,63 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
+        Log.i(TAG, "BleViewModel created (seek-resync v2)")
         if (hasPermissions()) {
             runCatching { LSBluetooth.connectedDevices().firstOrNull() }
                 .getOrNull()?.let {
                     _connected.value = it
                     startMonitoring(it)
                 }
+        }
+        tryAutoConnect()
+    }
+
+    // ── 자동 연결 ────────────────────────────────────────────────
+
+    fun isAutoConnect(mac: String): Boolean = _autoConnectDevices.value.any { it.first == mac }
+
+    fun setAutoConnect(device: Device, enabled: Boolean) = setAutoConnect(device.mac, device.name, enabled)
+
+    fun setAutoConnect(mac: String, name: String?, enabled: Boolean) {
+        prefs.setAutoConnect(mac, name, enabled)
+        _autoConnectDevices.value = prefs.getAutoConnectDevices()
+    }
+
+    /**
+     * 자동 연결로 등록된 기기에 스캔 없이 MAC 으로 바로 연결한다 (등록 순서대로, 하나가 연결되면 끝).
+     * 앱 시작 시 호출되며, 권한이 나중에 허용된 경우에도 다시 호출할 수 있다.
+     */
+    fun tryAutoConnect() {
+        if (_connected.value != null || autoConnectJob?.isActive == true) return
+        val targets = _autoConnectDevices.value
+        if (targets.isEmpty() || !hasPermissions()) return
+        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        if (btManager?.adapter?.isEnabled != true) return
+
+        autoConnectJob = viewModelScope.launch {
+            for ((mac, name) in targets) {
+                if (_connected.value != null) break
+                val device = runCatching { LSBluetooth.bondedDevices().firstOrNull { it.mac == mac } }.getOrNull()
+                    ?: Device(mac, name, null)
+                val result = CompletableDeferred<Boolean>()
+                _connectingMac.value = mac
+                Log.d(TAG, "autoConnect: $mac")
+                device.connect(onConnected = { result.complete(true) }, onFailed = { result.complete(false) })
+                val ok = withTimeoutOrNull(AUTO_CONNECT_TIMEOUT_MS) { result.await() } ?: false
+                _connectingMac.value = null
+                if (!ok) {
+                    runCatching { device.disconnect() }
+                    continue
+                }
+                if (_connected.value != null) { // 그 사이 사용자가 직접 다른 기기에 연결했다
+                    runCatching { device.disconnect() }
+                    break
+                }
+                _connected.value = device
+                startMonitoring(device)
+                _message.value = Loc.str(R.string.ble_view_model_4, device.name ?: name ?: device.mac)
+                break
+            }
         }
     }
 
@@ -216,6 +283,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         _battery.value = null
         _groupAllowed.value = true
         _broadcasting.value = true
+        _broadcastingSupported.value = false
         _otaProgress.value = null
         _otaCheck.value = null
         pendingFirmware = null
@@ -226,7 +294,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     /** 연결 직후 정보를 읽고, 이후 5초마다 연결을 확인하며 30초마다 배터리를 다시 읽는다 */
     private fun startMonitoring(device: Device) {
         monitorJob?.cancel()
-        _broadcasting.value = prefs.getBroadcasting(device.mac)
+        _broadcasting.value = true
+        _broadcastingSupported.value = false
         monitorJob = viewModelScope.launch {
             refreshInfo()
             readMode(device)
@@ -258,13 +327,76 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         runCatching { device.readBattery { r -> r.onSuccess { _battery.value = it } } }
     }
 
-    private fun readMode(device: Device) {
+    /**
+     * 기기 모드를 읽고 Broadcasting 지원 여부를 판정한다.
+     * SDK 의 supports*() / readDeviceMode 실패는 "미지원" 뿐 아니라 "아직 확정 전"(서비스 탐색 직후, GATT 캐시)일 때도
+     * 같은 값이라서, 미지원으로 보이면 잠시 뒤 두 번까지 다시 확인하고 그래도 아니면 메뉴를 숨긴 채로 둔다.
+     */
+    private fun readMode(device: Device, attempt: Int = 0) {
+        fun retryOrGiveUp(reason: String) {
+            if (_connected.value?.mac != device.mac) return
+            if (attempt < BROADCASTING_RETRIES) {
+                Log.d(TAG, "Broadcasting check: $reason → retry ${attempt + 1}/$BROADCASTING_RETRIES")
+                viewModelScope.launch {
+                    delay(BROADCASTING_RETRY_DELAY_MS)
+                    if (_connected.value?.mac == device.mac) readMode(device, attempt + 1)
+                }
+            } else {
+                Log.d(TAG, "Broadcasting check: $reason → unsupported (menu hidden)")
+                applyBroadcasting(device, isBleMode = false)
+            }
+        }
         if (!runCatching { device.supportsDeviceMode() }.getOrDefault(false)) {
             _groupAllowed.value = true   // 구형 펌웨어는 중계기로 간주
+            retryOrGiveUp("supportsDeviceMode=false")
             return
         }
         runCatching {
-            device.readDeviceMode { r -> r.onSuccess { _groupAllowed.value = it != DeviceMode.BLE } }
+            device.readDeviceMode { r ->
+                r.onSuccess {
+                    _groupAllowed.value = it != DeviceMode.BLE
+                    if (it == DeviceMode.BLE) {
+                        if (runCatching { device.supportsBroadcasting() }.getOrDefault(false)) {
+                            applyBroadcasting(device, isBleMode = true)
+                        } else {
+                            retryOrGiveUp("BLE mode but supportsBroadcasting=false")
+                        }
+                    } else {
+                        // 중계기: FF09 가 원래 없다 (확정)
+                        Log.d(TAG, "Broadcasting check: device mode=$it → unsupported")
+                        applyBroadcasting(device, isBleMode = false)
+                    }
+                }.onFailure { retryOrGiveUp("readDeviceMode failed: ${it.message}") }
+            }
+        }.onFailure { retryOrGiveUp("readDeviceMode threw: ${it.message}") }
+    }
+
+    /**
+     * Broadcasting(FF09): BLE 모드이고 펌웨어가 지원할 때만 설정할 수 있다.
+     * 응원봉은 연결할 때마다 true 로 초기화되므로, 저장된 값이 false 면 연결 직후 다시 기기에 적용한다.
+     */
+    private fun applyBroadcasting(device: Device, isBleMode: Boolean) {
+        if (_connected.value?.mac != device.mac) return
+        val supported = isBleMode && runCatching { device.supportsBroadcasting() }.getOrDefault(false)
+        _broadcastingSupported.value = supported
+        if (!supported) {
+            _broadcasting.value = true
+            return
+        }
+        val saved = prefs.getBroadcasting(device.mac)
+        _broadcasting.value = saved
+        if (!saved) writeBroadcasting(device, false, retry = true)
+    }
+
+    /** setBroadcasting 의 반환값은 "쓰기 요청 제출 여부"다. 실패(false)면 한 번 더 시도하고 결과를 로그로 남긴다 */
+    private fun writeBroadcasting(device: Device, enabled: Boolean, retry: Boolean) {
+        val ok = runCatching { device.setBroadcasting(enabled) }.getOrDefault(false)
+        Log.d(TAG, "setBroadcasting($enabled) submitted=$ok")
+        if (!ok && retry) {
+            viewModelScope.launch {
+                delay(BROADCASTING_RETRY_DELAY_MS)
+                if (_connected.value?.mac == device.mac) writeBroadcasting(device, enabled, retry = false)
+            }
         }
     }
 
@@ -278,7 +410,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             val blink = LSEffectPayload(
                 effectType = EffectType.BLINK, color = white, backgroundColor = LsColor(0, 0, 0),
                 period = 3, spf = 100, fade = 100, randomColor = 1, randomDelay = 0,
-                broadcasting = if (_broadcasting.value) 1 else 0, effectIndex = 0
+                duration = 0, effectIndex = 0
             )
             device.sendEffect(blink)
             delay(3_000L)
@@ -296,7 +428,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     private fun solidPayload(type: EffectType, r: Int, g: Int, b: Int) = LSEffectPayload(
         effectType = type, color = LsColor(r, g, b), backgroundColor = LsColor(0, 0, 0),
         period = 0, spf = 100, fade = 100, randomColor = 0, randomDelay = 0,
-        broadcasting = if (_broadcasting.value) 1 else 0, effectIndex = 0
+        duration = 0, effectIndex = 0
     )
 
     /**
@@ -351,7 +483,7 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 do {
                     for ((payload, ms) in steps) {
                         if (connectedOrNull() == null) return@launch
-                        device.sendEffect(payload.copy(broadcasting = if (_broadcasting.value) 1 else 0))
+                        device.sendEffect(payload)
                         delay(ms.coerceAtLeast(10L))
                     }
                 } while (loop)
@@ -371,8 +503,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setBroadcasting(enabled: Boolean) {
         val device = _connected.value ?: return
+        if (!_broadcastingSupported.value) return
         prefs.setBroadcasting(device.mac, enabled)
         _broadcasting.value = enabled
+        writeBroadcasting(device, enabled, retry = true)
     }
 
     fun setGroupCount(count: Int) {
@@ -446,24 +580,93 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── 타임라인 동기화 ──────────────────────────────────────────
 
+    /** 마지막으로 기기에 올린 프레임 — 재개 시 기기에 타임라인이 없으면 다시 올리는 데 쓴다 */
+    private var loadedFrames: List<Pair<Long, ByteArray>>? = null
+
     fun loadTimeline(frames: List<Pair<Long, ByteArray>>) {
         val device = connectedOrNull() ?: return
-        if (!device.playTimeline(frames)) Log.w(TAG, "playTimeline rejected")
+        loadedFrames = frames
+        val ok = device.playTimeline(frames)
+        timelinePaused = false
+        Log.d(TAG, "loadTimeline: frames=${frames.size} ok=$ok")
     }
 
+    /** 일시정지 중이거나 타임라인이 멈춘 상태인지 */
+    private var timelinePaused = true
+
+    /** 재생 위치를 SDK 에 알린다 (재생 중 100ms 마다) */
     fun updatePosition(positionMs: Long) {
         connectedOrNull()?.updatePlaybackPosition(positionMs)
     }
 
-    fun pauseTimeline() {
-        connectedOrNull()?.pauseTimeline()
+    /**
+     * 사용자가 재생 위치를 확정했다 (진행 바/타임라인을 탭하거나 드래그를 놓음).
+     * 재생 중이면 그 위치의 이펙트를 바로 보내고, 일시정지 중이면 위치만 알린다 (재개 때 복원).
+     */
+    fun seekTimeline(positionMs: Long) {
+        val device = connectedOrNull() ?: return
+        Log.d(TAG, "seekTimeline: pos=${positionMs}ms paused=$timelinePaused")
+        if (timelinePaused) {
+            device.updatePlaybackPosition(positionMs)
+        } else {
+            resendFrameAt(device, positionMs)
+        }
     }
 
-    fun resumeTimeline() {
-        connectedOrNull()?.resumeTimeline()
+    /**
+     * 재생 중 Seek 직후, 이동한 위치의 이펙트를 바로 보낸다.
+     * SDK 는 Seek 하면 그 위치의 프레임은 이미 보낸 것으로 보고 다음 프레임 시각이 올 때까지 아무것도 보내지 않아
+     * 기기가 이전 상태(꺼짐 등)로 남는다. 그 위치의 프레임을 직접 보내고(sendEffect 가 타임라인 전송을 잠시 멈춤),
+     * 프레임 위치를 다시 계산한 뒤 resumeTimeline 으로 재개한다.
+     */
+    private fun resendFrameAt(device: Device, positionMs: Long) {
+        val frame = loadedFrames?.lastOrNull { it.first <= positionMs }?.second
+        val payload = frame?.let { runCatching { LSEffectPayload.fromByteArray(it) }.getOrNull() }
+            ?: LSEffectPayload.Effects.off()
+        val sent = device.sendEffect(payload)
+        // 1초 이내 후진 / 10초 이내 전진은 SDK 가 프레임 위치를 다시 계산하지 않으므로 먼 위치 → 실제 위치로 강제 재계산
+        device.updatePlaybackPosition(positionMs + FORCE_RESYNC_OFFSET_MS)
+        device.updatePlaybackPosition(positionMs)
+        val resumed = device.resumeTimeline()
+        Log.d(TAG, "seek resend: pos=${positionMs}ms type=${payload.effectType} sent=$sent resumed=$resumed")
     }
+
+    /** 일시정지: 타임라인을 멈추고, 마지막 이펙트가 기기에서 계속 반복되지 않도록 OFF 를 보낸다 (Light-Stick-Music 과 동일) */
+    fun pauseTimeline() {
+        val device = connectedOrNull() ?: return
+        timelinePaused = true
+        val paused = device.pauseTimeline()
+        val off = LSEffectPayload.Effects.off()
+        val sent = device.sendEffect(off)
+        Log.d(
+            TAG, "pauseTimeline: pause=$paused offSent=$sent loaded=${device.isTimelineLoaded()} " +
+                "playing=${device.isTimelinePlaying()} payload=${off.toByteArray().hex()}"
+        )
+    }
+
+    /**
+     * 재개 (Light-Stick-Music 의 resyncEffectsOnResume 과 같은 순서):
+     * 기기에 타임라인이 없으면 다시 올리고 → resumeTimeline → 현재 재생 위치로 갱신(Seek, 즉시 위치 업데이트).
+     */
+    fun resumeTimeline(positionMs: Long) {
+        val device = connectedOrNull() ?: return
+        val needsReload = runCatching { !device.isTimelineLoaded() }.getOrDefault(true)
+        if (needsReload) loadedFrames?.let { device.playTimeline(it) }
+        val resumed = device.resumeTimeline()
+        timelinePaused = false
+        device.updatePlaybackPosition(positionMs) // Seek
+        device.updatePlaybackPosition(positionMs) // 즉시 위치 업데이트
+        Log.d(
+            TAG, "resumeTimeline: pos=${positionMs}ms reload=$needsReload resumed=$resumed " +
+                "loaded=${device.isTimelineLoaded()} playing=${device.isTimelinePlaying()}"
+        )
+    }
+
+    private fun ByteArray.hex(): String = joinToString(" ") { "%02X".format(it) }
 
     fun stopTimeline() {
+        loadedFrames = null
+        timelinePaused = true
         connectedOrNull()?.stopTimeline()
     }
 
@@ -479,8 +682,14 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         return device
     }
 
+    /** 앱 종료 시: 스캔을 멈추고, 자동 연결 기기의 연결을 해제한다 (다음 실행 때 다시 자동 연결된다) */
     override fun onCleared() {
         stopScan()
+        autoConnectJob?.cancel()
+        val device = _connected.value
+        if (device != null && isAutoConnect(device.mac) && hasPermissions()) {
+            runCatching { device.stopTimeline(); device.disconnect() }
+        }
         super.onCleared()
     }
 }

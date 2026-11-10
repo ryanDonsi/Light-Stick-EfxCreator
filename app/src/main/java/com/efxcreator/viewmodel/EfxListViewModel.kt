@@ -215,6 +215,16 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** 곡 여러 개를 한 번에 지운다 (목록은 마지막에 한 번만 다시 읽는다) */
+    fun deleteProjects(projectIds: Collection<String>) {
+        if (projectIds.isEmpty()) return
+        viewModelScope.launch {
+            Log.d(TAG, "Deleting ${projectIds.size} projects")
+            projectIds.forEach { repository.deleteProject(it) }
+            loadProjects()
+        }
+    }
+
     /**
      * 프로젝트를 내보내기 (임시 파일 생성)
      * @param projectId 프로젝트 ID

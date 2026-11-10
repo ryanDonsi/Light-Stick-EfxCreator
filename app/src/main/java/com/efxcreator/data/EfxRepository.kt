@@ -39,8 +39,8 @@ class EfxRepository(private val context: Context) {
         val path = prefs.efxStoragePath
 
         return when {
-            path == "default_internal" || path.isEmpty() -> {
-                // 기본: 내부 저장소
+            path == PreferencesManager.EFX_PATH_INTERNAL -> {
+                // 앱 내부 저장소
                 context.filesDir
             }
             path.startsWith("content://") -> {
@@ -49,13 +49,9 @@ class EfxRepository(private val context: Context) {
                 context.filesDir
             }
             else -> {
-                // 일반 경로
-                File(path).also {
-                    if (!it.exists()) {
-                        it.mkdirs()
-                        Log.d(TAG, "Created EFX directory: ${it.absolutePath}")
-                    }
-                }
+                // 일반 폴더 경로(예: /storage/emulated/0/Effects): 작업 파일은 내부 저장소에 두고
+                // 그 폴더에는 EfxFolderMirror 가 `공연명/곡명.efx` 사본만 만든다 (폴더 선택기와 같은 방식)
+                context.filesDir
             }
         }
     }
@@ -195,7 +191,12 @@ class EfxRepository(private val context: Context) {
                 val minor = efx.header.version and 0xFF
                 Log.d(TAG, "Loaded EFX with version: v$major.$minor (0x${efx.header.version.toString(16).padStart(4, '0').uppercase()})")
                 Log.d(TAG, "Loaded EFX with ${efx.body.entries.size} entries")
-                efx
+                // SDK 2.0 으로 저장한 옛 파일은 offset 18 의 effectIndex(순번)를 2.1 이 duration 으로 읽는다 → 정리
+                val cleaned = com.efxcreator.model.EfxDurations.sanitizeLegacy(efx.body.entries)
+                if (cleaned !== efx.body.entries) {
+                    Log.w(TAG, "Legacy EFX (SDK 2.0 layout) detected → duration/effectIndex reset")
+                    Efx(efx.header, efx.body.copy(entries = cleaned))
+                } else efx
             } else {
                 Log.w(TAG, "EFX file does not exist for project: $projectId")
                 null
@@ -311,7 +312,7 @@ class EfxRepository(private val context: Context) {
         Log.d(TAG, "Creating new EFX")
 
         val defaultPayload = LSEffectPayload(
-            effectIndex = 1,  // 첫 번째 Entry는 Index 1
+            effectIndex = 1,  // 첫 번째 Entry는 Index 1 (255 를 넘으면 0 부터 다시)
             effectType = EffectType.ON,
             color = Color(255, 255, 255),
             backgroundColor = Color(0, 0, 0),
@@ -320,7 +321,7 @@ class EfxRepository(private val context: Context) {
             fade = 100,
             randomColor = 0,
             randomDelay = 0,
-            broadcasting = 1
+            duration = 0
         )
 
         val defaultEntry = EfxEntry(
@@ -472,7 +473,11 @@ class EfxRepository(private val context: Context) {
     fun changeEfxStoragePath(newPath: String) {
         val oldPath = prefs.efxStoragePath
 
-        if (oldPath == newPath) return
+        if (oldPath == newPath) {
+            // 같은 위치라도 (예: 권한을 방금 허용함) 사본을 다시 맞춘다
+            EfxFolderMirror(context).syncAll()
+            return
+        }
 
         Log.d(TAG, "Changing EFX storage from $oldPath to $newPath")
 
@@ -572,8 +577,13 @@ class EfxRepository(private val context: Context) {
         val path = prefs.efxStoragePath
 
         return when {
-            path == "default_internal" || path.isEmpty() -> {
+            path == PreferencesManager.EFX_PATH_INTERNAL -> {
                 Loc.str(R.string.efx_repository_3, context.filesDir.absolutePath)
+            }
+            path == PreferencesManager.EFX_PATH_DEFAULT || path.isEmpty() -> {
+                val base = Loc.str(R.string.efx_repository_3, friendlyPath(PreferencesManager.defaultEfxDir().absolutePath))
+                if (PreferencesManager.canWriteFolders(context)) base
+                else base + "\n" + Loc.str(R.string.efx_default_need_permission)
             }
             path.startsWith("content://") -> {
                 Loc.str(R.string.efx_repository_4, describeTreeUri(path))

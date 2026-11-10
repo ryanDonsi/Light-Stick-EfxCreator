@@ -78,6 +78,23 @@ class ShowViewModel(application: Application) : AndroidViewModel(application) {
         resync(songs)
     }
 
+    /** 여러 공연을 한 번에 지운다 (공연 안의 곡은 지워지지 않고 미배정이 된다) */
+    fun deleteShows(ids: Collection<String>) {
+        val idSet = ids.toSet()
+        if (idSet.isEmpty()) return
+        val songs = _shows.value.filter { it.id in idSet }.flatMap { it.songIds }
+        viewModelScope.launch(Dispatchers.IO) { idSet.forEach { repository.deleteImages(it) } }
+        commit(_shows.value.filterNot { it.id in idSet })
+        resync(songs)
+    }
+
+    /** 곡 여러 개가 프로젝트에서 삭제될 때 모든 공연에서 한 번에 뺀다 */
+    fun removeSongsEverywhere(projectIds: Collection<String>) {
+        val idSet = projectIds.toSet()
+        if (_shows.value.none { show -> show.songIds.any { it in idSet } }) return
+        commit(_shows.value.map { it.copy(songIds = it.songIds.filterNot { id -> id in idSet }) })
+    }
+
     fun addSong(showId: String, projectId: String) {
         commit(_shows.value.map {
             if (it.id == showId && projectId !in it.songIds) it.copy(songIds = it.songIds + projectId) else it

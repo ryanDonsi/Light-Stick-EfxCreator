@@ -33,7 +33,7 @@ class SongPreviewState(private val repository: EfxRepository) {
     var activeId by mutableStateOf<String?>(null)
         private set
 
-    /** 기기에 올릴 프레임 (Broadcasting 설정이 반영된 것) */
+    /** 기기에 올릴 프레임 */
     var frames by mutableStateOf<List<Pair<Long, ByteArray>>>(emptyList())
         private set
 
@@ -41,20 +41,19 @@ class SongPreviewState(private val repository: EfxRepository) {
     var entries by mutableStateOf<List<com.lightstick.efx.EfxEntry>>(emptyList())
         private set
 
-    private var broadcasting = true
+    /** 위치가 확정됐을 때 실기기에도 알린다 (rememberSongPreview 가 연결) */
+    var onDeviceSeek: ((Long) -> Unit)? = null
 
-    fun setBroadcasting(enabled: Boolean) {
-        if (broadcasting == enabled) return
-        broadcasting = enabled
-        activeId?.let { reloadFrames(it) }
+    /** 진행 바에서 위치를 확정해 이동한다: 음악과 실기기 모두 그 위치로 맞춘다 */
+    fun seekTo(positionMs: Long) {
+        player.seekTo(positionMs)
+        onDeviceSeek?.invoke(positionMs)
     }
 
     private fun reloadFrames(projectId: String) {
         val efx = repository.loadEfx(projectId)
         entries = efx?.body?.entries.orEmpty()
-        frames = entries.map {
-            it.timestampMs to it.payload.copy(broadcasting = if (broadcasting) 1 else 0).toByteArray()
-        }
+        frames = entries.map { it.timestampMs to it.payload.toByteArray() }
     }
 
     /** 이 곡을 재생/일시정지한다. 다른 곡이 활성이면 그 곡으로 바꾼다. */
@@ -139,8 +138,7 @@ fun rememberSongPreview(bleVm: BleViewModel): SongPreviewState {
     val context = LocalContext.current
     val state = remember { SongPreviewState(EfxRepository(context.applicationContext)) }
     val connected by bleVm.connected.collectAsState()
-    val broadcasting by bleVm.broadcasting.collectAsState()
-    LaunchedEffect(broadcasting) { state.setBroadcasting(broadcasting) }
+    state.onDeviceSeek = { bleVm.seekTimeline(it) }
 
     // 재생 위치 갱신
     LaunchedEffect(Unit) {
@@ -162,7 +160,7 @@ fun rememberSongPreview(bleVm: BleViewModel): SongPreviewState {
                 bleVm.loadTimeline(state.frames)
                 loadedFor = activeId
             } else {
-                bleVm.resumeTimeline()
+                bleVm.resumeTimeline(state.player.positionMs)
             }
             while (isActive) {
                 bleVm.updatePosition(state.player.positionMs)

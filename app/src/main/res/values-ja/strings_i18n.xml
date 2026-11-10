@@ -154,7 +154,7 @@
     <string name="settings_screen_9">音楽ファイルの読み込み</string>
     <string name="settings_screen_10">現在の読み込み場所</string>
     <string name="settings_screen_11">ℹ️ フォルダ設定のご案内</string>
-    <string name="settings_screen_12">• フォルダアイコンをタップして、使いたいフォルダを選んでください\n• 選んだフォルダはアプリを再起動しても維持されます\n• フォルダの権限は自動で管理されます</string>
+    <string name="settings_screen_12">• フォルダアイコンをタップして、使いたいフォルダを選んでください\n• 選んだフォルダはアプリを再起動しても維持されます\n• フォルダの権限は自動で管理されます\n• 「このフォルダは使用できません」と表示された場合は、Androidが保護しているフォルダです（ストレージの最上位、Downloadなど）。\n   Music の中に新しいフォルダ（例: Effects）を作って、そのフォルダを選んでください\n• フォルダを指定しなくてもアプリは正常に動作します。指定したフォルダには公演ごとの .efx のコピーが作られるだけで、曲メニューの保存/共有でも書き出せます\n• フォルダ選択がブロックされる場合は、「Effects」ボタンでピッカーなしにフォルダを作って使えます（すべてのファイルへのアクセスの許可が必要）</string>
     <string name="settings_screen_13">デバイス管理</string>
     <string name="settings_screen_14">言語設定</string>
     <string name="settings_screen_15">EFX保存場所 · 音楽読み込み場所</string>
@@ -280,7 +280,7 @@
     <string name="efx_tablet_editor_screen_34">音楽を選ぶと再生できます</string>
     <string name="efx_tablet_editor_screen_35">選択したエフェクト</string>
     <string name="efx_tablet_editor_screen_36">タイムラインのブロックをタップすると属性を確認できます。\nブロックをドラッグすると時間を移動できます。</string>
-    <string name="efx_tablet_editor_screen_37">時刻</string>
+    <string name="efx_tablet_editor_screen_37">開始時刻</string>
     <string name="efx_tablet_editor_screen_38">種類</string>
     <string name="efx_tablet_editor_screen_39">色 (FG)</string>
     <string name="efx_tablet_editor_screen_40">背景 (BG)</string>
@@ -407,7 +407,7 @@
     <string name="language_settings_2">言語を変更</string>
     <string name="language_settings_3">表示言語を%1$sに変更するとアプリが再起動し、接続中のデバイスの接続が解除されます。続行しますか?</string>
     <string name="language_settings_4">自動 (システム言語: %1$s)</string>
-    <string name="label_timestamp">タイムスタンプ</string>
+    <string name="label_timestamp">開始時刻</string>
     <string name="label_minutes">分</string>
     <string name="label_seconds">秒</string>
     <string name="label_millis">ミリ秒</string>
@@ -596,4 +596,46 @@
     <string name="multi_exit">選択モードを終了</string>
     <string name="timeline_select_mode_badge">選択モード</string>
     <string name="song_palette_choose">この曲のパレットを選択</string>
+    <string name="label_auto_connect">自動接続</string>
+    <string name="auto_connect_desc">アプリ起動時にこの機器へ自動接続し、アプリ終了時に接続を解除します</string>
+    <string name="auto_connect_devices_title">自動接続する機器</string>
+    <string name="auto_connect_remove">解除</string>
+    <string name="label_duration">継続時間</string>
+    <string name="duration_until_next">次のエフェクトまで (0)</string>
+    <string name="broadcasting_ble_only">BLEモードのペンライトのみ設定できます（中継機は常に伝播）</string>
+    <string name="bulk_delete_all">すべて削除</string>
+    <string name="bulk_delete_selected">選択を削除 (%1$d)</string>
+    <string name="bulk_delete_shows_title">公演を削除</string>
+    <string name="bulk_delete_shows_message">公演 %1$d 件を削除します。\n公演内の曲は削除されず「未割り当て」に移動します。</string>
+    <string name="bulk_delete_songs_title">曲を削除</string>
+    <string name="bulk_delete_songs_message">曲 %1$d 件とエフェクトファイルを削除します。\nこの操作は取り消せません。</string>
+    <string name="exit_app_toast">もう一度押すと終了します</string>
+    <string name="dlg_beat_unit">ビート</string>
+    <string name="dlg_unit_10ms">10ms</string>
+    <string name="dlg_snap_label">ビートにスナップ</string>
+    <string name="dlg_snap_target">→ ビート %1$d (%2$s) に合わせて保存します</string>
+    <string name="dlg_snap_hint">開始時刻を変更すると最も近いビートに合わせます</string>
+    <string name="dlg_duration_ref_beats">= %1$sビート · %2$s · %3$d単位(10ms)</string>
+    <string name="dlg_duration_ref_ms">= %1$s · %2$d単位(10ms)</string>
+    <string name="dlg_overwrite_label">上書き</string>
+    <string name="dlg_overwrite_on_desc">オン: 重なるエフェクトを上書きします</string>
+    <string name="dlg_overwrite_off_desc">オフ: 重なると後ろのエフェクトを後ろへずらします</string>
+    <string name="dlg_overwrite_summary">上書き: エフェクト %1$d 件削除 · %2$d 件開始調整</string>
+    <string name="dlg_push_summary">後ろのエフェクト %1$d 件を %2$s 後ろへずらします</string>
+    <string name="dlg_overlap_none">重なるエフェクトはありません</string>
+    <string name="dlg_time_units">分 . 秒 . 1/100秒</string>
+    <string name="dlg_step_beat_snap">ビートボタン: 1ビート</string>
+    <string name="dlg_step_beat_fine">ビートボタン: 0.1ビート</string>
+    <string name="dlg_snap_on_desc">オン: 開始時刻を最も近いビートに合わせて保存します</string>
+    <string name="dlg_snap_off_desc">オフ: 入力した時刻のまま保存します</string>
+    <string name="settings_folder_quick_title">ピッカーなしで使う（すべてのファイルへのアクセスが必要）</string>
+    <string name="settings_folder_root">内部ストレージ/Effects</string>
+    <string name="settings_folder_music">Music/GlowSync</string>
+    <string name="settings_folder_reset">デフォルト (Music/Effects)</string>
+    <string name="settings_folder_failed">フォルダを作成または書き込みできません</string>
+    <string name="settings_folder_perm_denied">すべてのファイルへのアクセスが許可されていません</string>
+    <string name="settings_music_quick_title">ピッカーなしで開始位置を指定（曲追加時にファイル選択が開く場所・権限不要）</string>
+    <string name="settings_music_default">Music（デフォルト）</string>
+    <string name="efx_default_need_permission">既定の場所（Music/Effects）にコピーを作るには「すべてのファイルへのアクセス」の許可が必要です。設定の下のボタンから許可できます。</string>
+    <string name="settings_music_root">内部ストレージ/GlowSync</string>
 </resources>

@@ -49,6 +49,11 @@ object LedSimulator {
                 hi = mid - 1
             }
         }
+        // duration 이 있는 이펙트는 그 시간이 지나면 꺼진다 (다음 이펙트가 오기 전까지 아무 이펙트도 유효하지 않다)
+        if (ans >= 0 && entries[ans].payload.duration > 0) {
+            val end = com.efxcreator.model.EfxDurations.playEndMs(entries, ans)
+            if (end != null && positionMs >= end) return -1
+        }
         return ans
     }
 

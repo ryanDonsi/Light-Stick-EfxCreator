@@ -50,8 +50,8 @@ data class EffectPreset(
             fade = fade,
             randomColor = 0,
             randomDelay = 0,
-            broadcasting = 1,
-            effectIndex = 0   // 실제 Effect Index 는 EfxEditViewModel 이 저장 시 1부터 재부여한다
+            duration = 0,
+            effectIndex = 0   // 실제 Effect Index 는 EfxEditViewModel 이 편집/저장 시 순번으로 다시 매긴다 (255 를 넘으면 0 부터)
         )
     )
 }

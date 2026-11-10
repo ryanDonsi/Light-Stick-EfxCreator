@@ -154,7 +154,7 @@
     <string name="settings_screen_9">加载音乐文件</string>
     <string name="settings_screen_10">当前加载位置</string>
     <string name="settings_screen_11">ℹ️ 文件夹设置说明</string>
-    <string name="settings_screen_12">• 点击文件夹图标选择所需的文件夹\n• 所选文件夹在应用重启后仍会保留\n• 文件夹权限会自动管理</string>
+    <string name="settings_screen_12">• 点击文件夹图标选择所需的文件夹\n• 所选文件夹在应用重启后仍会保留\n• 文件夹权限会自动管理\n• 如果出现“无法使用此文件夹”，说明该文件夹受 Android 保护（存储根目录、Download 等）。\n   请在 Music 中新建文件夹（例如 Effects）并选择该文件夹\n• 不选择文件夹应用也能正常使用。所选文件夹只会生成按演出分类的 .efx 副本，也可以通过歌曲菜单的保存/分享导出\n• 如果无法选择文件夹，可使用“Effects”按钮不经选择器直接创建并使用文件夹（需要“所有文件访问”权限）</string>
     <string name="settings_screen_13">设备管理</string>
     <string name="settings_screen_14">语言设置</string>
     <string name="settings_screen_15">EFX保存位置 · 音乐加载位置</string>
@@ -280,7 +280,7 @@
     <string name="efx_tablet_editor_screen_34">选择音乐后即可播放</string>
     <string name="efx_tablet_editor_screen_35">所选效果</string>
     <string name="efx_tablet_editor_screen_36">点击时间轴上的块可查看属性。\n拖动块可更改时间。</string>
-    <string name="efx_tablet_editor_screen_37">时间</string>
+    <string name="efx_tablet_editor_screen_37">开始时间</string>
     <string name="efx_tablet_editor_screen_38">类型</string>
     <string name="efx_tablet_editor_screen_39">颜色 (FG)</string>
     <string name="efx_tablet_editor_screen_40">背景 (BG)</string>
@@ -407,7 +407,7 @@
     <string name="language_settings_2">更改语言</string>
     <string name="language_settings_3">将显示语言更改为%1$s后，应用会重新启动，已连接设备的连接将被断开。要继续吗？</string>
     <string name="language_settings_4">自动（系统语言：%1$s）</string>
-    <string name="label_timestamp">时间戳</string>
+    <string name="label_timestamp">开始时间</string>
     <string name="label_minutes">分</string>
     <string name="label_seconds">秒</string>
     <string name="label_millis">毫秒</string>
@@ -596,4 +596,46 @@
     <string name="multi_exit">退出选择模式</string>
     <string name="timeline_select_mode_badge">选择模式</string>
     <string name="song_palette_choose">选择这首歌的调色板</string>
+    <string name="label_auto_connect">自动连接</string>
+    <string name="auto_connect_desc">应用启动时自动连接此设备，应用退出时断开连接</string>
+    <string name="auto_connect_devices_title">自动连接设备</string>
+    <string name="auto_connect_remove">移除</string>
+    <string name="label_duration">持续时间</string>
+    <string name="duration_until_next">直到下一个效果 (0)</string>
+    <string name="broadcasting_ble_only">仅BLE模式应援棒可设置（中继器始终传播）</string>
+    <string name="bulk_delete_all">全部删除</string>
+    <string name="bulk_delete_selected">删除所选 (%1$d)</string>
+    <string name="bulk_delete_shows_title">删除演出</string>
+    <string name="bulk_delete_shows_message">将删除 %1$d 场演出。\n其中的歌曲不会被删除，而是移到“未分配”。</string>
+    <string name="bulk_delete_songs_title">删除歌曲</string>
+    <string name="bulk_delete_songs_message">将删除 %1$d 首歌曲及其效果文件。\n此操作无法撤销。</string>
+    <string name="exit_app_toast">再按一次退出</string>
+    <string name="dlg_beat_unit">节拍</string>
+    <string name="dlg_unit_10ms">10ms</string>
+    <string name="dlg_snap_label">吸附节拍</string>
+    <string name="dlg_snap_target">→ 将保存到第 %1$d 拍 (%2$s)</string>
+    <string name="dlg_snap_hint">修改开始时间后会吸附到最近的节拍</string>
+    <string name="dlg_duration_ref_beats">= %1$s 拍 · %2$s · %3$d 个单位(10ms)</string>
+    <string name="dlg_duration_ref_ms">= %1$s · %2$d 个单位(10ms)</string>
+    <string name="dlg_overwrite_label">覆盖</string>
+    <string name="dlg_overwrite_on_desc">开启：覆盖重叠的效果</string>
+    <string name="dlg_overwrite_off_desc">关闭：重叠时将后面的效果向后推</string>
+    <string name="dlg_overwrite_summary">覆盖：删除 %1$d 个效果 · 调整 %2$d 个起点</string>
+    <string name="dlg_push_summary">后面的 %1$d 个效果将向后推 %2$s</string>
+    <string name="dlg_overlap_none">没有重叠的效果</string>
+    <string name="dlg_time_units">分 . 秒 . 1/100秒</string>
+    <string name="dlg_step_beat_snap">节拍按钮：1拍</string>
+    <string name="dlg_step_beat_fine">节拍按钮：0.1拍</string>
+    <string name="dlg_snap_on_desc">开启：开始时间吸附到最近的节拍保存</string>
+    <string name="dlg_snap_off_desc">关闭：按输入的时间原样保存</string>
+    <string name="settings_folder_quick_title">不使用选择器直接使用（需要“所有文件访问”权限）</string>
+    <string name="settings_folder_root">内部存储/Effects</string>
+    <string name="settings_folder_music">Music/GlowSync</string>
+    <string name="settings_folder_reset">默认 (Music/Effects)</string>
+    <string name="settings_folder_failed">无法创建或写入文件夹</string>
+    <string name="settings_folder_perm_denied">未授予“所有文件访问”权限</string>
+    <string name="settings_music_quick_title">不使用选择器直接指定起始位置（添加歌曲时文件选择器打开的位置 · 无需权限）</string>
+    <string name="settings_music_default">Music（默认）</string>
+    <string name="efx_default_need_permission">要在默认位置（Music/Effects）创建副本，需要允许“所有文件访问”。可在设置中使用下方按钮授权。</string>
+    <string name="settings_music_root">内部存储/GlowSync</string>
 </resources>

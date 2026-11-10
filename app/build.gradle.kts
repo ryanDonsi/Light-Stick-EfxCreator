@@ -71,7 +71,7 @@ android {
 
 dependencies {
     // ⭐ LightStick SDK (AAR 파일)
-    implementation(files("libs/lightstick-sdk-2.0.0.aar"))
+    implementation(files("libs/lightstick-sdk-2.1.0.aar"))
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)

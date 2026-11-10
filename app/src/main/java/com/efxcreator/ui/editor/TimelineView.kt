@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -50,6 +51,9 @@ import com.lightstick.efx.EfxEntry
 import com.lightstick.types.EffectType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import com.efxcreator.model.EfxMoves
+import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -212,6 +216,61 @@ private fun DrawScope.drawEffectBlock(
 
 private enum class DragMode { NONE, SEEK, PAN, MOVE, GROUP, MARQUEE }
 
+/**
+ * 타임라인 블록마다 "지금 화면에 보이는 위치"를 들고 있다가 목표 위치로 부드럽게 다가가게 한다.
+ * 이펙트 이동(드래그)과 놓았을 때의 정렬 애니메이션에 쓴다.
+ */
+private class BlockAnim {
+    var curStart = FloatArray(0)
+    var curEnd = FloatArray(0)
+    /** 끌고 있거나 막 놓은 이펙트들 (원래 목록 기준 인덱스) */
+    var movedSet: Set<Int> = emptySet()
+    /** 놓으면 자리 잡을 구간 (점선 표시용) */
+    var ghostStart = 0f
+    var ghostEnd = 0f
+    /** 이동이 확정되면 바뀔 목록에서 각 항목이 원래 몇 번째였는지. 목록이 바뀌는 순간 위치를 이어받는 데 쓴다 */
+    var pendingOrigins: List<Int>? = null
+    /** 이동 확정(목록 갱신)을 기다리는 동안 애니메이션을 멈춰 둔다 */
+    var freeze = false
+
+    fun snapTo(blocks: List<TimelineBlock>) {
+        curStart = FloatArray(blocks.size) { blocks[it].startMs.toFloat() }
+        curEnd = FloatArray(blocks.size) { blocks[it].endMs.toFloat() }
+        clearHighlight()
+    }
+
+    fun clearHighlight() {
+        movedSet = emptySet()
+        ghostEnd = ghostStart
+    }
+
+    /** 목록이 [origins] 대로 바뀌었다: 같은 이펙트의 지금 위치를 그대로 이어받는다 */
+    fun remap(origins: List<Int>) {
+        val s = FloatArray(origins.size) { curStart[origins[it]] }
+        val e = FloatArray(origins.size) { curEnd[origins[it]] }
+        movedSet = origins.withIndex().filter { it.value in movedSet }.map { it.index }.toSet()
+        curStart = s
+        curEnd = e
+    }
+
+    /** 한 프레임 진행. 목표에 거의 닿으면 딱 맞추고, 아직 움직이는 블록이 있으면 true */
+    fun step(tStart: FloatArray, tEnd: FloatArray, fast: BooleanArray, dtMs: Float): Boolean {
+        var moving = false
+        val kSlow = 1f - exp(-dtMs / 70f)   // 이웃/정렬: 부드럽게
+        val kFast = 1f - exp(-dtMs / 22f)   // 끌고 있는 블록: 손가락을 거의 바로 따라감
+        for (i in curStart.indices) {
+            val k = if (fast[i]) kFast else kSlow
+            curStart[i] += (tStart[i] - curStart[i]) * k
+            curEnd[i] += (tEnd[i] - curEnd[i]) * k
+            if (abs(tStart[i] - curStart[i]) < 0.5f && abs(tEnd[i] - curEnd[i]) < 0.5f) {
+                curStart[i] = tStart[i]
+                curEnd[i] = tEnd[i]
+            } else moving = true
+        }
+        return moving
+    }
+}
+
 private class DragHolder {
     var mode = DragMode.NONE
     var originMs = 0L
@@ -243,6 +302,8 @@ fun TimelineView(
     isPlaying: Boolean,
     emptyHint: String,
     onSeek: (Long) -> Unit,
+    /** 눈금자를 탭하거나 드래그를 놓아 위치가 확정됐다 (드래그 중에는 [onSeek] 만 불린다) */
+    onSeekFinished: (Long) -> Unit = {},
     onEntryClick: (Int) -> Unit,
     onEntryMove: (Int, Long) -> Unit,
     onEntryToggle: (Int) -> Unit = {},
@@ -301,6 +362,8 @@ fun TimelineView(
     val currentDuration by rememberUpdatedState(durationMs)
     val currentSnap by rememberUpdatedState(snapToBeats)
     val onSeekState by rememberUpdatedState(onSeek)
+    val onSeekFinishedState by rememberUpdatedState(onSeekFinished)
+    val lastSeekMs = remember { longArrayOf(0L) }
     val onEntryClickState by rememberUpdatedState(onEntryClick)
     val onEntryMoveState by rememberUpdatedState(onEntryMove)
     val selectModeState by rememberUpdatedState(selectMode)
@@ -345,6 +408,99 @@ fun TimelineView(
     fun snapMs(ms: Long): Long {
         val tolerance = max(120L, (14f / state.pxPerMs).toLong())
         return TimelineMath.snap(ms, currentAnalysis?.beatTimesMs.orEmpty(), tolerance, currentSnap)
+    }
+
+    // ── 이펙트 이동 애니메이션: 끌고 있는 블록은 손가락을 부드럽게 따라가고, 이웃은 자리를 비켜 미끄러지며,
+    //    놓으면 정해진 자리로 스르륵 가서 정렬된다. 블록마다 "지금 보이는 위치"가 목표 위치로 다가간다.
+    val anim = remember { BlockAnim() }
+    var animTick by remember { mutableIntStateOf(0) }
+    var settling by remember { mutableStateOf(false) }
+    val animActive = dragIndex >= 0 || settling
+
+    /** 한 프레임 진행. 아직 움직이는 블록이 있으면 true */
+    fun stepAnimation(dtMs: Float): Boolean {
+        if (anim.freeze) return true
+        val blocks0 = TimelineMath.blocks(currentEntries, currentDuration)
+        val n = blocks0.size
+        if (anim.curStart.size != n) anim.snapTo(blocks0)
+        val tStart = FloatArray(n) { blocks0[it].startMs.toFloat() }
+        val tEnd = FloatArray(n) { blocks0[it].endMs.toFloat() }
+        val fast = BooleanArray(n)
+        if (dragIndex in 0 until n && (drag.mode == DragMode.MOVE || drag.mode == DragMode.GROUP)) {
+            val idxs: List<Int> =
+                if (drag.mode == DragMode.GROUP) (selectedIndicesState + dragIndex).toList() else listOf(dragIndex)
+            val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
+            val pv = EfxMoves.preview(currentEntries, idxs, newMs - drag.originMs, currentDuration)
+            if (pv != null && pv.origins.size == n) {
+                val pb = TimelineMath.blocks(pv.entries, currentDuration)
+                var gs = Float.MAX_VALUE
+                var ge = -Float.MAX_VALUE
+                pb.forEachIndexed { j, b ->
+                    val o = pv.origins[j]
+                    tStart[o] = b.startMs.toFloat()
+                    tEnd[o] = b.endMs.toFloat()
+                    if (o in idxs) {
+                        gs = min(gs, b.startMs.toFloat())
+                        ge = max(ge, b.endMs.toFloat())
+                    }
+                }
+                anim.ghostStart = gs
+                anim.ghostEnd = ge
+                anim.movedSet = idxs.toSet()
+                // 끌고 있는 이펙트는 손가락 위치를 따라간다 (놓으면 위에서 정한 자리로 가서 정렬)
+                for (i in idxs) {
+                    if (i !in 0 until n) continue
+                    tStart[i] = blocks0[i].startMs + dragDeltaMs
+                    tEnd[i] = blocks0[i].endMs + dragDeltaMs
+                    fast[i] = true
+                }
+            }
+        }
+        return anim.step(tStart, tEnd, fast, dtMs)
+    }
+
+    /** 놓는 순간: 확정될 배치를 기억해 두었다가, 목록이 바뀌면 같은 이펙트의 현재 위치를 이어받아 자리로 간다 */
+    fun prepareSettle(idxs: List<Int>, delta: Long) {
+        val pv = EfxMoves.preview(currentEntries, idxs, delta, currentDuration)
+        if (pv != null && pv.origins.size == currentEntries.size) {
+            anim.pendingOrigins = pv.origins
+            anim.freeze = true
+        }
+    }
+
+    // 이펙트 목록이 바뀌면: 이동 확정이면 같은 이펙트의 위치를 이어받고, 그 밖의 편집이면 바로 새 배치로 맞춘다
+    LaunchedEffect(entries) {
+        val blocksNow = TimelineMath.blocks(entries, durationMs)
+        val po = anim.pendingOrigins
+        if (po != null && po.size == blocksNow.size && anim.curStart.size == po.size) anim.remap(po)
+        else anim.snapTo(blocksNow)
+        anim.pendingOrigins = null
+        anim.freeze = false
+        animTick++
+    }
+    LaunchedEffect(animActive) {
+        if (!animActive) return@LaunchedEffect
+        var last = 0L
+        var frozenFrames = 0
+        while (isActive) {
+            val moving = withFrameNanos { t ->
+                val dt = if (last == 0L) 16f else ((t - last) / 1_000_000f).coerceIn(1f, 50f)
+                last = t
+                stepAnimation(dt)
+            }
+            animTick++
+            if (anim.freeze) {
+                // 이동이 실제로 확정되지 않았다면(변화 없음) 잠시 뒤 풀어 원래 자리로 돌아가게 한다
+                frozenFrames++
+                if (frozenFrames > 20) { anim.freeze = false; anim.pendingOrigins = null; frozenFrames = 0 }
+            } else frozenFrames = 0
+            if (!moving && dragIndex < 0 && !anim.freeze) {
+                settling = false
+                anim.clearHighlight()
+                animTick++
+                break
+            }
+        }
     }
 
     Canvas(
@@ -409,7 +565,9 @@ fun TimelineView(
                         val idx = blockAt(o.x)
                         if (selectModeState) { if (idx >= 0) onEntryToggleState(idx) } else onEntryClickState(idx)
                     } else {
-                        onSeekState(state.msAtX(o.x).toLong().coerceAtLeast(0L))
+                        val ms = state.msAtX(o.x).toLong().coerceAtLeast(0L)
+                        onSeekState(ms)
+                        onSeekFinishedState(ms)
                     }
                 }
             }
@@ -435,14 +593,17 @@ fun TimelineView(
                             }
                         } else {
                             drag.mode = DragMode.SEEK
-                            onSeekState(state.msAtX(o.x).toLong().coerceAtLeast(0L))
+                            lastSeekMs[0] = state.msAtX(o.x).toLong().coerceAtLeast(0L)
+                            onSeekState(lastSeekMs[0])
                         }
                     },
                     onDrag = { change, amount ->
                         change.consume()
                         when (drag.mode) {
-                            DragMode.SEEK ->
-                                onSeekState(state.msAtX(change.position.x).toLong().coerceAtLeast(0L))
+                            DragMode.SEEK -> {
+                                lastSeekMs[0] = state.msAtX(change.position.x).toLong().coerceAtLeast(0L)
+                                onSeekState(lastSeekMs[0])
+                            }
                             DragMode.PAN -> state.panByMs(-amount.x / state.pxPerMs, currentDuration)
                             DragMode.MOVE, DragMode.GROUP -> dragDeltaMs += amount.x / state.pxPerMs
                             DragMode.MARQUEE -> marqueeB = state.msAtX(change.position.x)
@@ -450,15 +611,23 @@ fun TimelineView(
                         }
                     },
                     onDragEnd = {
+                        if (drag.mode == DragMode.SEEK) onSeekFinishedState(lastSeekMs[0])
+                        if (drag.mode == DragMode.MOVE || drag.mode == DragMode.GROUP) settling = true
                         if (drag.mode == DragMode.MOVE && dragIndex >= 0) {
                             val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
-                            if (newMs != drag.originMs) onEntryMoveState(dragIndex, newMs)
+                            if (newMs != drag.originMs) {
+                                prepareSettle(listOf(dragIndex), newMs - drag.originMs)
+                                onEntryMoveState(dragIndex, newMs)
+                            }
                         }
                         if (drag.mode == DragMode.GROUP && dragIndex >= 0) {
                             val newMs = snapMs(drag.originMs + dragDeltaMs.toLong())
                             val delta = newMs - drag.originMs
                             val targets = (selectedIndicesState + dragIndex).sorted()
-                            if (delta != 0L) onEntriesMoveState(targets, delta)
+                            if (delta != 0L) {
+                                prepareSettle(targets, delta)
+                                onEntriesMoveState(targets, delta)
+                            }
                         }
                         if (drag.mode == DragMode.MARQUEE && marqueeA >= 0f) {
                             val lo = minOf(marqueeA, marqueeB).toLong()
@@ -475,6 +644,8 @@ fun TimelineView(
                         dragDeltaMs = 0f
                     },
                     onDragCancel = {
+                        if (drag.mode == DragMode.SEEK) onSeekFinishedState(lastSeekMs[0])
+                        if (drag.mode == DragMode.MOVE || drag.mode == DragMode.GROUP) settling = true
                         marqueeA = -1f
                         marqueeB = -1f
                         drag.mode = DragMode.NONE
@@ -606,18 +777,20 @@ fun TimelineView(
         // ── 이펙트 레인 ───────────────────────────────────────
         drawRect(laneBg, Offset(0f, laneTop), Size(w, laneH))
         drawBeats(laneTop, laneTop + laneH, beatLight.copy(alpha = 0.09f), beatLight.copy(alpha = 0.25f), withNumbers = false)
+        // 블록마다 애니메이션이 만든 "지금 보이는 위치"로 그린다 (끌 때 이웃이 비켜 미끄러지고, 놓으면 자리로 정렬)
+        @Suppress("UNUSED_VARIABLE") val animFrame = animTick
         val blocks = TimelineMath.blocks(entries, durationMs)
+        val animOk = anim.curStart.size == blocks.size
         for (b in blocks) {
-            val moving = dragIndex >= 0 && (b.index == dragIndex || (drag.mode == DragMode.GROUP && b.index in selectedIndices))
-            val shift = if (moving) dragDeltaMs else 0f
-            val x0 = xOf(b.startMs + shift)
-            val x1 = xOf(b.endMs + shift)
+            val moving = b.index in anim.movedSet
+            val x0 = xOf(if (animOk) anim.curStart[b.index] else b.startMs.toFloat())
+            val x1 = xOf(if (animOk) anim.curEnd[b.index] else b.endMs.toFloat())
             if (x1 < 0f || x0 > w) continue
 
             val p = b.entry.payload
             val left = max(-2f, x0)
             val width = max(2f, min(x1, w + 2f) - left - 1f)
-            val isPicked = if (selectMode) b.index in selectedIndices else b.index == selectedIndex
+            val isPicked = if (anim.movedSet.isNotEmpty()) moving else if (selectMode) b.index in selectedIndices else b.index == selectedIndex
             // 선택 모드에서는 선택되지 않은 블록을 흐리게 해서 선택된 것이 도드라지게 한다
             val alpha = when {
                 moving -> 0.7f
@@ -657,6 +830,16 @@ fun TimelineView(
                     maxWidth = width - 8f
                 )
             }
+        }
+
+        // ── 끌고 있는 동안: 놓으면 자리 잡을 곳을 점선으로 보여 준다 ──
+        if (dragIndex >= 0 && anim.ghostEnd > anim.ghostStart) {
+            val gx0 = xOf(anim.ghostStart)
+            val gx1 = xOf(anim.ghostEnd)
+            drawRect(
+                dropLine, Offset(gx0, laneTop + 3f), Size(max(2f, gx1 - gx0), laneH - 6f),
+                style = Stroke(width = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
+            )
         }
 
         // ── 선택 모드 표시: 이펙트 행 테두리 ──────────────────

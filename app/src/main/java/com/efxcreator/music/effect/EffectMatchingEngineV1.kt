@@ -627,7 +627,7 @@ class EffectMatchingEngineV1(
         val out = ArrayList<Pair<Long, ByteArray>>(pattern.steps.size)
         for (step in pattern.steps) {
             if (t >= endLimitMs) break
-            out += t to PatternResolver.payloadWith(step, broadcasting = 0) { roleColor(it, palette) }.toByteArray()
+            out += t to PatternResolver.payloadWith(step) { roleColor(it, palette) }.toByteArray()
             t += PatternResolver.durationMs(step, beatMs)
         }
         return out

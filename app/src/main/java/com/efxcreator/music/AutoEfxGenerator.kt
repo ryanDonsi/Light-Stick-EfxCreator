@@ -104,5 +104,5 @@ class AutoEfxGenerator {
                 Log.w(TAG, "Frame parse failed at ${timestampMs}ms: ${e.message}")
                 null
             }
-        }.sortedBy { it.timestampMs }
+        }.sortedBy { it.timestampMs }.let { com.efxcreator.model.EfxDurations.fillFull(it) }
 }

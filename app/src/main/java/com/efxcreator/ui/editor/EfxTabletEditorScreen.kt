@@ -184,10 +184,9 @@ fun EfxTabletEditorScreen(
     val patterns by patternsVm.patterns.collectAsState()
 
     val entries: List<EfxEntry> = efx?.body?.entries.orEmpty()
-    // 실기기로 보내는 프레임: Broadcasting Mode 설정에 따라 신호 전파 여부(broadcasting)를 덮어쓴다
-    val broadcasting by bleVm.broadcasting.collectAsState()
-    val frames = remember(entries, broadcasting) {
-        entries.map { it.timestampMs to it.payload.copy(broadcasting = if (broadcasting) 1 else 0).toByteArray() }
+    // 실기기로 보내는 프레임 (Broadcasting Mode 는 SDK 2.1.0 부터 기기 설정이라 페이로드에는 반영하지 않는다)
+    val frames = remember(entries) {
+        entries.map { it.timestampMs to it.payload.toByteArray() }
     }
 
     // ── 재생 / 타임라인 상태 ──────────────────────────────────
@@ -284,6 +283,7 @@ fun EfxTabletEditorScreen(
 
     // ── 실기기 동기화 ─────────────────────────────────────────
     val isPlaying = player.isPlaying
+    var scrubbing by remember { mutableStateOf(false) }
     LaunchedEffect(bleConnected) { deviceLoaded = false }
     LaunchedEffect(isPlaying, bleConnected) {
         if (bleConnected == null) return@LaunchedEffect
@@ -292,10 +292,11 @@ fun EfxTabletEditorScreen(
                 bleVm.loadTimeline(frames)
                 deviceLoaded = true
             } else {
-                bleVm.resumeTimeline()
+                bleVm.resumeTimeline(player.positionMs)
             }
             while (isActive) {
-                bleVm.updatePosition(player.positionMs)
+                // 타임라인 눈금자를 드래그하는 동안에는 기기로 위치를 보내지 않고, 손을 떼면 한 번 보낸다
+                if (!scrubbing) bleVm.updatePosition(player.positionMs)
                 delay(100)
             }
         } else if (deviceLoaded) {
@@ -311,10 +312,17 @@ fun EfxTabletEditorScreen(
     }
 
     // ── 동작 ─────────────────────────────────────────────────
+    /** 위치를 확정해 이동한다: 음악과 실기기 모두 그 위치로 맞춘다 */
     fun seek(ms: Long) {
         val target = ms.coerceIn(0L, durationMs)
         player.seekTo(target)
-        if (deviceLoaded) bleVm.updatePosition(target)
+        if (deviceLoaded) bleVm.seekTimeline(target)
+    }
+
+    /** 드래그 중 이동: 음악 위치만 따라가고 실기기에는 보내지 않는다 (손을 떼면 [seek]) */
+    fun scrubTo(ms: Long) {
+        scrubbing = true
+        player.seekTo(ms.coerceIn(0L, durationMs))
     }
 
     fun snapAt(ms: Long): Long {
@@ -514,7 +522,8 @@ fun EfxTabletEditorScreen(
                                 musicFile == null -> Loc.str(R.string.efx_tablet_editor_screen_4)
                                 else -> Loc.str(R.string.efx_tablet_editor_screen_5)
                             },
-                            onSeek = { seek(it) },
+                            onSeek = { scrubTo(it) },
+                            onSeekFinished = { scrubbing = false; seek(it) },
                             onEntryClick = { selectedIndex = it },
                             onEntryMove = { index, newMs ->
                                 pendingSelectTs = newMs
@@ -566,6 +575,7 @@ fun EfxTabletEditorScreen(
                     )
                     SelectedEntryPanel(
                         modifier = Modifier.weight(1f),
+                        beatTimesMs = analysis?.beatTimesMs.orEmpty(),
                         entry = if (selectMode) null else entries.getOrNull(selectedIndex),
                         multiEntries = if (selectMode) entries.filter { it.timestampMs in multiTimes } else emptyList(),
                         selectMode = selectMode,
@@ -621,6 +631,16 @@ fun EfxTabletEditorScreen(
                 pendingSelectTs = updated.timestampMs
                 editVm.updateTimelineEntry(index, updated)
             },
+            // 시작 시각/지속시간 편집: 비트 단위 입력, 비트 스냅(편집 화면 설정과 공유), 덮어쓰기/밀기
+            showOverwrite = true,
+            onSaveOverwrite = { updated, overwrite ->
+                pendingSelectTs = updated.timestampMs
+                editVm.updateTimelineEntry(index, updated, overwrite)
+            },
+            beatTimesMs = analysis?.beatTimesMs.orEmpty(),
+            snapToBeats = snapToBeats,
+            onSnapChange = { snapToBeats = it },
+            otherEntries = entries.filterIndexed { i, _ -> i != index },
             onDelete = {
                 editVm.deleteTimelineEntry(index)
                 selectedIndex = -1
@@ -1108,12 +1128,26 @@ private fun PreviewPanel(
     }
 }
 
-/** 이펙트 한 개의 상세 항목 (시간, 종류, 색, 주기, SPF, 밝기, 그룹 마스크 …). 한 개 선택과 다중 선택의 펼침에서 함께 쓴다. */
+/** 지속시간 표시: 0 이면 "다음 이펙트까지", 아니면 "4 비트 (1.63s)" (비트는 곡 분석이 있을 때만, 없으면 "1.63s") */
+private fun formatDuration(entry: EfxEntry, beatTimesMs: List<Long>): String {
+    val d = entry.payload.duration
+    if (d == 0) return Loc.str(R.string.duration_until_next)
+    val ms = com.efxcreator.model.EfxDurations.ticksToMs(d)
+    val time = com.efxcreator.model.EfxDurations.formatMs(ms)
+    if (beatTimesMs.size < 2) return time
+    val beats = BeatGrid.beatsBetween(beatTimesMs, entry.timestampMs.toDouble(), (entry.timestampMs + ms).toDouble())
+    val beatsText = BeatGrid.formatBeats(beats)
+    return "$beatsText ${Loc.str(R.string.dlg_beat_unit)} ($time)"
+}
+
+/** 이펙트 한 개의 상세 항목 (시작 시간, 지속 시간, 종류, 색, 주기, SPF, 밝기, 그룹 마스크 …). 한 개 선택과 다중 선택의 펼침에서 함께 쓴다. */
 @Composable
-private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier) {
+private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier, beatTimesMs: List<Long> = emptyList()) {
     val p = entry.payload
         val rows: List<Triple<String, String, Color?>> = listOf(
             Triple(Loc.str(R.string.efx_tablet_editor_screen_37), TimelineMath.formatTime(entry.timestampMs, withTenths = true), null),
+            // 지속시간: 시작 시간 바로 아래. 곡 분석이 있으면 비트 수도 함께 보여 준다
+            Triple(Loc.str(R.string.label_duration), formatDuration(entry, beatTimesMs), null),
             Triple(Loc.str(R.string.efx_tablet_editor_screen_38), p.effectType.name, null),
             Triple(Loc.str(R.string.efx_tablet_editor_screen_39), "RGB(${p.color.r}, ${p.color.g}, ${p.color.b})", Color(p.color.r, p.color.g, p.color.b)),
             Triple(
@@ -1173,7 +1207,8 @@ private fun SelectedEntryPanel(
     onClearSelection: () -> Unit = {},
     onDeleteSelected: () -> Unit = {},
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    beatTimesMs: List<Long> = emptyList()
 ) {
     Column(
         modifier = modifier
@@ -1243,7 +1278,7 @@ private fun SelectedEntryPanel(
                             }
                             if (open) {
                                 Spacer(Modifier.height(8.dp))
-                                EntryDetailRows(e)
+                                EntryDetailRows(e, beatTimesMs = beatTimesMs)
                                 Spacer(Modifier.height(2.dp))
                             }
                         }
@@ -1291,7 +1326,7 @@ private fun SelectedEntryPanel(
         val rowsScroll = rememberScrollState()
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxSize().padding(end = 10.dp).verticalScroll(rowsScroll)) {
-            EntryDetailRows(entry)
+            EntryDetailRows(entry, beatTimesMs = beatTimesMs)
         }
         SlimVerticalScrollBar(rowsScroll, Modifier.align(Alignment.CenterEnd))
         }

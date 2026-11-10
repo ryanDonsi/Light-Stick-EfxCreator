@@ -154,7 +154,7 @@
     <string name="settings_screen_9">음악 파일 불러오기</string>
     <string name="settings_screen_10">현재 불러오기 위치</string>
     <string name="settings_screen_11">ℹ️ 폴더 설정 안내</string>
-    <string name="settings_screen_12">• 폴더 아이콘을 눌러 원하는 폴더를 선택하세요\n• 선택한 폴더는 앱 재시작 후에도 유지됩니다\n• 폴더 권한은 자동으로 관리됩니다</string>
+    <string name="settings_screen_12">• 폴더 아이콘을 눌러 원하는 폴더를 선택하세요\n• 선택한 폴더는 앱 재시작 후에도 유지됩니다\n• 폴더 권한은 자동으로 관리됩니다\n• \"이 폴더를 사용할 수 없음\"이 나오면 Android 가 보호하는 폴더입니다 (저장소 최상위, Download 등).\n   Music 안에 새 폴더(예: Effects)를 만들어 그 폴더를 선택하세요\n• 폴더를 지정하지 않아도 앱은 정상 동작합니다. 지정한 폴더에는 공연별 .efx 사본만 만들어지며, 곡 메뉴의 저장/공유로도 내보낼 수 있습니다\n• 폴더 선택이 막히면 \"Effects\" 버튼으로 선택기 없이 바로 폴더를 만들어 쓸 수 있습니다 (모든 파일 접근 허용 필요)</string>
     <string name="settings_screen_13">디바이스 관리</string>
     <string name="settings_screen_14">언어 설정</string>
     <string name="settings_screen_15">EFX 저장 위치 · 음악 불러오기 위치</string>
@@ -280,7 +280,7 @@
     <string name="efx_tablet_editor_screen_34">음악을 선택하면 재생할 수 있습니다</string>
     <string name="efx_tablet_editor_screen_35">선택한 이펙트</string>
     <string name="efx_tablet_editor_screen_36">타임라인의 블록을 탭하면 속성을 볼 수 있습니다.\n블록을 끌면 시간을 옮길 수 있습니다.</string>
-    <string name="efx_tablet_editor_screen_37">시각</string>
+    <string name="efx_tablet_editor_screen_37">시작 시간</string>
     <string name="efx_tablet_editor_screen_38">종류</string>
     <string name="efx_tablet_editor_screen_39">색상 (FG)</string>
     <string name="efx_tablet_editor_screen_40">배경 (BG)</string>
@@ -407,7 +407,7 @@
     <string name="language_settings_2">언어 변경</string>
     <string name="language_settings_3">표시 언어를 %1$s(으)로 바꾸면 앱이 다시 시작되고, 연결된 디바이스의 연결이 해제됩니다. 계속할까요?</string>
     <string name="language_settings_4">자동 (시스템 언어: %1$s)</string>
-    <string name="label_timestamp">타임 스탬프</string>
+    <string name="label_timestamp">시작 시간</string>
     <string name="label_minutes">분</string>
     <string name="label_seconds">초</string>
     <string name="label_millis">밀리초</string>
@@ -596,4 +596,46 @@
     <string name="multi_exit">선택 모드 끝내기</string>
     <string name="timeline_select_mode_badge">선택 모드</string>
     <string name="song_palette_choose">이 곡의 팔레트 선택</string>
+    <string name="label_auto_connect">자동 연결</string>
+    <string name="auto_connect_desc">앱을 시작하면 이 기기에 자동으로 연결하고, 앱을 종료하면 연결을 해제합니다</string>
+    <string name="auto_connect_devices_title">자동 연결 기기</string>
+    <string name="auto_connect_remove">해제</string>
+    <string name="label_duration">지속 시간</string>
+    <string name="duration_until_next">다음 이펙트까지 (0)</string>
+    <string name="broadcasting_ble_only">BLE 모드 응원봉에서만 설정할 수 있습니다 (중계기는 항상 전파)</string>
+    <string name="bulk_delete_all">전체 삭제</string>
+    <string name="bulk_delete_selected">선택 삭제 (%1$d)</string>
+    <string name="bulk_delete_shows_title">공연 삭제</string>
+    <string name="bulk_delete_shows_message">공연 %1$d개를 삭제합니다.\n공연 안의 곡은 삭제되지 않고 \'미배정\'으로 옮겨집니다.</string>
+    <string name="bulk_delete_songs_title">곡 삭제</string>
+    <string name="bulk_delete_songs_message">곡 %1$d개와 이펙트 파일을 삭제합니다.\n되돌릴 수 없습니다.</string>
+    <string name="exit_app_toast">한 번 더 누르면 종료됩니다</string>
+    <string name="dlg_beat_unit">비트</string>
+    <string name="dlg_unit_10ms">10ms</string>
+    <string name="dlg_snap_label">비트 스냅</string>
+    <string name="dlg_snap_target">→ 비트 %1$d (%2$s)에 맞춰 저장됩니다</string>
+    <string name="dlg_snap_hint">시작 시각을 바꾸면 가까운 비트에 맞춰집니다</string>
+    <string name="dlg_duration_ref_beats">= %1$s비트 · %2$s · %3$d칸(10ms)</string>
+    <string name="dlg_duration_ref_ms">= %1$s · %2$d칸(10ms)</string>
+    <string name="dlg_overwrite_label">덮어쓰기</string>
+    <string name="dlg_overwrite_on_desc">켜짐: 겹치는 이펙트를 덮어씁니다</string>
+    <string name="dlg_overwrite_off_desc">꺼짐: 겹치면 뒤의 이펙트를 뒤로 밉니다</string>
+    <string name="dlg_overwrite_summary">덮어쓰기: 이펙트 %1$d개 삭제 · %2$d개 시작 조정</string>
+    <string name="dlg_push_summary">뒤의 이펙트 %1$d개가 %2$s 뒤로 밀립니다</string>
+    <string name="dlg_overlap_none">겹치는 이펙트가 없습니다</string>
+    <string name="dlg_time_units">분 . 초 . 1/100초</string>
+    <string name="dlg_step_beat_snap">비트 버튼: 1비트씩</string>
+    <string name="dlg_step_beat_fine">비트 버튼: 0.1비트씩</string>
+    <string name="dlg_snap_on_desc">켜짐: 시작 시간을 가까운 비트에 맞춰 저장합니다</string>
+    <string name="dlg_snap_off_desc">꺼짐: 입력한 시간 그대로 저장합니다</string>
+    <string name="settings_folder_quick_title">선택기 없이 바로 쓰기 (모든 파일 접근 허용 필요)</string>
+    <string name="settings_folder_root">내장 저장소/Effects</string>
+    <string name="settings_folder_music">Music/GlowSync</string>
+    <string name="settings_folder_reset">기본값 (Music/Effects)</string>
+    <string name="settings_folder_failed">폴더를 만들거나 쓸 수 없습니다</string>
+    <string name="settings_folder_perm_denied">모든 파일 접근이 허용되지 않았습니다</string>
+    <string name="settings_music_quick_title">선택기 없이 시작 위치 지정 (곡 추가 때 파일 선택기가 열리는 위치 · 권한 불필요)</string>
+    <string name="settings_music_default">Music (기본)</string>
+    <string name="efx_default_need_permission">기본 위치(Music/Effects)에 사본을 만들려면 \"모든 파일 접근\"을 허용해야 합니다. 설정의 아래 버튼으로 허용할 수 있습니다.</string>
+    <string name="settings_music_root">내장 저장소/GlowSync</string>
 </resources>
