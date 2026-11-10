@@ -935,18 +935,6 @@ private fun TimelineToolbar(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(Loc.str(R.string.efx_tablet_editor_screen_26), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-        if (selectMode) {
-            // 선택 모드 배지 — 지금 모드가 켜져 있음을 한눈에 알 수 있게 한다
-            Spacer(Modifier.width(8.dp))
-            Text(
-                Loc.str(R.string.timeline_select_mode_badge),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.RoundedCornerShape(50))
-                    .padding(horizontal = 10.dp, vertical = 3.dp)
-            )
-        }
         Spacer(Modifier.width(16.dp))
         // 이 곡에 적용된 팔레트 / 이펙트 세트
         Column(modifier = Modifier.weight(1f)) {

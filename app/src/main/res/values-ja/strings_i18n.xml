@@ -587,14 +587,13 @@
     <string name="palette_family_orange_gold">オレンジゴールド</string>
     <string name="palette_family_teal">ティール</string>
     <string name="palette_family_blue">ブルー</string>
-    <string name="timeline_select_mode">選択</string>
+    <string name="timeline_select_mode">選択モード</string>
     <string name="multi_selected_count">%1$d件選択</string>
     <string name="multi_clear">選択解除</string>
     <string name="multi_delete_n">%1$d件を削除</string>
     <string name="multi_range">区間 %1$s ~ %2$s</string>
-    <string name="multi_select_hint">エフェクト行を長押しするか「選択」をオンにすると選択モードになります。空いた場所をドラッグで範囲選択、エフェクトをタップで追加/解除、選択したエフェクトをドラッグでまとめて移動します。</string>
+    <string name="multi_select_hint">エフェクト行を長押しするか「選択モード」をオンにすると複数選択できます。空いた場所をドラッグで範囲選択、エフェクトをタップで追加/解除、選択したエフェクトをドラッグでまとめて移動します。</string>
     <string name="multi_exit">選択モードを終了</string>
-    <string name="timeline_select_mode_badge">選択モード</string>
     <string name="song_palette_choose">この曲のパレットを選択</string>
     <string name="label_auto_connect">自動接続</string>
     <string name="auto_connect_desc">アプリ起動時にこの機器へ自動接続し、アプリ終了時に接続を解除します</string>

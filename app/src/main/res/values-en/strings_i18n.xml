@@ -587,14 +587,13 @@
     <string name="palette_family_orange_gold">Orange gold</string>
     <string name="palette_family_teal">Teal</string>
     <string name="palette_family_blue">Blue</string>
-    <string name="timeline_select_mode">Select</string>
+    <string name="timeline_select_mode">Select mode</string>
     <string name="multi_selected_count">%1$d selected</string>
     <string name="multi_clear">Clear selection</string>
     <string name="multi_delete_n">Delete %1$d</string>
     <string name="multi_range">Range %1$s – %2$s</string>
-    <string name="multi_select_hint">Long-press the effect row or turn on Select to enter select mode. Drag on empty space to select a range, tap an effect to add or remove it, and drag a selected effect to move them together.</string>
+    <string name="multi_select_hint">Long-press the effect row or turn on Select mode. Drag on empty space to select a range, tap an effect to add or remove it, and drag a selected effect to move them together.</string>
     <string name="multi_exit">Exit select mode</string>
-    <string name="timeline_select_mode_badge">Select mode</string>
     <string name="song_palette_choose">Choose palette for this song</string>
     <string name="label_auto_connect">Auto connect</string>
     <string name="auto_connect_desc">Connect to this device automatically when the app starts and disconnect when the app exits</string>

@@ -587,14 +587,13 @@
     <string name="palette_family_orange_gold">橙金色</string>
     <string name="palette_family_teal">青绿色</string>
     <string name="palette_family_blue">蓝色</string>
-    <string name="timeline_select_mode">选择</string>
+    <string name="timeline_select_mode">选择模式</string>
     <string name="multi_selected_count">已选择%1$d个</string>
     <string name="multi_clear">取消选择</string>
     <string name="multi_delete_n">删除%1$d个</string>
     <string name="multi_range">区间 %1$s ~ %2$s</string>
-    <string name="multi_select_hint">长按效果行或开启“选择”即可进入选择模式。在空白处拖动可框选范围，点击效果可添加/取消，拖动已选效果可一起移动。</string>
+    <string name="multi_select_hint">长按效果行或开启“选择模式”即可多选。在空白处拖动可框选范围，点击效果可添加/取消，拖动已选效果可一起移动。</string>
     <string name="multi_exit">退出选择模式</string>
-    <string name="timeline_select_mode_badge">选择模式</string>
     <string name="song_palette_choose">选择这首歌的调色板</string>
     <string name="label_auto_connect">自动连接</string>
     <string name="auto_connect_desc">应用启动时自动连接此设备，应用退出时断开连接</string>

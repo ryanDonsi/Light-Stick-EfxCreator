@@ -587,14 +587,13 @@
     <string name="palette_family_orange_gold">오렌지 골드</string>
     <string name="palette_family_teal">틸</string>
     <string name="palette_family_blue">블루</string>
-    <string name="timeline_select_mode">선택</string>
+    <string name="timeline_select_mode">선택 모드</string>
     <string name="multi_selected_count">%1$d개 선택</string>
     <string name="multi_clear">선택 해제</string>
     <string name="multi_delete_n">%1$d개 삭제</string>
     <string name="multi_range">구간 %1$s ~ %2$s</string>
-    <string name="multi_select_hint">이펙트 행을 길게 누르거나 \'선택\'을 켜면 선택 모드입니다. 빈 곳을 끌면 범위 선택, 이펙트를 탭하면 추가/해제, 선택한 이펙트를 끌면 함께 이동합니다.</string>
+    <string name="multi_select_hint">이펙트 행을 길게 누르거나 \'선택 모드\'를 켜면 선택할 수 있습니다. 빈 곳을 끌면 범위 선택, 이펙트를 탭하면 추가/해제, 선택한 이펙트를 끌면 함께 이동합니다.</string>
     <string name="multi_exit">선택 모드 끝내기</string>
-    <string name="timeline_select_mode_badge">선택 모드</string>
     <string name="song_palette_choose">이 곡의 팔레트 선택</string>
     <string name="label_auto_connect">자동 연결</string>
     <string name="auto_connect_desc">앱을 시작하면 이 기기에 자동으로 연결하고, 앱을 종료하면 연결을 해제합니다</string>
