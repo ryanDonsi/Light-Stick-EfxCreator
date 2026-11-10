@@ -236,7 +236,7 @@
     <string name="device_ui_35">搜索并连接设备</string>
     <string name="device_ui_36">连接</string>
     <string name="device_ui_37">当前已连接%1$s。\n要断开此设备\n并连接新设备吗？</string>
-    <string name="effect_library_panel_1">点击 = 添加到播放位置 · 长按拖动 = 放置到任意位置</string>
+    <string name="effect_library_panel_1">点按 = 添加到播放位置 · 拖动到想要的位置（列表可滚动时需长按后拖动）</string>
     <string name="effect_library_panel_2">%1$s个</string>
     <string name="effect_library_panel_3">管理效果</string>
     <string name="effect_library_panel_4">在“设置 &gt; 效果库”中创建的效果会显示在这里。</string>
