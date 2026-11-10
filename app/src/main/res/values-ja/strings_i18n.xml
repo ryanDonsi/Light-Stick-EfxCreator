@@ -236,7 +236,7 @@
     <string name="device_ui_35">デバイスを検索して接続</string>
     <string name="device_ui_36">接続</string>
     <string name="device_ui_37">現在%1$sが接続されています。\nこのデバイスの接続を解除して\n新しいデバイスを接続しますか?</string>
-    <string name="effect_library_panel_1">タップ = 再生位置に追加 · ドラッグで好きな位置に配置（リストがスクロールする場合は長押ししてドラッグ）</string>
+    <string name="effect_library_panel_1">タップ = 再生位置に追加 · 長押ししてドラッグ = 好きな位置に配置</string>
     <string name="effect_library_panel_2">%1$s個</string>
     <string name="effect_library_panel_3">エフェクト管理</string>
     <string name="effect_library_panel_4">設定 &gt; エフェクトライブラリで作成したエフェクトがここに表示されます。</string>

@@ -236,7 +236,7 @@
     <string name="device_ui_35">Search and connect a device</string>
     <string name="device_ui_36">Connect</string>
     <string name="device_ui_37">%1$s is currently connected.\nDisconnect it and\nconnect a new device?</string>
-    <string name="effect_library_panel_1">Tap = add at playhead · Drag to place where you want (long-press to drag when the list scrolls)</string>
+    <string name="effect_library_panel_1">Tap = add at the playhead · Long-press and drag = place anywhere</string>
     <string name="effect_library_panel_2">%1$s items</string>
     <string name="effect_library_panel_3">Manage effects</string>
     <string name="effect_library_panel_4">Effects you create in Settings &gt; Effect library appear here.</string>

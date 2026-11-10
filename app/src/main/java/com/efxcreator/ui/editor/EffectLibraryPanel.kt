@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +52,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -86,8 +84,7 @@ fun EffectPreset.swatchBgColor(): Color = Color(backgroundColor.r, backgroundCol
  * - "내 라이브러리": 설정의 "이펙트 라이브러리" 에서 만든 이펙트만 보여 준다 (이름 아래에 몇 비트짜리인지 표기).
  *   이펙트는 설정에서 추가/수정/삭제한다.
  * - 나머지 탭: 기본 제공 프리셋.
- * - 카드 탭: 현재 재생 위치에 추가 / 끌기: 타임라인의 원하는 위치에 드롭.
- *   목록이 화면보다 길어 스크롤될 때는 스크롤과 구분하려고 길게 눌러야 끌 수 있다
+ * - 카드 탭: 현재 재생 위치에 추가 / 길게 눌러 끌기: 타임라인의 원하는 위치에 드롭
  */
 @Composable
 fun EffectLibraryPanel(
@@ -179,9 +176,7 @@ fun EffectLibraryPanel(
                                         preset = preset,
                                         drag = drag,
                                         onTap = { onTapPreset(preset) },
-                                        onDrop = onDrop,
-                                        // 스크롤할 일이 없으면 바로 끌 수 있고, 스크롤되는 긴 목록만 길게 눌러 끈다
-                                        immediateDrag = scroll.maxValue == 0
+                                        onDrop = onDrop
                                     )
                                 }
                             }
@@ -233,8 +228,7 @@ private fun PresetCard(
     preset: EffectPreset,
     drag: PresetDragState,
     onTap: () -> Unit,
-    onDrop: () -> Unit,
-    immediateDrag: Boolean
+    onDrop: () -> Unit
 ) {
     var originWindow by remember { mutableStateOf(Offset.Zero) }
     // pointerInput 블록은 키가 바뀔 때만 다시 시작되므로, 편집 모드 같은 최신 상태를 읽도록 항상 최신 람다를 참조한다
@@ -249,30 +243,19 @@ private fun PresetCard(
             .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
             .onGloballyPositioned { originWindow = it.positionInWindow() }
             .pointerInput(preset.id) { detectTapGestures(onTap = { currentOnTap() }) }
-            .pointerInput(preset.id, immediateDrag) {
-                val start = { offset: Offset ->
-                    drag.preset = preset
-                    drag.pointerWindow = originWindow + offset
-                }
-                val move = { change: PointerInputChange, amount: Offset ->
-                    change.consume()
-                    drag.pointerWindow += amount
-                }
-                if (immediateDrag) {
-                    detectDragGestures(
-                        onDragStart = start,
-                        onDrag = move,
-                        onDragEnd = { currentOnDrop() },
-                        onDragCancel = { drag.preset = null }
-                    )
-                } else {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = start,
-                        onDrag = move,
-                        onDragEnd = { currentOnDrop() },
-                        onDragCancel = { drag.preset = null }
-                    )
-                }
+            .pointerInput(preset.id) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { offset ->
+                        drag.preset = preset
+                        drag.pointerWindow = originWindow + offset
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        drag.pointerWindow += amount
+                    },
+                    onDragEnd = { currentOnDrop() },
+                    onDragCancel = { drag.preset = null }
+                )
             }
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
