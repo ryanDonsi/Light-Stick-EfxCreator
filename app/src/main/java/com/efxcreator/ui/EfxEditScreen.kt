@@ -375,13 +375,6 @@ fun TimelineEntryCard(
                     .padding(top = 8.dp),  // X 버튼 공간
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Effect Index (최상단)
-                Text(
-                    text = "Index: ${entry.payload.effectIndex}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
                 // Effect Type (강조) + Timestamp (mm:ss.ms)
                 Row(
                     modifier = Modifier.fillMaxWidth(),

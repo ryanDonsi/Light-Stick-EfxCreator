@@ -1179,8 +1179,8 @@ private fun EntryDetailRows(entry: EfxEntry, modifier: Modifier = Modifier, beat
                 if (p.randomDelay == 0) Loc.str(R.string.efx_tablet_editor_screen_42) else Loc.str(R.string.efx_tablet_editor_screen_43) + TimelineMath.formatFrames(p.randomDelay, p.spf),
                 null
             ),
-            Triple(Loc.str(R.string.label_random_color), if (p.randomColor != 0) "ON" else "OFF", null),
-            Triple(Loc.str(R.string.label_index), p.effectIndex.toString(), null)
+            Triple(Loc.str(R.string.label_random_color), if (p.randomColor != 0) "ON" else "OFF", null)
+            // Effect Index 는 255 를 넘으면 0 부터 다시 시작하는 패킷 값이라 사용자에게는 의미가 없어 표시하지 않는다
         )
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(9.dp)) {
             rows.forEach { (k, v, swatch) ->
