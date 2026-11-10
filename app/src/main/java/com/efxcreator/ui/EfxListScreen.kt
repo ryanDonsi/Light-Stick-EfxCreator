@@ -4,6 +4,7 @@ import android.content.Intent
 import android.widget.Toast
 import android.app.Activity
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -786,7 +787,11 @@ fun EfxProjectCard(
                 ) {
                     Text(
                         text = project.name,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        // 제목이 길어도 카드 높이가 커지지 않도록 1줄로 두고 옆으로 흘러가게 한다
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
