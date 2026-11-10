@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -1087,11 +1088,22 @@ private fun PreviewPanel(
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
+            // 구간과 음악 스타일을 한 줄에 붙이면 아이콘 폭(84dp)을 넘어 잘리므로 두 줄로 나눈다 (줄 높이는 비어 있어도 유지)
             Text(
-                text = listOfNotNull(section?.type, analysis?.musicStyle).joinToString(" · ").ifEmpty { " " },
+                text = section?.type ?: " ",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = analysis?.musicStyle ?: " ",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
