@@ -631,7 +631,7 @@
     <string name="settings_folder_quick_title">Use without the picker (needs All files access)</string>
     <string name="settings_folder_root">Internal storage/Effects</string>
     <string name="settings_folder_music">Music/GlowSync</string>
-    <string name="settings_folder_reset">Default (Music/Effects)</string>
+    <string name="settings_folder_reset">Music/Effects (default)</string>
     <string name="settings_folder_failed">Cannot create or write the folder</string>
     <string name="settings_folder_perm_denied">All files access was not granted</string>
     <string name="settings_music_quick_title">Set the start location without the picker (where the file picker opens when adding songs · no permission needed)</string>
