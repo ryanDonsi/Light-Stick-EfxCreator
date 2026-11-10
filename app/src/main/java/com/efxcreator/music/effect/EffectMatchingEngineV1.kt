@@ -520,7 +520,7 @@ class EffectMatchingEngineV1(
                 lastFg = fg
 
                 val beatPeriod = when (effectiveEngine) {
-                    EffectMatchingEngine.FgEngine.BREATH -> msToBreathPeriod(section.beatMs)
+                    EffectMatchingEngine.FgEngine.BREATH -> msToBreathPeriod(section.beatMs, beatsPerBar)
                     else            -> null
                 }
                 val beatRandomDelay = when {
@@ -533,10 +533,10 @@ class EffectMatchingEngineV1(
                     // 비발라드 BRIDGE는 기존처럼 beatPeriod(결정적, 파도 없음)를 유지한다.
                     effectiveEngine == EffectMatchingEngine.FgEngine.BREATH &&
                         section.type == SectionDetector.SectionType.BRIDGE && isBalladMode ->
-                        msToBreathRandomDelay(section.beatMs)
+                        msToBreathRandomDelay(section.beatMs, beatsPerBar)
                     effectiveEngine == EffectMatchingEngine.FgEngine.BREATH &&
                         section.type == SectionDetector.SectionType.BRIDGE -> beatPeriod
-                    effectiveEngine == EffectMatchingEngine.FgEngine.BREATH             -> msToBreathRandomDelay(section.beatMs)
+                    effectiveEngine == EffectMatchingEngine.FgEngine.BREATH             -> msToBreathRandomDelay(section.beatMs, beatsPerBar)
                     else                                           -> null
                 }
                 // 발라드 BRIDGE는 SDK의 randomColor 플래그를 켜서 기기가 직접 색을 무작위로
@@ -821,12 +821,14 @@ class EffectMatchingEngineV1(
 
     private fun buildOffPayload(transit: Int = ON_TRANSIT): ByteArray = LSEffectPayload.Effects.off(transit = transit).toByteArray()
 
-    // period는 10ms 단위고 FG+BG를 합친 한 사이클 전체 길이다(예: period=50 → 250ms FG +
-    // 250ms BG = 500ms). beatMs/10("1비트=1사이클")은 느리고, beatMs/40도 실기 테스트로는
-    // 박자가 안 맞았다 — beatMs/100이 체감상 박자에 얼추 맞는다는 실기 피드백으로 조정.
+    // period 의 1단위는 1프레임(SPF 100 → 100ms)이다. 1프레임 = 100ms 기준으로
+    // - BLINK : beatMs/100 → 한 주기(FG+BG 합친 길이)가 1박. 실기 테스트로 박자에 맞게 조정한 값.
+    // - BREATH: 4단계(FG 전환/FG 유지/BG 전환/BG 유지)가 한 주기에 다 들어가야 하므로 1마디(beatMs × 박자수)로 잡는다.
     private fun msToBlinkPeriod(beatMs: Long)        = (beatMs / 100L).toInt().coerceIn(1, 255)
-    private fun msToBreathPeriod(beatMs: Long)       = (beatMs / 20L).toInt().coerceIn(1, 255)
-    private fun msToBreathRandomDelay(beatMs: Long)  = (msToBreathPeriod(beatMs) / 10).coerceIn(1, 10)
+    private fun msToBreathPeriod(beatMs: Long, beatsPerBar: Int = 4) =
+        (beatMs * beatsPerBar.coerceAtLeast(1) / 100L).toInt().coerceIn(1, 255)
+    private fun msToBreathRandomDelay(beatMs: Long, beatsPerBar: Int = 4) =
+        (msToBreathPeriod(beatMs, beatsPerBar) / 10).coerceIn(1, 10)
 
     private fun percentile(values: List<Float>, p: Float): Float {
         if (values.isEmpty()) return 0f
