@@ -110,9 +110,23 @@ fun SettingsScreen(
         }
     }
 
-    // 폴더 선택기를 루트가 아닌 Music 폴더에서 시작시킨다 (루트는 시스템이 막아 "이 폴더를 사용할 수 없음" 이 나옴)
+    // 폴더 선택기를 현재 설정된 위치에서 시작시킨다. 기본값이거나 알 수 없는 경로는 Music 폴더에서 시작한다
+    // (루트는 시스템이 막아 "이 폴더를 사용할 수 없음" 이 나온다)
     fun pickerStartUri(tag: String): Uri {
-        val uri = DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Music")
+        val current = if (tag == "efx") viewModel.efxStoragePath.value else viewModel.musicLoadPath.value
+        val internalRoot = "/storage/emulated/0/"
+        val docId = when {
+            current == com.efxcreator.data.PreferencesManager.EFX_PATH_DEFAULT -> "primary:Music/Effects"
+            current.startsWith("content://") -> null // 선택기가 돌려준 트리 URI
+            current.startsWith(internalRoot) -> "primary:" + current.removePrefix(internalRoot).trimEnd('/')
+            else -> "primary:Music" // default_music, default_internal 등
+        }
+        val uri = if (docId != null) {
+            DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", docId)
+        } else runCatching {
+            val tree = Uri.parse(current)
+            DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        }.getOrElse { DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Music") }
         android.util.Log.d("FolderPicker", "launch($tag) initial=$uri sdk=${android.os.Build.VERSION.SDK_INT} model=${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
         return uri
     }

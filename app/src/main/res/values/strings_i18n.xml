@@ -629,7 +629,7 @@
     <string name="dlg_snap_on_desc">켜짐: 시작 시간을 가까운 비트에 맞춰 저장합니다</string>
     <string name="dlg_snap_off_desc">꺼짐: 입력한 시간 그대로 저장합니다</string>
     <string name="settings_folder_quick_title">선택기 없이 바로 쓰기 (모든 파일 접근 허용 필요)</string>
-    <string name="settings_folder_root">내장 저장소/Effects</string>
+    <string name="settings_folder_root">Effects</string>
     <string name="settings_folder_music">Music/GlowSync</string>
     <string name="settings_folder_reset">Music/Effects (기본값)</string>
     <string name="settings_folder_failed">폴더를 만들거나 쓸 수 없습니다</string>
@@ -637,5 +637,5 @@
     <string name="settings_music_quick_title">선택기 없이 시작 위치 지정 (곡 추가 때 파일 선택기가 열리는 위치 · 권한 불필요)</string>
     <string name="settings_music_default">Music (기본값)</string>
     <string name="efx_default_need_permission">기본 위치(Music/Effects)에 사본을 만들려면 \"모든 파일 접근\"을 허용해야 합니다. 설정의 아래 버튼으로 허용할 수 있습니다.</string>
-    <string name="settings_music_root">내장 저장소/GlowSync</string>
+    <string name="settings_music_root">GlowSync</string>
 </resources>
