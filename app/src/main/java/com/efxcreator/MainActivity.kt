@@ -45,24 +45,15 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             PreferencesManager.ensureDefaultEfxDir(this)
         }
-    private val legacyStorageLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            PreferencesManager.ensureDefaultEfxDir(this)
-        }
-
     private fun requestStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            val intent = Intent(
-                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            try {
-                allFilesLauncher.launch(intent)
-            } catch (e: Exception) {
-                allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-            }
-        } else {
-            legacyStorageLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        val intent = Intent(
+            android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+            Uri.parse("package:$packageName")
+        )
+        try {
+            allFilesLauncher.launch(intent)
+        } catch (e: Exception) {
+            allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
         }
     }
 

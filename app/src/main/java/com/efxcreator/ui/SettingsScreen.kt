@@ -1,6 +1,5 @@
 package com.efxcreator.ui
 
-import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -133,11 +132,7 @@ fun SettingsScreen(
 
     // ── 폴더 선택기 없이 Effects 폴더 바로 쓰기: "모든 파일 접근"을 허용받은 뒤 폴더를 만들어 적용한다 ──
     var pendingFolderPath by rememberSaveable { mutableStateOf<String?>(null) }
-    fun hasAllFilesAccess(): Boolean =
-        if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager()
-        else androidx.core.content.ContextCompat.checkSelfPermission(
-            context, Manifest.permission.WRITE_EXTERNAL_STORAGE
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    fun hasAllFilesAccess(): Boolean = android.os.Environment.isExternalStorageManager()
     fun applyFolder(dir: File) {
         val ok = viewModel.changeEfxStoragePathToFolder(dir)
         Toast.makeText(
@@ -157,34 +152,20 @@ fun SettingsScreen(
             else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
         }
     }
-    val legacyPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        val dir = pendingFolderPath?.let { File(it) }
-        pendingFolderPath = null
-        viewModel.onStoragePermissionResult()
-        permissionTick++
-        if (dir != null) {
-            if (granted) applyFolder(dir)
-            else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
-        }
-    }
     fun requestFolder(dir: File) {
         if (hasAllFilesAccess()) {
             applyFolder(dir)
             return
         }
         pendingFolderPath = dir.absolutePath
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            val intent = Intent(
-                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                Uri.parse("package:${context.packageName}")
-            )
-            try {
-                allFilesLauncher.launch(intent)
-            } catch (e: Exception) {
-                allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-            }
-        } else {
-            legacyPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        val intent = Intent(
+            android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+            Uri.parse("package:${context.packageName}")
+        )
+        try {
+            allFilesLauncher.launch(intent)
+        } catch (e: Exception) {
+            allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
         }
     }
 
@@ -310,18 +291,14 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = {
                             // 저장 위치 설정은 그대로 두고 권한만 요청한다 (돌아오면 기본 폴더를 만든다)
-                            if (android.os.Build.VERSION.SDK_INT >= 30) {
-                                val intent = Intent(
-                                    android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                    Uri.parse("package:${context.packageName}")
-                                )
-                                try {
-                                    allFilesLauncher.launch(intent)
-                                } catch (e: Exception) {
-                                    allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-                                }
-                            } else {
-                                legacyPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            val intent = Intent(
+                                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                Uri.parse("package:${context.packageName}")
+                            )
+                            try {
+                                allFilesLauncher.launch(intent)
+                            } catch (e: Exception) {
+                                allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                             }
                         }) {
                             Text(Loc.str(R.string.storage_perm_allow))

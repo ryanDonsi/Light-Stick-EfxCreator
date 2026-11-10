@@ -30,12 +30,8 @@ class PreferencesManager(context: Context) {
             return dir.isDirectory || dir.mkdirs()
         }
 
-        /** 폴더 경로로 직접 쓰기 위한 권한 (Android 11+ 모든 파일 접근, 그 이전은 쓰기 권한) */
-        fun canWriteFolders(context: Context): Boolean =
-            if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager()
-            else androidx.core.content.ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        /** 폴더 경로로 직접 쓰기 위한 권한 ("모든 파일 접근", Android 11+. minSdk 31 이라 항상 해당) */
+        fun canWriteFolders(context: Context): Boolean = android.os.Environment.isExternalStorageManager()
 
         // EFX 저장 경로
         private const val KEY_EFX_STORAGE_PATH = "efx_storage_path"
