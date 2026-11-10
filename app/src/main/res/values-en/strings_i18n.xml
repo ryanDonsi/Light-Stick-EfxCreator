@@ -272,7 +272,7 @@
     <string name="efx_tablet_editor_screen_26">Timeline</string>
     <string name="efx_tablet_editor_screen_27">Show beats</string>
     <string name="efx_tablet_editor_screen_28">Snap to beats</string>
-    <string name="efx_tablet_editor_screen_29">Follow</string>
+    <string name="efx_tablet_editor_screen_29">Auto scroll</string>
     <string name="efx_tablet_editor_screen_30">Zoom out</string>
     <string name="efx_tablet_editor_screen_31">Zoom in</string>
     <string name="efx_tablet_editor_screen_32">Fit all</string>

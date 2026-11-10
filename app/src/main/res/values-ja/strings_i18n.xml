@@ -272,7 +272,7 @@
     <string name="efx_tablet_editor_screen_26">タイムライン</string>
     <string name="efx_tablet_editor_screen_27">ビート表示</string>
     <string name="efx_tablet_editor_screen_28">ビートにスナップ</string>
-    <string name="efx_tablet_editor_screen_29">追従</string>
+    <string name="efx_tablet_editor_screen_29">自動スクロール</string>
     <string name="efx_tablet_editor_screen_30">縮小</string>
     <string name="efx_tablet_editor_screen_31">拡大</string>
     <string name="efx_tablet_editor_screen_32">全体表示</string>

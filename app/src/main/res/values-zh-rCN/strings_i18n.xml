@@ -272,7 +272,7 @@
     <string name="efx_tablet_editor_screen_26">时间轴</string>
     <string name="efx_tablet_editor_screen_27">显示节拍</string>
     <string name="efx_tablet_editor_screen_28">吸附节拍</string>
-    <string name="efx_tablet_editor_screen_29">跟随</string>
+    <string name="efx_tablet_editor_screen_29">自动滚动</string>
     <string name="efx_tablet_editor_screen_30">缩小</string>
     <string name="efx_tablet_editor_screen_31">放大</string>
     <string name="efx_tablet_editor_screen_32">显示全部</string>

@@ -272,7 +272,7 @@
     <string name="efx_tablet_editor_screen_26">타임라인</string>
     <string name="efx_tablet_editor_screen_27">비트 표시</string>
     <string name="efx_tablet_editor_screen_28">비트 스냅</string>
-    <string name="efx_tablet_editor_screen_29">따라가기</string>
+    <string name="efx_tablet_editor_screen_29">자동 스크롤</string>
     <string name="efx_tablet_editor_screen_30">축소</string>
     <string name="efx_tablet_editor_screen_31">확대</string>
     <string name="efx_tablet_editor_screen_32">전체 보기</string>
