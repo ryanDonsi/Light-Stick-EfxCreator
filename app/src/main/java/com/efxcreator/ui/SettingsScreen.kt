@@ -146,9 +146,12 @@ fun SettingsScreen(
             Toast.LENGTH_SHORT
         ).show()
     }
+    var permissionTick by remember { mutableIntStateOf(0) } // 권한 화면에서 돌아오면 권한 상태 표시를 다시 그린다
     val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val dir = pendingFolderPath?.let { File(it) }
         pendingFolderPath = null
+        viewModel.onStoragePermissionResult()
+        permissionTick++
         if (dir != null) {
             if (hasAllFilesAccess()) applyFolder(dir)
             else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
@@ -157,6 +160,8 @@ fun SettingsScreen(
     val legacyPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val dir = pendingFolderPath?.let { File(it) }
         pendingFolderPath = null
+        viewModel.onStoragePermissionResult()
+        permissionTick++
         if (dir != null) {
             if (granted) applyFolder(dir)
             else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
@@ -297,6 +302,29 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         FilledTonalIconButton(onClick = { efxFolderPicker.launch(pickerStartUri("efx")) }) {
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
+                        }
+                    }
+                    // 기본 위치(Music/Effects)를 쓰는데 권한이 없으면 허용 버튼을 보여 준다 (허용되면 폴더를 만든다)
+                    val efxPath by viewModel.efxStoragePath.collectAsState()
+                    if (permissionTick >= 0 && com.efxcreator.data.PreferencesManager.isDefaultEfxPath(efxPath) && !hasAllFilesAccess()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = {
+                            // 저장 위치 설정은 그대로 두고 권한만 요청한다 (돌아오면 기본 폴더를 만든다)
+                            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                                val intent = Intent(
+                                    android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                                try {
+                                    allFilesLauncher.launch(intent)
+                                } catch (e: Exception) {
+                                    allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                                }
+                            } else {
+                                legacyPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }
+                        }) {
+                            Text(Loc.str(R.string.storage_perm_allow))
                         }
                     }
                     // 폴더 선택기가 막힌 기기용: 선택기 없이 Effects 폴더를 바로 만들어 쓴다

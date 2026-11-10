@@ -638,4 +638,8 @@
     <string name="settings_music_default">Music（デフォルト）</string>
     <string name="efx_default_need_permission">既定の場所（Music/Effects）にコピーを作るには「すべてのファイルへのアクセス」の許可が必要です。設定の下のボタンから許可できます。</string>
     <string name="settings_music_root">GlowSync</string>
+    <string name="storage_perm_title">ストレージ権限が必要です</string>
+    <string name="storage_perm_message">EFXのコピーを既定の場所（Music/Effects）に保存するには「すべてのファイルへのアクセス」が必要です。許可するとフォルダが自動的に作成されます。後で設定から許可することもでき、許可しなくてもアプリは内部ストレージで動作します。</string>
+    <string name="storage_perm_allow">許可する</string>
+    <string name="storage_perm_later">後で</string>
 </resources>

@@ -638,4 +638,8 @@
     <string name="settings_music_default">Music (기본값)</string>
     <string name="efx_default_need_permission">기본 위치(Music/Effects)에 사본을 만들려면 \"모든 파일 접근\"을 허용해야 합니다. 설정의 아래 버튼으로 허용할 수 있습니다.</string>
     <string name="settings_music_root">GlowSync</string>
+    <string name="storage_perm_title">저장 권한 필요</string>
+    <string name="storage_perm_message">EFX 파일 사본을 기본 위치(Music/Effects)에 저장하려면 \"모든 파일 접근\" 권한이 필요합니다. 허용하면 폴더가 자동으로 만들어집니다. 나중에 설정에서도 허용할 수 있고, 허용하지 않아도 앱은 내부 저장소로 정상 동작합니다.</string>
+    <string name="storage_perm_allow">권한 허용</string>
+    <string name="storage_perm_later">나중에</string>
 </resources>

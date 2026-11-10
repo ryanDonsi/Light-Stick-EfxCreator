@@ -70,6 +70,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _musicLoadInfo.value = repository.getMusicLoadInfo()
     }
 
+    /** 권한 화면에서 돌아온 뒤: 허용됐으면 기본 폴더(Music/Effects)를 만들고 저장 위치 안내를 갱신한다 */
+    fun onStoragePermissionResult() {
+        PreferencesManager.ensureDefaultEfxDir(context)
+        _efxStorageInfo.value = repository.getEfxStorageInfo()
+    }
+
     /** EFX 저장 위치를 기본(Music/Effects)으로 되돌린다 */
     fun resetEfxStoragePath() {
         repository.changeEfxStoragePath(com.efxcreator.data.PreferencesManager.EFX_PATH_DEFAULT)
