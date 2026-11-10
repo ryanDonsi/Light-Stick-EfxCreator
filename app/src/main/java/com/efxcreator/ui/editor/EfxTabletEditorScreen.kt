@@ -400,6 +400,7 @@ fun EfxTabletEditorScreen(
                 analyzing = analyzing,
                 applying = applying,
                 entryCount = entries.size,
+                genre = analysis?.musicStyle,
                 deviceConnected = bleConnected != null,
                 canUndo = canUndo,
                 canRedo = canRedo,
@@ -778,6 +779,7 @@ private fun EditorTopBar(
     analyzing: Boolean,
     applying: Boolean,
     entryCount: Int,
+    genre: String?,
     deviceConnected: Boolean,
     canUndo: Boolean,
     canRedo: Boolean,
@@ -817,11 +819,23 @@ private fun EditorTopBar(
                         .clickable(onClick = onRename)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
-                Text(
-                    "· $entryCount entries",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // 곡의 장르는 바뀌지 않으므로 제목 옆에 위에서부터 장르 > entries 순으로 표시한다
+                Column(modifier = Modifier.padding(start = 4.dp)) {
+                    if (!genre.isNullOrBlank()) {
+                        Text(
+                            genre,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                    Text(
+                        "$entryCount entries",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
                 AnimatedVisibility(
                     visible = dirty,
                     enter = fadeIn(tween(EfxMotion.MEDIUM, easing = EfxMotion.StandardDecelerate)) +
@@ -1088,17 +1102,9 @@ private fun PreviewPanel(
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
-            // 구간과 음악 스타일을 한 줄에 붙이면 아이콘 폭(84dp)을 넘어 잘리므로 두 줄로 나눈다 (줄 높이는 비어 있어도 유지)
+            // 장르는 상단 제목 옆에 표시하므로 여기서는 현재 구간만 보여 준다 (비어 있어도 줄 높이는 유지)
             Text(
                 text = section?.type ?: " ",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = analysis?.musicStyle ?: " ",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
