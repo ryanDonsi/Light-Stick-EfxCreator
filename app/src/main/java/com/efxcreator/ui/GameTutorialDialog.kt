@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -99,6 +101,9 @@ fun GameTutorialDialog(mode: GameMode, onDismiss: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
+                // 태블릿처럼 넓은 화면에서는 폰 대화상자 폭 정도로 제한하고 가운데에 둔다 (Light-Stick-Music 과 같은 규칙)
+                .wrapContentWidth(Alignment.CenterHorizontally)
+                .widthIn(max = 420.dp)
                 .wrapContentHeight()
         ) {
             Surface(
