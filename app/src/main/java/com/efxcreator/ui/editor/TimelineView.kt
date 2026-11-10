@@ -170,7 +170,7 @@ private fun DrawScope.drawLabel(
  * - OFF     : 어두운 회색
  * - STROBE  : FG 3 : BG 7
  * - BLINK   : FG 5 : BG 5
- * - BREATH  : 그라데이션(BG→FG) 2.5 / FG 2.5 / 그라데이션(FG→BG) 2.5 / BG 2.5
+ * - BREATH  : FG 5 : BG 5 로 반씩, 가운데 경계만 FG → BG 그라데이션
  */
 private fun DrawScope.drawEffectBlock(
     offBlock: Color, type: EffectType, fg: Color, bg: Color,
@@ -194,17 +194,14 @@ private fun DrawScope.drawEffectBlock(
             drawRect(b, Offset(left, top + h1), size(height - h1))
         }
         EffectType.BREATH -> {
-            val q = height * 0.25f
+            // 위 절반 FG · 아래 절반 BG 로 나누고, 가운데(30%~70%)만 FG → BG 그라데이션 (이펙트 라이브러리 스와치와 같은 표현)
             drawRect(
-                Brush.verticalGradient(listOf(b, f), startY = top, endY = top + q),
-                Offset(left, top), size(q)
+                Brush.verticalGradient(
+                    0f to f, 0.3f to f, 0.7f to b, 1f to b,
+                    startY = top, endY = top + height
+                ),
+                Offset(left, top), size(height)
             )
-            drawRect(f, Offset(left, top + q), size(q))
-            drawRect(
-                Brush.verticalGradient(listOf(f, b), startY = top + 2 * q, endY = top + 3 * q),
-                Offset(left, top + 2 * q), size(q)
-            )
-            drawRect(b, Offset(left, top + 3 * q), size(height - 3 * q))
         }
     }
     // 배경색이 레인 색과 비슷해도 블록 경계가 보이도록 얇은 테두리
