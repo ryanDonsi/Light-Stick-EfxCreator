@@ -580,7 +580,11 @@ class EfxRepository(private val context: Context) {
             path == PreferencesManager.EFX_PATH_INTERNAL -> {
                 Loc.str(R.string.efx_repository_3, context.filesDir.absolutePath)
             }
-            path == PreferencesManager.EFX_PATH_DEFAULT || path.isEmpty() -> Loc.str(R.string.efx_default_unset)
+            path == PreferencesManager.EFX_PATH_DEFAULT || path.isEmpty() -> {
+                val base = Loc.str(R.string.efx_repository_3, friendlyPath(PreferencesManager.defaultEfxDir().absolutePath))
+                if (PreferencesManager.canWriteFolders(context)) base
+                else base + "\n" + Loc.str(R.string.efx_default_need_permission)
+            }
             path.startsWith("content://") -> {
                 Loc.str(R.string.efx_repository_4, describeTreeUri(path))
             }

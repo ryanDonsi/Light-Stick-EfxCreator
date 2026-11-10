@@ -8,12 +8,34 @@ class PreferencesManager(context: Context) {
         context.getSharedPreferences("efx_creator_prefs", Context.MODE_PRIVATE)
 
     companion object {
-        /** EFX 저장 위치 기본값: 폴더가 아직 지정되지 않은 상태. 앱 내부에만 저장하고 사본은 만들지 않는다 (폴더를 지정하면 `공연명/곡명.efx` 사본을 둔다) */
+        /** EFX 저장 위치 기본값: Music/Effects 에 `공연명/곡명.efx` 사본을 둔다 (모든 파일 접근이 허용돼야 만들어짐) */
         const val EFX_PATH_DEFAULT = "default_efx"
         /** 앱 내부에만 저장 (사본 없음) */
         const val EFX_PATH_INTERNAL = "default_internal"
 
+        /** Music/Effects 폴더 */
+        fun defaultEfxDir(): java.io.File = java.io.File(
+            android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC), "Effects"
+        )
+
         fun isDefaultEfxPath(path: String): Boolean = path.isEmpty() || path == EFX_PATH_DEFAULT
+
+        /**
+         * 기본 위치(Music/Effects)를 쓰는 중이고 권한이 허용돼 있으면 폴더를 만든다.
+         * 권한이 없거나 기본 위치를 쓰지 않으면 아무것도 하지 않는다. 폴더가 준비돼 있으면 true.
+         */
+        fun ensureDefaultEfxDir(context: Context): Boolean {
+            if (!isDefaultEfxPath(PreferencesManager(context).efxStoragePath) || !canWriteFolders(context)) return false
+            val dir = defaultEfxDir()
+            return dir.isDirectory || dir.mkdirs()
+        }
+
+        /** 폴더 경로로 직접 쓰기 위한 권한 (Android 11+ 모든 파일 접근, 그 이전은 쓰기 권한) */
+        fun canWriteFolders(context: Context): Boolean =
+            if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager()
+            else androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
         // EFX 저장 경로
         private const val KEY_EFX_STORAGE_PATH = "efx_storage_path"
@@ -30,6 +52,11 @@ class PreferencesManager(context: Context) {
     var efxStoragePath: String
         get() = prefs.getString(KEY_EFX_STORAGE_PATH, DEFAULT_EFX_PATH) ?: DEFAULT_EFX_PATH
         set(value) = prefs.edit().putString(KEY_EFX_STORAGE_PATH, value).apply()
+
+    // 기본 저장 위치에 필요한 권한 안내를 이미 한 번 보여줬는지 (거부해도 다시 묻지 않는다)
+    var storagePermissionPromptShown: Boolean
+        get() = prefs.getBoolean("storage_perm_prompt_shown", false)
+        set(value) = prefs.edit().putBoolean("storage_perm_prompt_shown", value).apply()
 
     // 음악 불러오기 경로
     var musicLoadPath: String

@@ -628,14 +628,18 @@
     <string name="dlg_step_beat_fine">Beat buttons: 0.1 beat</string>
     <string name="dlg_snap_on_desc">On: the start time snaps to the nearest beat</string>
     <string name="dlg_snap_off_desc">Off: saved exactly as entered</string>
+    <string name="settings_folder_quick_title">Use without the picker (needs All files access)</string>
+    <string name="settings_folder_root">Effects</string>
     <string name="settings_folder_music">Music/GlowSync</string>
     <string name="settings_folder_reset">Music/Effects (default)</string>
+    <string name="settings_folder_failed">Cannot create or write the folder</string>
+    <string name="settings_folder_perm_denied">All files access was not granted</string>
     <string name="settings_music_quick_title">Set the start location without the picker (where the file picker opens when adding songs · no permission needed)</string>
     <string name="settings_music_default">Music (default)</string>
+    <string name="efx_default_need_permission">Allow \"All files access\" to create copies in the default location (Music/Effects). Use the buttons below in Settings.</string>
     <string name="settings_music_root">GlowSync</string>
-    <string name="folder_guide_title">Set Effects folder</string>
-    <string name="folder_guide_message">Choose a folder for EFX copies so other apps such as Light-Stick-Music can use them directly. Please pick Music/Effects. If you don\'t, files are stored in app internal storage only.</string>
-    <string name="folder_guide_confirm">Choose folder</string>
-    <string name="folder_guide_later">Later</string>
-    <string name="efx_default_unset">Not set: stored in app internal storage only. Choose a folder to create showname/songname.efx copies.</string>
+    <string name="storage_perm_title">Storage permission needed</string>
+    <string name="storage_perm_message">To save EFX copies in the default location (Music/Effects), \"All files access\" is required. Once allowed, the folder is created automatically. You can also allow it later in Settings, and the app works with internal storage even if you don\'t.</string>
+    <string name="storage_perm_allow">Allow</string>
+    <string name="storage_perm_later">Later</string>
 </resources>

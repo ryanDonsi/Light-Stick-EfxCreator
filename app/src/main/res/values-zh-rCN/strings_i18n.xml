@@ -628,14 +628,18 @@
     <string name="dlg_step_beat_fine">节拍按钮：0.1拍</string>
     <string name="dlg_snap_on_desc">开启：开始时间吸附到最近的节拍保存</string>
     <string name="dlg_snap_off_desc">关闭：按输入的时间原样保存</string>
+    <string name="settings_folder_quick_title">不使用选择器直接使用（需要“所有文件访问”权限）</string>
+    <string name="settings_folder_root">Effects</string>
     <string name="settings_folder_music">Music/GlowSync</string>
     <string name="settings_folder_reset">Music/Effects（默认）</string>
+    <string name="settings_folder_failed">无法创建或写入文件夹</string>
+    <string name="settings_folder_perm_denied">未授予“所有文件访问”权限</string>
     <string name="settings_music_quick_title">不使用选择器直接指定起始位置（添加歌曲时文件选择器打开的位置 · 无需权限）</string>
     <string name="settings_music_default">Music（默认）</string>
+    <string name="efx_default_need_permission">要在默认位置（Music/Effects）创建副本，需要允许“所有文件访问”。可在设置中使用下方按钮授权。</string>
     <string name="settings_music_root">GlowSync</string>
-    <string name="folder_guide_title">设置Effects文件夹</string>
-    <string name="folder_guide_message">指定保存EFX副本的文件夹后，Light-Stick-Music等其他应用即可直接使用。请选择Music/Effects文件夹。未指定时仅保存在应用内部存储。</string>
-    <string name="folder_guide_confirm">设置文件夹</string>
-    <string name="folder_guide_later">稍后</string>
-    <string name="efx_default_unset">未设置：仅保存在应用内部存储。指定文件夹后会创建 演出名/曲名.efx 副本。</string>
+    <string name="storage_perm_title">需要存储权限</string>
+    <string name="storage_perm_message">要将EFX副本保存到默认位置（Music/Effects），需要“所有文件访问”权限。允许后会自动创建该文件夹。也可稍后在设置中允许，不允许时应用仍会使用内部存储正常运行。</string>
+    <string name="storage_perm_allow">允许</string>
+    <string name="storage_perm_later">稍后</string>
 </resources>

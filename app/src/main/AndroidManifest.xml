@@ -5,10 +5,19 @@
     <!-- 음악 파일 읽기 권한 (Android 13+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
-    <!-- 레거시 저장소 권한 (Android 12~12L) -->
+    <!-- 레거시 저장소 권한 (Android 12 이하) -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+
+    <!-- 모든 파일 접근 (Android 11+): 폴더 선택기가 막힌 기기에서도 Effects 폴더를 직접 만들어 쓰기 위한 권한.
+         설정의 "Effects" 버튼을 눌렀을 때만 사용자에게 요청한다. (직접 설치 배포용 — 스토어 배포 시 사용 심사가 필요하다) -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <!-- Bluetooth (응원봉 실기기 연동) -->
     <uses-permission
