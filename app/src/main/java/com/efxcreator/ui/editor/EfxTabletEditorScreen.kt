@@ -58,6 +58,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -911,6 +912,13 @@ private fun EditorTopBar(
     )
 }
 
+/** 켜진 토글 칩은 패널 배경과 잘 구분되도록 앱 포인트 색(primaryContainer)으로 채운다 */
+@Composable
+private fun toggleChipColors() = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+)
+
 @Composable
 private fun TimelineToolbar(
     selectMode: Boolean,
@@ -1022,13 +1030,13 @@ private fun TimelineToolbar(
                 )
             }
         }
-        FilterChip(selected = selectMode, onClick = { onSelectModeChange(!selectMode) }, label = { Text(Loc.str(R.string.timeline_select_mode)) })
+        FilterChip(selected = selectMode, onClick = { onSelectModeChange(!selectMode) }, label = { Text(Loc.str(R.string.timeline_select_mode)) }, colors = toggleChipColors())
         Spacer(Modifier.width(8.dp))
-        FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_27)) })
+        FilterChip(selected = showBeats, onClick = { onShowBeatsChange(!showBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_27)) }, colors = toggleChipColors())
         Spacer(Modifier.width(8.dp))
-        FilterChip(selected = snapToBeats, onClick = { onSnapChange(!snapToBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_28)) })
+        FilterChip(selected = snapToBeats, onClick = { onSnapChange(!snapToBeats) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_28)) }, colors = toggleChipColors())
         Spacer(Modifier.width(8.dp))
-        FilterChip(selected = followPlayhead, onClick = { onFollowChange(!followPlayhead) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_29)) })
+        FilterChip(selected = followPlayhead, onClick = { onFollowChange(!followPlayhead) }, label = { Text(Loc.str(R.string.efx_tablet_editor_screen_29)) }, colors = toggleChipColors())
         Spacer(Modifier.width(4.dp))
         IconButton(onClick = onZoomOut) { Icon(Icons.Default.ZoomOut, contentDescription = Loc.str(R.string.efx_tablet_editor_screen_30)) }
         IconButton(onClick = onZoomIn) { Icon(Icons.Default.ZoomIn, contentDescription = Loc.str(R.string.efx_tablet_editor_screen_31)) }
