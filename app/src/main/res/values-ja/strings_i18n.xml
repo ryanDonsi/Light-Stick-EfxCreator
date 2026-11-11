@@ -632,10 +632,10 @@
     <string name="settings_music_quick_title">ピッカーなしで開始位置を指定（曲追加時にファイル選択が開く場所・権限不要）</string>
     <string name="settings_music_default">Music（デフォルト）</string>
     <string name="settings_music_root">GlowSync</string>
-    <string name="folder_guide_title">Effectsフォルダの設定</string>
-    <string name="folder_guide_message">EFXのコピーを保存するフォルダを指定すると、Light-Stick-Musicなど他のアプリですぐに使えます。Music/Effectsフォルダを選択してください。指定しない場合はアプリ内部ストレージにのみ保存されます。</string>
-    <string name="folder_guide_confirm">フォルダを設定</string>
-    <string name="folder_guide_later">後で</string>
+    <string name="folder_guide_title">エフェクトファイルの保存フォルダ</string>
+    <string name="folder_guide_message">生成されたエフェクトファイル(.efx)を保存するフォルダを指定してください。GlowSync Musicアプリと同じフォルダを指定すると、すぐに連携できます。</string>
+    <string name="folder_guide_confirm">フォルダを指定</string>
+    <string name="folder_guide_later">フォルダなしで続ける</string>
     <string name="efx_default_unset">未設定: アプリ内部ストレージにのみ保存されます。フォルダを指定すると 公演名/曲名.efx のコピーを作成します。</string>
     <string name="bulk_share_selected">共有 (%1$d)</string>
 </resources>

@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.efxcreator.ui.editor.PlayerSeekBar
 import com.efxcreator.R
+import com.efxcreator.data.EfxFolderSetup
 import com.efxcreator.core.Loc
 
 /** 어느 공연에도 속하지 않은 곡을 모아 보여 주는 가상 공연의 id */
@@ -116,6 +117,20 @@ fun EfxListScreen(
     var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedShowId) { if (selectionMode == ListSelection.SONGS) exitSelection() }
     var showCreateDialog by remember { mutableStateOf(false) }
+    // 곡 추가를 시작하기 전에 EFX 저장 폴더가 지정되어 있는지 확인하는 안내
+    var showFolderGuide by remember { mutableStateOf(false) }
+    val efxFolderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            val ok = EfxFolderSetup.apply(context, uri)
+            Toast.makeText(
+                context,
+                if (ok) Loc.str(R.string.settings_screen_1) else Loc.str(R.string.settings_screen_2),
+                Toast.LENGTH_SHORT
+            ).show()
+            // 폴더를 지정했으면 이어서 곡 추가를 진행한다
+            if (ok) showCreateDialog = true
+        }
+    }
     var showNameDialog by remember { mutableStateOf<Show?>(null) }       // 이름 변경 대상
     var newShowDialog by remember { mutableStateOf(false) }
     var deleteShowTarget by remember { mutableStateOf<Show?>(null) }
@@ -169,6 +184,27 @@ fun EfxListScreen(
             }
             else -> Unit
         }
+    }
+
+    if (showFolderGuide) {
+        AlertDialog(
+            onDismissRequest = { showFolderGuide = false },   // 바깥을 누르거나 뒤로 가면 곡 추가를 취소한다
+            title = { Text(Loc.str(R.string.folder_guide_title)) },
+            text = { Text(Loc.str(R.string.folder_guide_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showFolderGuide = false
+                    efxFolderPicker.launch(EfxFolderSetup.pickerStartUri())
+                }) { Text(Loc.str(R.string.folder_guide_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showFolderGuide = false
+                    folderGuideSkipped = true   // 이번 앱 실행 동안은 다시 묻지 않는다
+                    showCreateDialog = true
+                }) { Text(Loc.str(R.string.folder_guide_later)) }
+            }
+        )
     }
 
     if (showCreateDialog) {
@@ -542,7 +578,13 @@ fun EfxListScreen(
                                 }
                             )
                         } else {
-                            Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
+                            Button(
+                                onClick = {
+                                    if (EfxFolderSetup.isUnset(context) && !folderGuideSkipped) showFolderGuide = true
+                                    else showCreateDialog = true
+                                },
+                                enabled = selectedShow != null
+                            ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text(Loc.str(R.string.efx_list_screen_3))
@@ -990,6 +1032,9 @@ private fun shareEfxFiles(context: android.content.Context, files: List<File>) {
 }
 
 private fun shareEfxFile(context: android.content.Context, file: File) = shareEfxFiles(context, listOf(file))
+
+/** "폴더 없이 계속"을 고르면 이번 앱 실행 동안 폴더 안내를 다시 띄우지 않는다 (앱을 다시 켜면 초기화) */
+private var folderGuideSkipped = false
 
 /** 선택 삭제 모드가 켜진 목록 */
 private enum class ListSelection { NONE, SHOWS, SONGS }
