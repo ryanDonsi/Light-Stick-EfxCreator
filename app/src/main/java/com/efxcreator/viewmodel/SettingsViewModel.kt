@@ -37,30 +37,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * 일반 폴더(예: /storage/emulated/0/Effects)를 EFX 사본 저장 위치로 쓴다.
-     * 폴더를 만들고 실제로 쓸 수 있는지 확인한 뒤에만 적용한다 (모든 파일 접근 권한이 있어야 한다).
-     */
-    fun changeEfxStoragePathToFolder(dir: File): Boolean = try {
-        val writable = (dir.isDirectory || dir.mkdirs()) && runCatching {
-            File(dir, ".glowsync_write_test").apply { writeText("ok"); delete() }
-        }.isSuccess
-        if (writable) {
-            val path = dir.absolutePath
-            Log.d(TAG, "Changing EFX storage to folder: $path")
-            repository.changeEfxStoragePath(path)
-            _efxStoragePath.value = path
-            _efxStorageInfo.value = repository.getEfxStorageInfo()
-            true
-        } else {
-            Log.e(TAG, "Cannot create/write folder: ${dir.absolutePath}")
-            false
-        }
-    } catch (e: Exception) {
-        Log.e(TAG, "Error changing EFX path to folder", e)
-        false
-    }
-
-    /**
      * 음악 불러오기 시작 위치를 경로로 바로 지정한다 ("default_music" 이면 기본 Music 폴더).
      * 이 값은 곡 추가 때 파일 선택기가 처음 열리는 위치(힌트)로만 쓰여서 권한이나 폴더 생성이 필요 없다.
      */
@@ -68,19 +44,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         repository.changeMusicLoadPath(path)
         _musicLoadPath.value = path
         _musicLoadInfo.value = repository.getMusicLoadInfo()
-    }
-
-    /** 권한 화면에서 돌아온 뒤: 허용됐으면 기본 폴더(Music/Effects)를 만들고 저장 위치 안내를 갱신한다 */
-    fun onStoragePermissionResult() {
-        PreferencesManager.ensureDefaultEfxDir(context)
-        _efxStorageInfo.value = repository.getEfxStorageInfo()
-    }
-
-    /** EFX 저장 위치를 기본(Music/Effects)으로 되돌린다 */
-    fun resetEfxStoragePath() {
-        repository.changeEfxStoragePath(com.efxcreator.data.PreferencesManager.EFX_PATH_DEFAULT)
-        _efxStoragePath.value = com.efxcreator.data.PreferencesManager.EFX_PATH_DEFAULT
-        _efxStorageInfo.value = repository.getEfxStorageInfo()
     }
 
     /**
