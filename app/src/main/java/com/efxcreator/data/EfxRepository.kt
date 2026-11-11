@@ -451,20 +451,30 @@ class EfxRepository(private val context: Context) {
     /**
      * .efx 파일을 외부로 익스포트
      */
-    fun exportEfx(projectId: String, exportName: String): File {
+    fun exportEfx(projectId: String, exportName: String): File =
+        exportEfxBatch(listOf(projectId to exportName)).first()
+
+    /**
+     * 여러 곡을 공유용 파일로 내보낸다. 파일 이름은 안전한 문자만 남기고, 같은 이름이 겹치면 (2), (3) 을 붙인다.
+     * (받는 앱은 파일 이름이 아니라 헤더의 Music ID 로 곡과 연결하므로, 이름이 달라도 동작에는 영향이 없다)
+     */
+    fun exportEfxBatch(items: List<Pair<String, String>>): List<File> {
         val outputDir = File(context.getExternalFilesDir(null), "EfxExports")
         if (!outputDir.exists()) {
             outputDir.mkdirs()
             Log.d(TAG, "Created export directory: ${outputDir.absolutePath}")
         }
-
-        val sourceFile = getEfxFile(projectId)
-        val outputFile = File(outputDir, "$exportName.efx")
-
-        sourceFile.copyTo(outputFile, overwrite = true)
-        Log.d(TAG, "Exported EFX to: ${outputFile.absolutePath}")
-
-        return outputFile
+        val used = HashSet<String>()
+        return items.map { (projectId, name) ->
+            val base = EfxShare.safeFileName(name)
+            var candidate = base
+            var n = 2
+            while (!used.add(candidate.lowercase())) candidate = "$base ($n)".also { n++ }
+            val outputFile = File(outputDir, "$candidate.${EfxShare.EXTENSION}")
+            getEfxFile(projectId).copyTo(outputFile, overwrite = true)
+            Log.d(TAG, "Exported EFX to: ${outputFile.absolutePath}")
+            outputFile
+        }
     }
 
     /**

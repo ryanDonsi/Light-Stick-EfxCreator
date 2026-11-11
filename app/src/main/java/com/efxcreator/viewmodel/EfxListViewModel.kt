@@ -236,6 +236,12 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
         return repository.exportEfx(projectId, projectName)
     }
 
+    /** 여러 곡을 한 번에 공유하기 위한 파일들 (곡 이름으로 파일 이름을 정한다) */
+    fun prepareExportFiles(projectIds: List<String>): List<File> {
+        val names = repository.loadProjectsMetadata().associate { it.id to it.name }
+        return repository.exportEfxBatch(projectIds.mapNotNull { id -> names[id]?.let { id to it } })
+    }
+
     /**
      * 임시 파일을 사용자가 선택한 위치에 복사
      * @param sourceFile 소스 파일

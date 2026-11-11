@@ -641,4 +641,5 @@
     <string name="storage_perm_message">EFXのコピーを既定の場所（Music/Effects）に保存するには「すべてのファイルへのアクセス」が必要です。許可するとフォルダが自動的に作成されます。後で設定から許可することもでき、許可しなくてもアプリは内部ストレージで動作します。</string>
     <string name="storage_perm_allow">許可する</string>
     <string name="storage_perm_later">後で</string>
+    <string name="bulk_share_selected">共有 (%1$d)</string>
 </resources>

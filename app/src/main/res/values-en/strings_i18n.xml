@@ -641,4 +641,5 @@
     <string name="storage_perm_message">To save EFX copies in the default location (Music/Effects), \"All files access\" is required. Once allowed, the folder is created automatically. You can also allow it later in Settings, and the app works with internal storage even if you don\'t.</string>
     <string name="storage_perm_allow">Allow</string>
     <string name="storage_perm_later">Later</string>
+    <string name="bulk_share_selected">Share (%1$d)</string>
 </resources>

@@ -534,7 +534,12 @@ fun EfxListScreen(
                                 checkedCount = checkedSongIds.size,
                                 onCancel = { exitSelection() },
                                 onDeleteAll = { bulkDelete = BulkDelete(ListSelection.SONGS, songs.map { it.id }) },
-                                onDeleteSelected = { bulkDelete = BulkDelete(ListSelection.SONGS, checkedSongIds.toList()) }
+                                onDeleteSelected = { bulkDelete = BulkDelete(ListSelection.SONGS, checkedSongIds.toList()) },
+                                onShareSelected = {
+                                    // 목록 순서대로 선택한 곡들의 EFX 를 한 번에 공유한다
+                                    val ids = songs.map { it.id }.filter { it in checkedSongIds }
+                                    shareEfxFiles(context, viewModel.prepareExportFiles(ids))
+                                }
                             )
                         } else {
                             Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
@@ -957,29 +962,34 @@ fun EfxProjectCard(
 }
 
 /**
- * EFX 파일 공유
+ * EFX 파일 공유. 한 곡이면 ACTION_SEND, 여러 곡이면 ACTION_SEND_MULTIPLE.
+ * 받는 앱이 알아볼 수 있도록 전용 MIME([EfxShare.MIME_TYPE])을 붙인다.
+ * Quick Share, 메신저, 드라이브 등 시스템 공유 창의 모든 대상으로 보낼 수 있다.
  */
-private fun shareEfxFile(context: android.content.Context, file: File) {
+private fun shareEfxFiles(context: android.content.Context, files: List<File>) {
+    if (files.isEmpty()) return
     try {
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/octet-stream"
-            putExtra(Intent.EXTRA_STREAM, uri)
+        val uris = ArrayList(files.map { FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it) })
+        val base = if (uris.size == 1) {
+            Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, uris[0]) }
+        } else {
+            Intent(Intent.ACTION_SEND_MULTIPLE).apply { putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris) }
+        }
+        val shareIntent = base.apply {
+            type = com.efxcreator.data.EfxShare.MIME_TYPE
+            // 공유 창(선택기)이 받는 앱에 읽기 권한을 넘길 수 있도록 ClipData 에도 담는다
+            clipData = android.content.ClipData.newRawUri(null, uris[0]).also { clip ->
+                uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+            }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-
-        context.startActivity(
-            Intent.createChooser(shareIntent, Loc.str(R.string.efx_list_screen_38))
-        )
+        context.startActivity(Intent.createChooser(shareIntent, Loc.str(R.string.efx_list_screen_38)))
     } catch (e: Exception) {
         android.util.Log.e("EfxListScreen", "Error sharing file", e)
     }
 }
+
+private fun shareEfxFile(context: android.content.Context, file: File) = shareEfxFiles(context, listOf(file))
 
 /** 선택 삭제 모드가 켜진 목록 */
 private enum class ListSelection { NONE, SHOWS, SONGS }
@@ -994,10 +1004,17 @@ private fun BulkDeleteButtons(
     checkedCount: Int,
     onCancel: () -> Unit,
     onDeleteAll: () -> Unit,
-    onDeleteSelected: () -> Unit
+    onDeleteSelected: () -> Unit,
+    /** 지정하면 "공유 (N)" 버튼을 보여 준다 (곡 선택 모드) */
+    onShareSelected: (() -> Unit)? = null
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         TextButton(onClick = onCancel) { Text(Loc.str(R.string.efx_edit_screen_16)) }
+        if (onShareSelected != null) {
+            OutlinedButton(onClick = onShareSelected, enabled = checkedCount > 0) {
+                Text(Loc.str(R.string.bulk_share_selected, checkedCount))
+            }
+        }
         OutlinedButton(
             onClick = onDeleteAll,
             enabled = allCount > 0,
