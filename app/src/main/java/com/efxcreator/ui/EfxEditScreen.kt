@@ -1,8 +1,6 @@
 package com.efxcreator.ui
 
-import android.Manifest
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -50,14 +48,6 @@ fun EfxEditScreen(
         viewModel.loadProject(projectId)
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (!isGranted) {
-            showPermissionDialog = true
-        }
-    }
-
     val musicPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -66,9 +56,7 @@ fun EfxEditScreen(
     }
 
     fun selectMusic() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
-        }
+        // 시스템 선택기로 고른 파일만 접근하므로 별도 저장소 권한이 필요 없다
         musicPicker.launch("audio/*")
     }
 
