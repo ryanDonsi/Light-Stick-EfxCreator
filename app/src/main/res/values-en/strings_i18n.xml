@@ -638,4 +638,8 @@
     <string name="folder_guide_later">Continue without folder</string>
     <string name="efx_default_unset">Not set: stored in app internal storage only. Choose a folder to create showname/songname.efx copies.</string>
     <string name="bulk_share_selected">Share (%1$d)</string>
+    <string name="palette_set_warm">Warm family</string>
+    <string name="palette_set_cool">Cool family</string>
+    <string name="palette_family_warm">Warm</string>
+    <string name="palette_family_cool">Cool</string>
 </resources>

@@ -638,4 +638,8 @@
     <string name="folder_guide_later">폴더 없이 계속</string>
     <string name="efx_default_unset">지정 안 됨: 앱 내부에만 저장됩니다. 폴더를 지정하면 공연명/곡명.efx 사본을 만듭니다.</string>
     <string name="bulk_share_selected">공유 (%1$d)</string>
+    <string name="palette_set_warm">웜 계열</string>
+    <string name="palette_set_cool">쿨 계열</string>
+    <string name="palette_family_warm">웜</string>
+    <string name="palette_family_cool">쿨</string>
 </resources>

@@ -638,4 +638,8 @@
     <string name="folder_guide_later">不指定，继续</string>
     <string name="efx_default_unset">未设置：仅保存在应用内部存储。指定文件夹后会创建 演出名/曲名.efx 副本。</string>
     <string name="bulk_share_selected">分享 (%1$d)</string>
+    <string name="palette_set_warm">暖色系</string>
+    <string name="palette_set_cool">冷色系</string>
+    <string name="palette_family_warm">暖色</string>
+    <string name="palette_family_cool">冷色</string>
 </resources>

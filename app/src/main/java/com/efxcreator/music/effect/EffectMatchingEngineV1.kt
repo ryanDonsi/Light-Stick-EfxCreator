@@ -62,6 +62,18 @@ private val BLUE_SKYCYAN = LSColor(0, 232, 255)  // 하늘청록
 private val BLUE_AZURE   = LSColor(0, 116, 255)  // 파랑
 private val BLUE_PURE    = LSColor(0, 0, 255)    // 순수 파랑
 
+// Light-Stick-Music 의 WARM / COLD(쿨) 2계열 — 핵심 3색(순환색) + 남는 1색(accent: 단색 전용).
+// WARM = 핑크~노랑, COLD = 초록~보라. 색 값은 Music 의 PaletteCatalog 와 같다.
+private val WARM_PINK   = LSColor(255, 0, 125)   // 핑크 (accent)
+private val WARM_RED    = LSColor(255, 0, 0)     // 빨강
+private val WARM_ORANGE = LSColor(255, 51, 0)    // 주황
+private val WARM_YELLOW = LSColor(255, 255, 0)   // 노랑
+
+private val COLD_GREEN  = LSColor(0, 255, 0)     // 초록 (accent)
+private val COLD_TEAL   = LSColor(0, 255, 255)   // 청록
+private val COLD_BLUE   = LSColor(0, 0, 255)     // 파랑
+private val COLD_PURPLE = LSColor(150, 0, 255)   // 보라
+
 // 위 스와치들의 파생색 — cMain으로 선택된 스와치와 같은 hue에서 명도만 48%로 낮춘
 // 어두운 톤(cDeep)이다. 매번 계산하지 않고 값 그대로 이름 붙여 선언해둔다.
 private val PURPLE_MAGENTA_SHADE = LSColor(101, 0, 122)   // 자주보라 셰이드
@@ -88,6 +100,17 @@ private val BLUE_SEAFOAM_SHADE = LSColor(0, 122, 77)    // 민트청록 셰이�
 private val BLUE_SKYCYAN_SHADE = LSColor(0, 111, 122)   // 하늘청록 셰이드
 private val BLUE_AZURE_SHADE   = LSColor(0, 55, 122)    // 파랑 셰이드
 private val BLUE_PURE_SHADE    = LSColor(0, 0, 122)     // 순수 파랑 셰이드
+
+// WARM / COLD 스와치의 셰이드(명도 48%)
+private val WARM_PINK_SHADE   = LSColor(122, 0, 60)
+private val WARM_RED_SHADE    = LSColor(122, 0, 0)
+private val WARM_ORANGE_SHADE = LSColor(122, 24, 0)
+private val WARM_YELLOW_SHADE = LSColor(122, 122, 0)
+
+private val COLD_GREEN_SHADE  = LSColor(0, 122, 0)
+private val COLD_TEAL_SHADE   = LSColor(0, 122, 122)
+private val COLD_BLUE_SHADE   = LSColor(0, 0, 122)
+private val COLD_PURPLE_SHADE = LSColor(72, 0, 122)
 
 /**
  * EffectMatchingEngineV1 - 섹션 타입 기반 이펙트 매칭 엔진
@@ -149,6 +172,15 @@ class EffectMatchingEngineV1(
         //   HIPHOP_RNB→BALLAD)의 값을 그대로 가져다 쓴다.
         private data class GenreTheme(val families: List<PaletteFamily>, val rolePermutation: List<Int>)
 
+        /**
+         * 기본(자동) 팔레트: Light-Stick-Music 처럼 장르와 상관없이 WARM / COLD 2계열 중 seed 로 하나를 고른다.
+         * (Music 의 PaletteCatalog.select 와 같은 규칙. 장르별 계열로 되돌리려면 buildPalette 에서 GENRE_THEMES[musicStyle] 을 쓰면 된다)
+         */
+        private val AUTO_THEME = GenreTheme(
+            families = listOf(PaletteFamily.WARM, PaletteFamily.COLD),
+            rolePermutation = listOf(0, 1, 2, 3)
+        )
+
         private val GENRE_THEMES: Map<MusicStyleClassifier.MusicStyle, GenreTheme> = mapOf(
             MusicStyleClassifier.MusicStyle.BALLAD to GenreTheme(
                 families = listOf(PaletteFamily.TEAL, PaletteFamily.PURPLE, PaletteFamily.BLUE),
@@ -192,6 +224,16 @@ class EffectMatchingEngineV1(
         val rgb: List<LSColor>,
         val deep: List<LSColor>
     ) {
+        // Light-Stick-Music 의 WARM / COLD. rgb 는 [accent(단색 전용), 순환색 3개] 순서 — 역할 배치(0,1,2,3)로
+        // cMain = accent, cStep1~3 = 순환색이 된다. 기본(자동) 팔레트로 쓰이므로 맨 앞에 둔다.
+        WARM(
+            rgb  = listOf(WARM_PINK, WARM_RED, WARM_ORANGE, WARM_YELLOW),
+            deep = listOf(WARM_PINK_SHADE, WARM_RED_SHADE, WARM_ORANGE_SHADE, WARM_YELLOW_SHADE)
+        ),
+        COLD(
+            rgb  = listOf(COLD_GREEN, COLD_TEAL, COLD_BLUE, COLD_PURPLE),
+            deep = listOf(COLD_GREEN_SHADE, COLD_TEAL_SHADE, COLD_BLUE_SHADE, COLD_PURPLE_SHADE)
+        ),
         PURPLE(
             rgb  = listOf(PURPLE_MAGENTA, PURPLE_VIOLET, PURPLE_INDIGO, PURPLE_NAVY),
             deep = listOf(PURPLE_MAGENTA_SHADE, PURPLE_VIOLET_SHADE, PURPLE_INDIGO_SHADE, PURPLE_NAVY_SHADE)
@@ -232,13 +274,13 @@ class EffectMatchingEngineV1(
         val rawHue  = (((seed.toLong() * 2654435761L) ushr 8) and 0x7FFFFFFFL).toInt()
         // 장르에 어울리는 색 계열 후보군 중 하나를 seed로 결정론적으로 고른다 — 같은
         // 장르 곡들이 전부 똑같은 색은 아니게 하되, 계열 자체(=실측 RGB)는 그대로 쓴다.
-        val theme = GENRE_THEMES[musicStyle]
-        val candidates = theme?.families ?: PaletteFamily.values().toList()
+        val theme = AUTO_THEME   // 되돌리려면: GENRE_THEMES[musicStyle]
+        val candidates = theme.families
         val family = candidates[Math.floorMod(rawHue, candidates.size)]
         Log.d(TAG, "[Palette] style=$musicStyle family=$family")
         // 장르별 역할 배치(GenreTheme.rolePermutation)에 따라 family.rgb(4개 고정 RGB)를
         // cMain/cStep1~3으로 재배정한다 — 실측값을 그대로 쓰므로 변환이 필요 없다.
-        val rolePerm = theme?.rolePermutation ?: listOf(0, 1, 2, 3)
+        val rolePerm = theme.rolePermutation
         val cMain  = family.rgb[rolePerm[0]]
         val cStep1 = family.rgb[rolePerm[1]]
         val cStep2 = family.rgb[rolePerm[2]]

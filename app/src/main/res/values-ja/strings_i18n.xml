@@ -638,4 +638,8 @@
     <string name="folder_guide_later">フォルダなしで続ける</string>
     <string name="efx_default_unset">未設定: アプリ内部ストレージにのみ保存されます。フォルダを指定すると 公演名/曲名.efx のコピーを作成します。</string>
     <string name="bulk_share_selected">共有 (%1$d)</string>
+    <string name="palette_set_warm">ウォーム系</string>
+    <string name="palette_set_cool">クール系</string>
+    <string name="palette_family_warm">ウォーム</string>
+    <string name="palette_family_cool">クール</string>
 </resources>

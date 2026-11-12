@@ -1046,6 +1046,8 @@ private fun TimelineToolbar(
 
 /** 엔진이 고른 팔레트 색 계열 이름을 화면에 쓸 이름으로 바꾼다 */
 private fun familyLabel(family: String): String = when (family) {
+    "WARM" -> Loc.str(R.string.palette_family_warm)
+    "COLD" -> Loc.str(R.string.palette_family_cool)
     "PURPLE" -> Loc.str(R.string.palette_family_purple)
     "RED" -> Loc.str(R.string.palette_family_red)
     "ORANGE_GOLD" -> Loc.str(R.string.palette_family_orange_gold)
