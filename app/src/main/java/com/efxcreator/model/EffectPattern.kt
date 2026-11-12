@@ -22,10 +22,39 @@ data class PatternStep(
     val bg: String = PatternColors.BLACK,
     val frames: Int = 0,
     val spf: Int = 100,
-    val fade: Int = 100
+    val fade: Int = 100,
+    /**
+     * 색 순환: 순환할 전경색(색 역할) 목록. null 이면 순환을 쓰지 않는다(이전 버전에서 저장한 패턴도 null).
+     * 2개 이상이면 선택한 순서대로 [cycleUnit] 단위마다 색이 바뀌고, 단계의 길이는 `색 개수 × 순환 단위`가 된다 ([expanded] 참고).
+     */
+    val fgCycle: List<String>? = null,
+    /** 한 색을 유지하는 순환 단위 크기 (1~3). 단위는 [cycleByBar] 가 정한다 */
+    val cycleUnit: Int = 1,
+    /** true 면 순환 단위가 바(마디), false 면 비트(박) */
+    val cycleByBar: Boolean = false
 ) {
     val beats: Float get() = beatsTenths / 10f
     val effectType: EffectType get() = runCatching { EffectType.valueOf(type) }.getOrDefault(EffectType.ON)
+
+    /** 순환에 쓰는 색 목록 (순환을 쓰지 않으면 빈 목록) */
+    val cycleColors: List<String> get() = fgCycle.orEmpty()
+
+    /** 순환색이 2개 이상이라 실제로 색이 순환하는가 */
+    val isCycling: Boolean get() = type != "OFF" && cycleColors.size >= 2
+
+    /** 순환 한 단위의 길이 (박자의 1/10 단위). 바 단위는 [beatsPerBar] 박으로 계산한다 */
+    fun cycleUnitTenths(beatsPerBar: Int): Int =
+        cycleUnit.coerceIn(1, 3) * (if (cycleByBar) beatsPerBar.coerceAtLeast(1) else 1) * 10
+
+    /** 순환하는 단계는 색마다 하나씩 단계로 풀어 쓴다. 순환하지 않으면 자기 자신 하나 */
+    fun expanded(beatsPerBar: Int = DEFAULT_BEATS_PER_BAR): List<PatternStep> =
+        if (!isCycling) listOf(this)
+        else cycleColors.map { c -> copy(fg = c, beatsTenths = cycleUnitTenths(beatsPerBar), fgCycle = null) }
+
+    companion object {
+        /** 곡의 박자 정보가 없을 때 바(마디) 하나를 몇 박으로 볼지 (4/4) */
+        const val DEFAULT_BEATS_PER_BAR = 4
+    }
 }
 
 /** 이름을 붙인 단계들의 묶음. 예) ON_PULSE = [ON 0.4박, ON 1.6박 (Transit 3)] */
@@ -38,7 +67,11 @@ data class EffectPattern(
     /** 한 줄 설명 (기본 제공 이펙트에 쓴다) */
     val description: String = ""
 ) {
-    val totalBeatsTenths: Int get() = steps.sumOf { it.beatsTenths }
+    /** 순환하는 단계를 색마다 하나씩 풀어 쓴 단계 목록 (실제로 타임라인/기기에 나가는 단계) */
+    fun expandedSteps(beatsPerBar: Int = PatternStep.DEFAULT_BEATS_PER_BAR): List<PatternStep> =
+        steps.flatMap { it.expanded(beatsPerBar) }
+
+    val totalBeatsTenths: Int get() = expandedSteps().sumOf { it.beatsTenths }
 }
 
 /** 패턴 단계가 고를 수 있는 색 역할 */
@@ -98,13 +131,16 @@ object PatternResolver {
         Math.round(step.beatsTenths / 10.0 * beatMs / 10.0) * 10L
 
     /** 패턴 전체 길이(ms) = 단계 길이의 합 */
-    fun totalDurationMs(pattern: EffectPattern, beatMs: Long): Long =
-        pattern.steps.sumOf { durationMs(it, beatMs) }
+    fun totalDurationMs(pattern: EffectPattern, beatMs: Long, beatsPerBar: Int = PatternStep.DEFAULT_BEATS_PER_BAR): Long =
+        pattern.expandedSteps(beatsPerBar).sumOf { durationMs(it, beatMs) }
 
     /** 시작 시각 [startMs] 부터 단계마다 하나씩 타임라인 엔트리를 만든다 */
-    fun expand(pattern: EffectPattern, startMs: Long, beatMs: Long, palette: PaletteSet?): List<EfxEntry> {
+    fun expand(
+        pattern: EffectPattern, startMs: Long, beatMs: Long, palette: PaletteSet?,
+        beatsPerBar: Int = PatternStep.DEFAULT_BEATS_PER_BAR
+    ): List<EfxEntry> {
         var t = startMs
-        return pattern.steps.map { step ->
+        return pattern.expandedSteps(beatsPerBar).map { step ->
             EfxEntry(t, payload(step, palette)).also { t += durationMs(step, beatMs) }
         }
     }

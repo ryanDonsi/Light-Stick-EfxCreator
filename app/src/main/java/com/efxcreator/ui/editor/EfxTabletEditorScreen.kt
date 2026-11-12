@@ -111,6 +111,7 @@ import com.efxcreator.viewmodel.EfxEditViewModel
 import com.efxcreator.viewmodel.PatternsViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.model.PatternResolver
+import com.efxcreator.model.PatternStep
 import com.lightstick.efx.EfxEntry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -355,10 +356,12 @@ fun EfxTabletEditorScreen(
             pendingSelectTs = ts
             // 시작 위치부터 이펙트 길이(비트 수)만큼의 기존 엔트리는 새 이펙트로 교체된다
             val beatMs = beatLengthAt(ts)
+            // 바 단위 색 순환은 곡의 박자 수(분석 결과)로 계산하고, 없으면 4/4 로 본다
+            val barBeats = analysis?.engineInput?.beatsPerBar ?: PatternStep.DEFAULT_BEATS_PER_BAR
             editVm.addTimelineEntries(
-                PatternResolver.expand(pattern, ts, beatMs, palette),
+                PatternResolver.expand(pattern, ts, beatMs, palette, barBeats),
                 replaceFromMs = ts,
-                replaceToMs = ts + PatternResolver.totalDurationMs(pattern, beatMs)
+                replaceToMs = ts + PatternResolver.totalDurationMs(pattern, beatMs, barBeats)
             )
             return
         }

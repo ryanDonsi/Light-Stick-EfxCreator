@@ -642,4 +642,12 @@
     <string name="palette_set_cool">쿨 계열</string>
     <string name="palette_family_warm">웜</string>
     <string name="palette_family_cool">쿨</string>
+    <string name="pattern_cycle_toggle">색 순환</string>
+    <string name="pattern_cycle_hint">순환할 색을 2개 이상 선택하세요 (선택한 순서대로 순환)</string>
+    <string name="pattern_cycle_unit">순환 단위</string>
+    <string name="pattern_cycle_beat">비트</string>
+    <string name="pattern_cycle_bar">바</string>
+    <string name="pattern_cycle_length" formatted="false">순환 %1$d색 × %2$d%3$s = %4$s박</string>
+    <string name="pattern_cycle_note">바 = 곡의 박자 수(자동 생성 시), 직접 넣을 때는 4박 기준</string>
+    <string name="pattern_cycle_summary" formatted="false">순환 %1$d%2$s</string>
 </resources>

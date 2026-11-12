@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -39,6 +40,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -92,13 +94,18 @@ private const val MAX_BEAT_MS = 1500  // 40 BPM
 
 /** 한 단계를 "1. ON 0.3박 · 화이트" 처럼 한 줄로 요약한다 */
 fun PatternStep.summary(index: Int): String {
+    val fgText = if (isCycling) {
+        cycleColors.joinToString(" → ") { PatternColors.label(it) } +
+            " (${Loc.str(R.string.pattern_cycle_summary, cycleUnit.coerceIn(1, 3), Loc.str(if (cycleByBar) R.string.pattern_cycle_bar else R.string.pattern_cycle_beat))})"
+    } else PatternColors.label(fg)
     val colors = when {
         type == "OFF" -> ""
-        isTwoColor(type) -> " · ${PatternColors.label(fg)} / ${PatternColors.label(bg)}"
-        else -> " · ${PatternColors.label(fg)}"
+        isTwoColor(type) -> " · $fgText / ${PatternColors.label(bg)}"
+        else -> " · $fgText"
     }
     val frame = if (frames > 0) " · ${if (type == "ON" || type == "OFF") Loc.str(R.string.label_transit) else Loc.str(R.string.label_period)} ${frames}f" else ""
-    return Loc.str(R.string.pattern_panel_1, index + 1, type, "%.1f".format(Locale.US, beats), colors, frame)
+    val lengthBeats = if (isCycling) expanded().sumOf { it.beatsTenths } / 10f else beats
+    return Loc.str(R.string.pattern_panel_1, index + 1, type, "%.1f".format(Locale.US, lengthBeats), colors, frame)
 }
 
 private fun formatBeats(tenths: Int) = "%.1f".format(Locale.US, tenths / 10f)
@@ -246,7 +253,7 @@ fun EffectPatternsPanel(
                         Text(step.summary(i), style = MaterialTheme.typography.bodySmall)
                     }
                     HorizontalDivider()
-                    PatternTester(pattern.steps, paletteSets, bleVm)
+                    PatternTester(pattern.expandedSteps(), paletteSets, bleVm)
                 }
             },
             confirmButton = { TextButton(onClick = { testing = null }) { Text(Loc.str(R.string.efx_edit_screen_6)) } }
@@ -283,7 +290,7 @@ fun PatternEditorDialog(
 ) {
     var name by remember { mutableStateOf(initial.name) }
     val steps = remember { initial.steps.toMutableStateList() }
-    val total = steps.sumOf { it.beatsTenths }
+    val total = steps.sumOf { step -> step.expanded().sumOf { it.beatsTenths } }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -328,7 +335,7 @@ fun PatternEditorDialog(
                 }
                 HorizontalDivider()
                 Text(Loc.str(R.string.pattern_panel_8), style = MaterialTheme.typography.titleSmall)
-                PatternTester(steps.toList(), paletteSets, bleVm)
+                PatternTester(steps.flatMap { it.expanded() }, paletteSets, bleVm)
             }
         },
         confirmButton = {
@@ -373,7 +380,18 @@ private fun StepEditor(
                     )
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (step.isCycling) {
+                // 색 순환 중에는 길이가 "색 개수 × 순환 단위"로 정해지므로 직접 입력하지 않는다
+                Text(
+                    Loc.str(
+                        R.string.pattern_cycle_length,
+                        step.cycleColors.size, step.cycleUnit.coerceIn(1, 3),
+                        Loc.str(if (step.cycleByBar) R.string.pattern_cycle_bar else R.string.pattern_cycle_beat),
+                        formatBeats(step.expanded().sumOf { it.beatsTenths })
+                    ),
+                    style = MaterialTheme.typography.labelLarge
+                )
+            } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(Loc.str(R.string.pattern_panel_23), style = MaterialTheme.typography.labelLarge)
                 IconButton(onClick = { onChange(step.copy(beatsTenths = (step.beatsTenths - 1).coerceAtLeast(1))) }) {
                     Icon(Icons.Default.Remove, contentDescription = Loc.str(R.string.pattern_panel_24))
@@ -386,11 +404,14 @@ private fun StepEditor(
             }
             if (step.type != "OFF") {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ColorRefDropdown(Loc.str(R.string.pattern_panel_27), step.fg) { onChange(step.copy(fg = it)) }
+                    if (step.fgCycle == null) {
+                        ColorRefDropdown(Loc.str(R.string.pattern_panel_27), step.fg) { onChange(step.copy(fg = it)) }
+                    }
                     if (isTwoColor(step.type)) {
                         ColorRefDropdown(Loc.str(R.string.efx_tablet_editor_screen_40), step.bg) { onChange(step.copy(bg = it)) }
                     }
                 }
+                CycleControls(step, onChange)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 NumberTextField(
@@ -421,6 +442,51 @@ private fun StepEditor(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+/**
+ * 색 순환 설정: 순환할 색을 2개 이상 고르고(선택한 순서대로 순환), 한 색을 유지하는 단위를 1~3 비트 또는 1~3 바로 정한다.
+ */
+@Composable
+private fun CycleControls(step: PatternStep, onChange: (PatternStep) -> Unit) {
+    val cycle = step.fgCycle
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Switch(
+            checked = cycle != null,
+            onCheckedChange = { on -> onChange(if (on) step.copy(fgCycle = listOf(step.fg)) else step.copy(fgCycle = null)) }
+        )
+        Text(Loc.str(R.string.pattern_cycle_toggle), style = MaterialTheme.typography.labelLarge)
+    }
+    if (cycle == null) return
+    // 색 선택: 고른 순서가 순환 순서다. 첫 색은 단일 색(fg)과 같게 맞춰 둔다
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        PatternColors.OPTIONS.forEach { (key, name) ->
+            val order = cycle.indexOf(key)
+            FilterChip(
+                selected = order >= 0,
+                onClick = {
+                    val next = if (order >= 0) cycle - key else cycle + key
+                    onChange(step.copy(fgCycle = next, fg = next.firstOrNull() ?: step.fg))
+                },
+                label = { Text(if (order >= 0) "${order + 1}. $name" else name) }
+            )
+        }
+    }
+    if (cycle.size < 2) {
+        Text(Loc.str(R.string.pattern_cycle_hint), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(Loc.str(R.string.pattern_cycle_unit), style = MaterialTheme.typography.labelMedium)
+        (1..3).forEach { n ->
+            FilterChip(selected = step.cycleUnit == n, onClick = { onChange(step.copy(cycleUnit = n)) }, label = { Text("$n") })
+        }
+        Spacer(Modifier.width(6.dp))
+        FilterChip(selected = !step.cycleByBar, onClick = { onChange(step.copy(cycleByBar = false)) }, label = { Text(Loc.str(R.string.pattern_cycle_beat)) })
+        FilterChip(selected = step.cycleByBar, onClick = { onChange(step.copy(cycleByBar = true)) }, label = { Text(Loc.str(R.string.pattern_cycle_bar)) })
+    }
+    if (step.cycleByBar) {
+        Text(Loc.str(R.string.pattern_cycle_bar_note), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

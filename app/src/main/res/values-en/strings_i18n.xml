@@ -642,4 +642,12 @@
     <string name="palette_set_cool">Cool family</string>
     <string name="palette_family_warm">Warm</string>
     <string name="palette_family_cool">Cool</string>
+    <string name="pattern_cycle_toggle">Color cycle</string>
+    <string name="pattern_cycle_hint">Select 2 or more colors to cycle (in the order selected)</string>
+    <string name="pattern_cycle_unit">Cycle unit</string>
+    <string name="pattern_cycle_beat">beat</string>
+    <string name="pattern_cycle_bar">bar</string>
+    <string name="pattern_cycle_length" formatted="false">%1$d colors × %2$d %3$s = %4$s beats</string>
+    <string name="pattern_cycle_note">Bar = the song\'s beats per bar (auto generation); 4 beats when placed manually</string>
+    <string name="pattern_cycle_summary" formatted="false">cycle %1$d %2$s</string>
 </resources>

@@ -642,4 +642,12 @@
     <string name="palette_set_cool">クール系</string>
     <string name="palette_family_warm">ウォーム</string>
     <string name="palette_family_cool">クール</string>
+    <string name="pattern_cycle_toggle">色の循環</string>
+    <string name="pattern_cycle_hint">循環する色を2つ以上選択してください（選択した順に循環）</string>
+    <string name="pattern_cycle_unit">循環単位</string>
+    <string name="pattern_cycle_beat">拍</string>
+    <string name="pattern_cycle_bar">小節</string>
+    <string name="pattern_cycle_length" formatted="false">循環 %1$d色 × %2$d%3$s = %4$s拍</string>
+    <string name="pattern_cycle_note">小節 = 曲の拍数（自動生成時）、手動配置時は4拍基準</string>
+    <string name="pattern_cycle_summary" formatted="false">循環 %1$d%2$s</string>
 </resources>

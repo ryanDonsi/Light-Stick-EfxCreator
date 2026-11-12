@@ -554,13 +554,14 @@ class EffectMatchingEngineV1(
                         // 이펙트 라이브러리의 이펙트: 이 박에서 시작해 단계들을 박자 길이에 맞춰 넣는다.
                         // 이미 앞선 이펙트가 진행 중인 박은 건너뛴다.
                         if (t < patternBusyUntil) continue
-                        val frames = patternFrames(pattern, t, section.endMs, section.beatMs, palette)
+                        val frames = patternFrames(pattern, t, section.endMs, section.beatMs, beatsPerBar, palette)
                         lastRepeatKey = null
                         val single = frames.singleOrNull()?.second
-                        val same = pattern.steps.size == 1 && single != null && lastPatternBytes?.contentEquals(single) == true
+                        val oneStep = pattern.expandedSteps(beatsPerBar).size == 1
+                        val same = oneStep && single != null && lastPatternBytes?.contentEquals(single) == true
                         if (!same) frames.forEach { (ft, bytes) -> put(ft, bytes) }
-                        lastPatternBytes = if (pattern.steps.size == 1) single else null
-                        patternBusyUntil = t + PatternResolver.totalDurationMs(pattern, section.beatMs)
+                        lastPatternBytes = if (oneStep) single else null
+                        patternBusyUntil = t + PatternResolver.totalDurationMs(pattern, section.beatMs, beatsPerBar)
                         patternLastFg(pattern, palette)?.let { lastFg = it }
                         continue
                     }
@@ -689,12 +690,14 @@ class EffectMatchingEngineV1(
 
     /** 이펙트 라이브러리 이펙트를 [startMs] 부터 단계별 프레임으로 펼친다 (섹션 끝을 넘는 단계는 버린다) */
     private fun patternFrames(
-        pattern: EffectPattern, startMs: Long, endLimitMs: Long, beatMs: Long,
+        pattern: EffectPattern, startMs: Long, endLimitMs: Long, beatMs: Long, beatsPerBar: Int,
         palette: EffectMatchingEngine.Palette
     ): List<Pair<Long, ByteArray>> {
         var t = startMs
-        val out = ArrayList<Pair<Long, ByteArray>>(pattern.steps.size)
-        for (step in pattern.steps) {
+        // 색 순환 단계는 색마다 하나씩 풀어서 넣는다 (바 단위 순환은 곡의 박자 수로 계산)
+        val steps = pattern.expandedSteps(beatsPerBar)
+        val out = ArrayList<Pair<Long, ByteArray>>(steps.size)
+        for (step in steps) {
             if (t >= endLimitMs) break
             out += t to PatternResolver.payloadWith(step) { roleColor(it, palette) }.toByteArray()
             t += PatternResolver.durationMs(step, beatMs)
@@ -704,7 +707,7 @@ class EffectMatchingEngineV1(
 
     /** OUTRO 페이드가 이어받을 "마지막으로 떠 있던 색": 이펙트의 단계 중 검정이 아닌 마지막 색 */
     private fun patternLastFg(pattern: EffectPattern, palette: EffectMatchingEngine.Palette): LSColor? =
-        pattern.steps.lastOrNull { it.effectType != com.lightstick.types.EffectType.OFF && it.fg != "BLACK" }
+        pattern.expandedSteps().lastOrNull { it.effectType != com.lightstick.types.EffectType.OFF && it.fg != "BLACK" }
             ?.let { step -> roleColor(step.fg, palette).let { LSColor(it.r, it.g, it.b) } }
 
     private fun scaleColor(c: LSColor, factor: Float): LSColor {
