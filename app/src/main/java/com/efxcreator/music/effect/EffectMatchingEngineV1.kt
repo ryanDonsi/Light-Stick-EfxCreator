@@ -176,12 +176,10 @@ class EffectMatchingEngineV1(
         private data class GenreTheme(val families: List<PaletteFamily>, val rolePermutation: List<Int>)
 
         /**
-         * 기본(자동) 팔레트: Light-Stick-Music 처럼 장르와 상관없이 WARM / COLD 2계열 중 seed 로 하나를 고른다.
-         * (Music 의 PaletteCatalog.select 와 같은 규칙. 장르별 계열로 되돌리려면 buildPalette 에서 GENRE_THEMES[musicStyle] 을 쓰면 된다)
+         * 자동 선택이 고르는 기존 5계열. WARM / COLD 는 자동으로 뽑히지 않고, 팔레트 세트에서 사용자가 골라 쓴다.
          */
-        private val AUTO_THEME = GenreTheme(
-            families = listOf(PaletteFamily.WARM, PaletteFamily.COLD),
-            rolePermutation = listOf(0, 1, 2, 3)
+        private val AUTO_FAMILIES = listOf(
+            PaletteFamily.PURPLE, PaletteFamily.RED, PaletteFamily.ORANGE_GOLD, PaletteFamily.TEAL, PaletteFamily.BLUE
         )
 
         private val GENRE_THEMES: Map<MusicStyleClassifier.MusicStyle, GenreTheme> = mapOf(
@@ -206,7 +204,7 @@ class EffectMatchingEngineV1(
                 rolePermutation = listOf(0, 1, 2, 3)
             ),
             MusicStyleClassifier.MusicStyle.POP to GenreTheme(
-                families = PaletteFamily.values().toList(),
+                families = AUTO_FAMILIES,
                 rolePermutation = listOf(1, 0, 2, 3)
             )
         )
@@ -229,9 +227,32 @@ class EffectMatchingEngineV1(
         /** 이펙트별 색 표(Music 의 PaletteCatalog 방식). 없으면 rgb 4개에서 계산한다 */
         val explicit: EffectMatchingEngine.ExplicitColors? = null
     ) {
-        // Light-Stick-Music 의 WARM / COLD. rgb 는 [accent(단색 전용), 순환색 3개] 순서 — 역할 배치(0,1,2,3)로
-        // cMain = accent, cStep1~3 = 순환색이 된다. 기본(자동) 팔레트로 쓰이므로 맨 앞에 둔다.
-        // 이펙트별 색 표는 Music 의 PaletteCatalog.WARM_SET / COLD_SET 과 같다.
+        PURPLE(
+            rgb  = listOf(PURPLE_MAGENTA, PURPLE_VIOLET, PURPLE_INDIGO, PURPLE_NAVY),
+            deep = listOf(PURPLE_MAGENTA_SHADE, PURPLE_VIOLET_SHADE, PURPLE_INDIGO_SHADE, PURPLE_NAVY_SHADE)
+        ),
+        // 0/360도 경계를 넘어간다. 세 번째 자리는 보간값이 아니라 RED_PURE로 고정.
+        RED(
+            rgb  = listOf(RED_MAGENTA, RED_ROSE, RED_PURE, RED_VERMILION),
+            deep = listOf(RED_MAGENTA_SHADE, RED_ROSE_SHADE, RED_PURE_SHADE, RED_VERMILION_SHADE)
+        ),
+        ORANGE_GOLD(
+            rgb  = listOf(ORANGE_GOLD_DEEP, ORANGE_GOLD_ORANGE, ORANGE_GOLD_AMBER, ORANGE_GOLD_LIME),
+            deep = listOf(ORANGE_GOLD_DEEP_SHADE, ORANGE_GOLD_ORANGE_SHADE, ORANGE_GOLD_AMBER_SHADE, ORANGE_GOLD_LIME_SHADE)
+        ),
+        TEAL(
+            rgb  = listOf(TEAL_YELLOWGREEN, TEAL_GREEN, TEAL_MINT, TEAL_CYAN),
+            deep = listOf(TEAL_YELLOWGREEN_SHADE, TEAL_GREEN_SHADE, TEAL_MINT_SHADE, TEAL_CYAN_SHADE)
+        ),
+        // 네 번째 자리(BLUE_PURE)가 이미 순수 파랑(0,0,255).
+        BLUE(
+            rgb  = listOf(BLUE_SEAFOAM, BLUE_SKYCYAN, BLUE_AZURE, BLUE_PURE),
+            deep = listOf(BLUE_SEAFOAM_SHADE, BLUE_SKYCYAN_SHADE, BLUE_AZURE_SHADE, BLUE_PURE_SHADE)
+        ),
+
+        // Light-Stick-Music 의 WARM / COLD 세트. rgb 는 [단색 전용(accent), 순환색 3개] 순서이고,
+        // 이펙트별 색 표(explicit)는 Music 의 PaletteCatalog.WARM_SET / COLD_SET 과 같다.
+        // 자동 선택에는 쓰이지 않고 팔레트 세트에서 직접 고르면 적용된다.
         WARM(
             rgb  = listOf(WARM_PINK, WARM_RED, WARM_ORANGE, WARM_YELLOW),
             deep = listOf(WARM_PINK_SHADE, WARM_RED_SHADE, WARM_ORANGE_SHADE, WARM_YELLOW_SHADE),
@@ -257,28 +278,6 @@ class EffectMatchingEngineV1(
                 breathDefault      = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK),
                 freeze             = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK)
             )
-        ),
-        PURPLE(
-            rgb  = listOf(PURPLE_MAGENTA, PURPLE_VIOLET, PURPLE_INDIGO, PURPLE_NAVY),
-            deep = listOf(PURPLE_MAGENTA_SHADE, PURPLE_VIOLET_SHADE, PURPLE_INDIGO_SHADE, PURPLE_NAVY_SHADE)
-        ),
-        // 0/360도 경계를 넘어간다. 세 번째 자리는 보간값이 아니라 RED_PURE로 고정.
-        RED(
-            rgb  = listOf(RED_MAGENTA, RED_ROSE, RED_PURE, RED_VERMILION),
-            deep = listOf(RED_MAGENTA_SHADE, RED_ROSE_SHADE, RED_PURE_SHADE, RED_VERMILION_SHADE)
-        ),
-        ORANGE_GOLD(
-            rgb  = listOf(ORANGE_GOLD_DEEP, ORANGE_GOLD_ORANGE, ORANGE_GOLD_AMBER, ORANGE_GOLD_LIME),
-            deep = listOf(ORANGE_GOLD_DEEP_SHADE, ORANGE_GOLD_ORANGE_SHADE, ORANGE_GOLD_AMBER_SHADE, ORANGE_GOLD_LIME_SHADE)
-        ),
-        TEAL(
-            rgb  = listOf(TEAL_YELLOWGREEN, TEAL_GREEN, TEAL_MINT, TEAL_CYAN),
-            deep = listOf(TEAL_YELLOWGREEN_SHADE, TEAL_GREEN_SHADE, TEAL_MINT_SHADE, TEAL_CYAN_SHADE)
-        ),
-        // 네 번째 자리(BLUE_PURE)가 이미 순수 파랑(0,0,255).
-        BLUE(
-            rgb  = listOf(BLUE_SEAFOAM, BLUE_SKYCYAN, BLUE_AZURE, BLUE_PURE),
-            deep = listOf(BLUE_SEAFOAM_SHADE, BLUE_SKYCYAN_SHADE, BLUE_AZURE_SHADE, BLUE_PURE_SHADE)
         )
     }
 
@@ -298,13 +297,13 @@ class EffectMatchingEngineV1(
         val rawHue  = (((seed.toLong() * 2654435761L) ushr 8) and 0x7FFFFFFFL).toInt()
         // 장르에 어울리는 색 계열 후보군 중 하나를 seed로 결정론적으로 고른다 — 같은
         // 장르 곡들이 전부 똑같은 색은 아니게 하되, 계열 자체(=실측 RGB)는 그대로 쓴다.
-        val theme = AUTO_THEME   // 되돌리려면: GENRE_THEMES[musicStyle]
-        val candidates = theme.families
+        val theme = GENRE_THEMES[musicStyle]
+        val candidates = theme?.families ?: AUTO_FAMILIES
         val family = candidates[Math.floorMod(rawHue, candidates.size)]
         Log.d(TAG, "[Palette] style=$musicStyle family=$family")
         // 장르별 역할 배치(GenreTheme.rolePermutation)에 따라 family.rgb(4개 고정 RGB)를
         // cMain/cStep1~3으로 재배정한다 — 실측값을 그대로 쓰므로 변환이 필요 없다.
-        val rolePerm = theme.rolePermutation
+        val rolePerm = theme?.rolePermutation ?: listOf(0, 1, 2, 3)
         val cMain  = family.rgb[rolePerm[0]]
         val cStep1 = family.rgb[rolePerm[1]]
         val cStep2 = family.rgb[rolePerm[2]]
@@ -319,8 +318,10 @@ class EffectMatchingEngineV1(
     /** 사용자 팔레트 세트(대표색 + 단계색 3개)로 팔레트를 만든다. 어두운 톤(cDeep)은 대표색 명도 48%. */
     override fun buildCustomPalette(set: PaletteSet): EffectMatchingEngine.Palette {
         val cMain = set.main.toLs()
+        // 내장 WARM / COLD 세트는 Music 과 같은 이펙트별 색 표로 색을 고른다 (그 외 세트는 4색에서 계산)
+        val tabled = PaletteFamily.values().firstOrNull { it.explicit != null && set.id == "builtin_${it.name.lowercase()}" }
         return paletteFromColors(cMain, set.step1.toLs(), set.step2.toLs(), set.step3.toLs(),
-            scaleColor(cMain, 0.48f), "CUSTOM")
+            scaleColor(cMain, 0.48f), tabled?.name ?: "CUSTOM", tabled?.explicit)
     }
 
     private fun paletteFromColors(
