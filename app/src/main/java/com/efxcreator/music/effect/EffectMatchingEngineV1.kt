@@ -101,6 +101,9 @@ private val BLUE_SKYCYAN_SHADE = LSColor(0, 111, 122)   // 하늘청록 셰이�
 private val BLUE_AZURE_SHADE   = LSColor(0, 55, 122)    // 파랑 셰이드
 private val BLUE_PURE_SHADE    = LSColor(0, 0, 122)     // 순수 파랑 셰이드
 
+private val PALETTE_BLACK = LSColor(0, 0, 0)
+private val PALETTE_WHITE = LSColor(255, 255, 255)
+
 // WARM / COLD 스와치의 셰이드(명도 48%)
 private val WARM_PINK_SHADE   = LSColor(122, 0, 60)
 private val WARM_RED_SHADE    = LSColor(122, 0, 0)
@@ -222,17 +225,38 @@ class EffectMatchingEngineV1(
      */
     private enum class PaletteFamily(
         val rgb: List<LSColor>,
-        val deep: List<LSColor>
+        val deep: List<LSColor>,
+        /** 이펙트별 색 표(Music 의 PaletteCatalog 방식). 없으면 rgb 4개에서 계산한다 */
+        val explicit: EffectMatchingEngine.ExplicitColors? = null
     ) {
         // Light-Stick-Music 의 WARM / COLD. rgb 는 [accent(단색 전용), 순환색 3개] 순서 — 역할 배치(0,1,2,3)로
         // cMain = accent, cStep1~3 = 순환색이 된다. 기본(자동) 팔레트로 쓰이므로 맨 앞에 둔다.
+        // 이펙트별 색 표는 Music 의 PaletteCatalog.WARM_SET / COLD_SET 과 같다.
         WARM(
             rgb  = listOf(WARM_PINK, WARM_RED, WARM_ORANGE, WARM_YELLOW),
-            deep = listOf(WARM_PINK_SHADE, WARM_RED_SHADE, WARM_ORANGE_SHADE, WARM_YELLOW_SHADE)
+            deep = listOf(WARM_PINK_SHADE, WARM_RED_SHADE, WARM_ORANGE_SHADE, WARM_YELLOW_SHADE),
+            explicit = EffectMatchingEngine.ExplicitColors(
+                onPulse            = EffectMatchingEngine.EffectColors(listOf(WARM_RED, WARM_ORANGE, WARM_YELLOW), PALETTE_BLACK),
+                blink              = EffectMatchingEngine.EffectColors(listOf(WARM_RED, WARM_ORANGE, WARM_YELLOW), COLD_BLUE),
+                chorus             = EffectMatchingEngine.EffectColors(listOf(PALETTE_WHITE, WARM_RED, WARM_YELLOW, WARM_ORANGE), PALETTE_BLACK),
+                breathVerse        = EffectMatchingEngine.EffectColors(listOf(WARM_RED, WARM_ORANGE, WARM_YELLOW), PALETTE_BLACK),
+                breathBridgeBallad = EffectMatchingEngine.EffectColors(listOf(WARM_PINK), PALETTE_BLACK),
+                breathDefault      = EffectMatchingEngine.EffectColors(listOf(WARM_PINK), PALETTE_BLACK),
+                freeze             = EffectMatchingEngine.EffectColors(listOf(WARM_PINK), PALETTE_BLACK)
+            )
         ),
         COLD(
             rgb  = listOf(COLD_GREEN, COLD_TEAL, COLD_BLUE, COLD_PURPLE),
-            deep = listOf(COLD_GREEN_SHADE, COLD_TEAL_SHADE, COLD_BLUE_SHADE, COLD_PURPLE_SHADE)
+            deep = listOf(COLD_GREEN_SHADE, COLD_TEAL_SHADE, COLD_BLUE_SHADE, COLD_PURPLE_SHADE),
+            explicit = EffectMatchingEngine.ExplicitColors(
+                onPulse            = EffectMatchingEngine.EffectColors(listOf(COLD_TEAL, COLD_BLUE, COLD_PURPLE), PALETTE_BLACK),
+                blink              = EffectMatchingEngine.EffectColors(listOf(COLD_TEAL, COLD_BLUE, COLD_PURPLE), WARM_YELLOW),
+                chorus             = EffectMatchingEngine.EffectColors(listOf(PALETTE_WHITE, COLD_TEAL, COLD_PURPLE, COLD_BLUE), PALETTE_BLACK),
+                breathVerse        = EffectMatchingEngine.EffectColors(listOf(COLD_TEAL, COLD_BLUE, COLD_PURPLE), PALETTE_BLACK),
+                breathBridgeBallad = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK),
+                breathDefault      = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK),
+                freeze             = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK)
+            )
         ),
         PURPLE(
             rgb  = listOf(PURPLE_MAGENTA, PURPLE_VIOLET, PURPLE_INDIGO, PURPLE_NAVY),
@@ -289,7 +313,7 @@ class EffectMatchingEngineV1(
         // 자주 눈에 띈다는 피드백으로 더 이상 쓰지 않는다. 대신 family.deep(명도만 48%로
         // 낮춘 톤)은 cDeep으로 그대로 사용.
         val cDeep  = family.deep[rolePerm[0]]
-        return paletteFromColors(cMain, cStep1, cStep2, cStep3, cDeep, family.name)
+        return paletteFromColors(cMain, cStep1, cStep2, cStep3, cDeep, family.name, family.explicit)
     }
 
     /** 사용자 팔레트 세트(대표색 + 단계색 3개)로 팔레트를 만든다. 어두운 톤(cDeep)은 대표색 명도 48%. */
@@ -300,7 +324,8 @@ class EffectMatchingEngineV1(
     }
 
     private fun paletteFromColors(
-        cMain: LSColor, cStep1: LSColor, cStep2: LSColor, cStep3: LSColor, cDeep: LSColor, familyName: String
+        cMain: LSColor, cStep1: LSColor, cStep2: LSColor, cStep3: LSColor, cDeep: LSColor, familyName: String,
+        explicit: EffectMatchingEngine.ExplicitColors? = null
     ): EffectMatchingEngine.Palette {
         val black  = LSColor(0, 0, 0)
         val white = LSColor(255, 255, 255)
@@ -350,7 +375,8 @@ class EffectMatchingEngineV1(
             verseBlinkBg = verseBlinkBg,
             verseBlinkFgCycle = verseBlinkFgCycle,
             chorusColors = chorusColors,
-            roleColors = listOf(cMain, cStep1, cStep2, cStep3)
+            roleColors = listOf(cMain, cStep1, cStep2, cStep3),
+            explicit = explicit
         )
     }
 
@@ -771,6 +797,8 @@ class EffectMatchingEngineV1(
         beatIndex: Int = 0, sectionType: SectionDetector.SectionType = SectionDetector.SectionType.VERSE,
         barIdx: Int = 0, isBalladMode: Boolean = false
     ): Pair<LSColor, LSColor?> {
+        // 이펙트별 색 표가 있는 팔레트(WARM/COLD)는 Music 과 같은 규칙으로 색을 고른다
+        palette.explicit?.let { return explicitColorsForEngine(it, palette, engine, beatIndex, sectionType, barIdx, isBalladMode) }
         val isPatternA = (sectionIndex % 2 == 0)
         // 예전엔 "CHORUS면 chorusColors, 아니면 colorGroup"을 effectiveColors 하나로
         // 묶어서 ON_PULSE/BREATH/ON_TRANSIT_ROTATE가 전부 같이 참조했는데, 실제로는
@@ -835,6 +863,31 @@ class EffectMatchingEngineV1(
             // OFF_TRANSIT 섹션은 buildFramesFromSections에서 이미 continue로 걸러져 여기 도달하지 않음
             EffectMatchingEngine.FgEngine.OFF_TRANSIT -> palette.black to palette.black
         }
+    }
+
+    /** Music 의 FgEngineEffect.pick 과 같다: fgCycle 에서 idx 번째(순환), bg 는 bgCycle 이 있으면 순환, 없으면 고정 */
+    private fun pickExplicit(ec: EffectMatchingEngine.EffectColors, idx: Int): Pair<LSColor, LSColor?> {
+        val fg = ec.fgCycle[Math.floorMod(idx, ec.fgCycle.size)]
+        val bg = ec.bgCycle?.let { it[Math.floorMod(idx, it.size)] } ?: ec.bg
+        return fg to bg
+    }
+
+    /** 이펙트별 색 표대로 (전경색, 배경색)을 고른다. 이펙트가 쓰는 순환 기준(bar/박)은 Music 과 같다 */
+    private fun explicitColorsForEngine(
+        t: EffectMatchingEngine.ExplicitColors, palette: EffectMatchingEngine.Palette,
+        engine: EffectMatchingEngine.FgEngine, beatIndex: Int,
+        sectionType: SectionDetector.SectionType, barIdx: Int, isBalladMode: Boolean
+    ): Pair<LSColor, LSColor?> = when (engine) {
+        EffectMatchingEngine.FgEngine.ON_PULSE -> pickExplicit(t.onPulse, barIdx)
+        EffectMatchingEngine.FgEngine.BLINK -> pickExplicit(t.blink, barIdx)
+        EffectMatchingEngine.FgEngine.ON_TRANSIT_ROTATE -> pickExplicit(t.chorus, beatIndex)
+        EffectMatchingEngine.FgEngine.BREATH -> when {
+            sectionType == SectionDetector.SectionType.BRIDGE && isBalladMode -> pickExplicit(t.breathBridgeBallad, 0)
+            sectionType == SectionDetector.SectionType.VERSE -> pickExplicit(t.breathVerse, barIdx)
+            else -> pickExplicit(t.breathDefault, 0)
+        }
+        EffectMatchingEngine.FgEngine.FREEZE -> pickExplicit(t.freeze, 0)
+        EffectMatchingEngine.FgEngine.OFF_TRANSIT -> palette.black to palette.black
     }
 
     private fun buildPayload(

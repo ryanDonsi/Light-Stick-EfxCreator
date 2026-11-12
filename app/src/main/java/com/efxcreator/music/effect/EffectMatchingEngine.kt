@@ -47,6 +47,26 @@ interface EffectMatchingEngine {
     }
     enum class ChangeLevel { MEDIUM, STRONG }
 
+    /**
+     * 이펙트 하나가 쓰는 색 표 (Light-Stick-Music 의 EffectColors 와 같다).
+     * fgCycle 은 bar/박마다 순환하는 전경색, bg 는 배경색, bgCycle 이 있으면 배경색도 같은 방식으로 순환한다.
+     */
+    data class EffectColors(val fgCycle: List<LSColor>, val bg: LSColor, val bgCycle: List<LSColor>? = null)
+
+    /**
+     * 이펙트별로 직접 정해 둔 색 표 (Music 의 PaletteCatalog 방식). 팔레트에 이 값이 있으면
+     * 4색에서 계산하지 않고 이 표대로 색을 고른다.
+     */
+    data class ExplicitColors(
+        val onPulse: EffectColors,            // ON_PULSE(VERSE, 비발라드)
+        val blink: EffectColors,              // BLINK(VERSE 고에너지 bar, 비발라드)
+        val chorus: EffectColors,             // ON_TRANSIT_ROTATE(CHORUS)
+        val breathVerse: EffectColors,        // BREATH(VERSE)
+        val breathBridgeBallad: EffectColors, // BREATH(BRIDGE, 발라드)
+        val breathDefault: EffectColors,      // BREATH(그 외 — INTRO, BRIDGE 비발라드)
+        val freeze: EffectColors              // FREEZE(BREAK)
+    )
+
     data class Palette(
         val black: LSColor, val white: LSColor,
         // 이 팔레트가 선택한 색 계열의 이름(V1: PaletteFamily.name, 예 "PURPLE"/"RED"/
@@ -69,7 +89,9 @@ interface EffectMatchingEngine {
         // 골라 전환마다 또렷이 달라지도록 white 포함 4개로 미리 계산해 둔다.
         val chorusColors: List<LSColor>,
         // 이펙트 라이브러리의 색 역할(대표색, 보조색1~3)에 해당하는 4색 — 사용자 팔레트 세트면 그 색 그대로
-        val roleColors: List<LSColor> = emptyList()
+        val roleColors: List<LSColor> = emptyList(),
+        // 이펙트별 색 표가 정해진 팔레트(WARM/COLD)면 값이 있고, 이때는 위 4색 계산 대신 이 표를 쓴다
+        val explicit: ExplicitColors? = null
     )
 
     data class ColorSet(val fg: LSColor, val bg: LSColor)
