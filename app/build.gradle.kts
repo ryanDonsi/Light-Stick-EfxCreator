@@ -22,11 +22,20 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // 난독화와 코드/리소스 축소. 규칙은 proguard-rules.pro (Gson 저장 모델과 LightStick SDK 유지)
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        // 릴리스와 같은 설정(난독화 포함)이지만 디버그 키로 서명해서 기기에 바로 설치해 볼 수 있는 테스트용 빌드.
+        // 스토어에 올리거나 배포하는 용도로 쓰지 않는다 (배포는 release 를 업로드 키로 서명해서 쓴다).
+        create("releaseTest") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
         }
     }
 
