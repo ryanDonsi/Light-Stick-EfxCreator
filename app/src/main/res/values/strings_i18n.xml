@@ -628,9 +628,7 @@
     <string name="dlg_snap_on_desc">켜짐: 시작 시간을 가까운 비트에 맞춰 저장합니다</string>
     <string name="dlg_snap_off_desc">꺼짐: 입력한 시간 그대로 저장합니다</string>
     <string name="settings_folder_music">Music/GlowSync</string>
-    <string name="settings_folder_reset">Music/Effects (기본값)</string>
     <string name="settings_music_quick_title">선택기 없이 시작 위치 지정 (곡 추가 때 파일 선택기가 열리는 위치 · 권한 불필요)</string>
-    <string name="settings_music_default">Music (기본값)</string>
     <string name="settings_music_root">GlowSync</string>
     <string name="folder_guide_title">이펙트 파일 저장 폴더</string>
     <string name="folder_guide_message">생성된 이펙트 파일(.efx)을 저장할 폴더를 지정하세요. GlowSync Music 앱과 동일 폴더 지정 시 바로 연동 가능합니다.</string>

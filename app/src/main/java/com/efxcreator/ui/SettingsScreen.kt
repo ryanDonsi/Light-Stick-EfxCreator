@@ -112,9 +112,8 @@ fun SettingsScreen(
 
     // 폴더 선택기를 현재 설정된 위치에서 시작시킨다. 기본값이거나 알 수 없는 경로는 Music 폴더에서 시작한다
     // (루트는 시스템이 막아 "이 폴더를 사용할 수 없음" 이 나온다)
-    fun pickerStartUri(tag: String, forceDefault: Boolean = false): Uri {
-        val current = if (forceDefault) PreferencesManager.EFX_PATH_DEFAULT
-        else if (tag == "efx") viewModel.efxStoragePath.value else viewModel.musicLoadPath.value
+    fun pickerStartUri(tag: String): Uri {
+        val current = if (tag == "efx") viewModel.efxStoragePath.value else viewModel.musicLoadPath.value
         val internalRoot = "/storage/emulated/0/"
         val docId = when {
             PreferencesManager.isDefaultEfxPath(current) && tag == "efx" -> "primary:Music/Effects"
@@ -248,13 +247,6 @@ fun SettingsScreen(
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
-                    // 기본 위치: 선택기를 Music/Effects 에서 열어 폴더를 지정한다 (Light-Stick-Music 과 같은 방식)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(onClick = { efxFolderPicker.launch(pickerStartUri("efx", forceDefault = true)) }) {
-                        Text(Loc.str(R.string.settings_folder_reset))
-                    }
                 }
             }
 
@@ -308,10 +300,6 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(onClick = {
-                            viewModel.setMusicLoadPath("default_music")
-                            Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
-                        }) { Text(Loc.str(R.string.settings_music_default)) }
                         OutlinedButton(onClick = {
                             viewModel.setMusicLoadPath(
                                 File(

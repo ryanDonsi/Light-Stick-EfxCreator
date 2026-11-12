@@ -628,9 +628,7 @@
     <string name="dlg_snap_on_desc">オン: 開始時刻を最も近いビートに合わせて保存します</string>
     <string name="dlg_snap_off_desc">オフ: 入力した時刻のまま保存します</string>
     <string name="settings_folder_music">Music/GlowSync</string>
-    <string name="settings_folder_reset">Music/Effects（デフォルト）</string>
     <string name="settings_music_quick_title">ピッカーなしで開始位置を指定（曲追加時にファイル選択が開く場所・権限不要）</string>
-    <string name="settings_music_default">Music（デフォルト）</string>
     <string name="settings_music_root">GlowSync</string>
     <string name="folder_guide_title">エフェクトファイルの保存フォルダ</string>
     <string name="folder_guide_message">生成されたエフェクトファイル(.efx)を保存するフォルダを指定してください。GlowSync Musicアプリと同じフォルダを指定すると、すぐに連携できます。</string>

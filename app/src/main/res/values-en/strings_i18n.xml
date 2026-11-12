@@ -628,9 +628,7 @@
     <string name="dlg_snap_on_desc">On: the start time snaps to the nearest beat</string>
     <string name="dlg_snap_off_desc">Off: saved exactly as entered</string>
     <string name="settings_folder_music">Music/GlowSync</string>
-    <string name="settings_folder_reset">Music/Effects (default)</string>
     <string name="settings_music_quick_title">Set the start location without the picker (where the file picker opens when adding songs · no permission needed)</string>
-    <string name="settings_music_default">Music (default)</string>
     <string name="settings_music_root">GlowSync</string>
     <string name="folder_guide_title">EFX file folder</string>
     <string name="folder_guide_message">Choose a folder to save the generated effect files (.efx). If you pick the same folder as the GlowSync Music app, they work together right away.</string>
