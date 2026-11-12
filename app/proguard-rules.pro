@@ -9,3 +9,6 @@
 
 # LightStick SDK (자체 consumer rules 가 비어 있어 앱에서 유지한다)
 -keep class com.lightstick.** { *; }
+
+# SDK 가 컴파일 때만 쓰는 @Parcelize 어노테이션 클래스는 AAR 에 들어 있지 않다 (실행 중에는 쓰이지 않으므로 경고만 무시한다)
+-dontwarn kotlinx.parcelize.**
