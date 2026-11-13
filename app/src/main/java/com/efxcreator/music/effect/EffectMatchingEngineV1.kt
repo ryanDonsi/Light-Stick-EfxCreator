@@ -550,7 +550,9 @@ class EffectMatchingEngineV1(
                 if (cases.isNotEmpty()) {
                     val matched = cases.firstOrNull { it.matches(barRankPct(barIdx), sectionEnergyPct, isBalladMode, musicStyle) }
                     val pattern = matched?.patternId?.let { id -> patterns.firstOrNull { it.id == id } }
-                    if (pattern != null) {
+                    // 엔진 이펙트(기본 제공)는 단계 목록이 아니라 엔진의 이펙트 그대로 쓴다
+                    val patternEngine = pattern?.engine?.let { runCatching { EffectMatchingEngine.FgEngine.valueOf(it) }.getOrNull() }
+                    if (pattern != null && patternEngine == null) {
                         // 이펙트 라이브러리의 이펙트: 이 박에서 시작해 단계들을 박자 길이에 맞춰 넣는다.
                         // 이미 앞선 이펙트가 진행 중인 박은 건너뛴다.
                         if (t < patternBusyUntil) continue
@@ -565,7 +567,7 @@ class EffectMatchingEngineV1(
                         patternLastFg(pattern, palette)?.let { lastFg = it }
                         continue
                     }
-                    caseEngine = matched?.engine
+                    caseEngine = patternEngine ?: matched?.engine
                 }
                 val beatEngine = caseEngine ?: when {
                     section.type == SectionDetector.SectionType.BRIDGE &&
@@ -672,6 +674,56 @@ class EffectMatchingEngineV1(
         }
 
         return frameMap.entries.sortedBy { it.key }.map { it.key to it.value }
+    }
+
+    /**
+     * 이펙트 라이브러리의 엔진 이펙트: [startMs, endMs) 구간에 자동 매칭과 같은 규칙(색 순환, 주기, 전환 시간, 반복 생략)으로 프레임을 만든다.
+     * 박은 [beatMs] 간격의 일정한 박으로 보고, bar 번호는 시작 위치부터 센다.
+     */
+    override fun effectFrames(
+        palette: EffectMatchingEngine.Palette, engine: EffectMatchingEngine.FgEngine,
+        startMs: Long, endMs: Long, beatMs: Long, beatsPerBar: Int, isBalladMode: Boolean
+    ): List<Pair<Long, ByteArray>> {
+        if (beatMs <= 0L || endMs <= startMs) return emptyList()
+        val sectionType = when (engine) {
+            EffectMatchingEngine.FgEngine.ON_PULSE, EffectMatchingEngine.FgEngine.BLINK -> SectionDetector.SectionType.VERSE
+            EffectMatchingEngine.FgEngine.ON_TRANSIT_ROTATE -> SectionDetector.SectionType.CHORUS
+            EffectMatchingEngine.FgEngine.FREEZE -> SectionDetector.SectionType.BREAK
+            EffectMatchingEngine.FgEngine.BREATH, EffectMatchingEngine.FgEngine.OFF_TRANSIT -> SectionDetector.SectionType.INTRO
+        }
+        val perBar = beatsPerBar.coerceAtLeast(1)
+        val out = ArrayList<Pair<Long, ByteArray>>()
+        var lastKey: List<Int>? = null
+        var beatIndex = 0
+        var t = startMs
+        while (t < endMs) {
+            val barIdx = beatIndex / perBar
+            val (fg, bg) = colorsForEngine(palette, engine, 0, beatIndex, sectionType, barIdx, isBalladMode)
+            val bgNonNull = bg ?: LSColor(0, 0, 0)
+            val period = if (engine == EffectMatchingEngine.FgEngine.BREATH) msToBreathPeriod(beatMs, perBar) else null
+            val randomDelay = if (engine == EffectMatchingEngine.FgEngine.BREATH) msToBreathRandomDelay(beatMs, perBar) else null
+            val rotateTransit = if (engine == EffectMatchingEngine.FgEngine.ON_TRANSIT_ROTATE && isBalladMode) ON_ROTATE_BALLAD_TRANSIT else 0
+            val skipOnPulseOdd = engine == EffectMatchingEngine.FgEngine.ON_PULSE && beatIndex % 2 != 0
+            val skip = when {
+                skipOnPulseOdd -> true
+                engine.keepsRunning -> {   // 기기가 상태를 유지하는 패턴은 같은 속성이면 첫 박에만 보낸다
+                    val key = listOf(engine.ordinal, fg.r, fg.g, fg.b, bgNonNull.r, bgNonNull.g, bgNonNull.b, period ?: 0, randomDelay ?: 0)
+                    val dup = key == lastKey; lastKey = key; dup
+                }
+                else -> { lastKey = null; false }
+            }
+            if (!skip) {
+                out += t to buildPayload(engine, fg, bg, beatMs, period, randomDelay, rotateTransit = rotateTransit)
+            }
+            if (engine == EffectMatchingEngine.FgEngine.ON_PULSE && !skipOnPulseOdd) {
+                val holdMs = (beatMs * ON_PULSE_HOLD_PERCENT / 100L).coerceAtLeast(60L)
+                val offT = minOf(endMs - 1L, t + holdMs)
+                if (offT > t) out += offT to LSEffectPayload.Effects.on(color = LSColor(0, 0, 0), transit = 3).toByteArray()
+            }
+            t += beatMs
+            beatIndex++
+        }
+        return out
     }
 
     /** 이펙트 라이브러리 이펙트의 색 역할(화이트/검정/대표색/보조색1~3)을 엔진 팔레트의 색으로 푼다 */

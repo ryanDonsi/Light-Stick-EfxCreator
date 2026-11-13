@@ -648,4 +648,6 @@
     <string name="pattern_cycle_length" formatted="false">%1$d colors × %2$d %3$s = %4$s beats</string>
     <string name="pattern_cycle_bar_note">Bar = the song\'s beats per bar (auto generation); 4 beats when placed manually</string>
     <string name="pattern_cycle_summary" formatted="false">cycle %1$d %2$s</string>
+    <string name="pattern_engine_length">1 bar</string>
+    <string name="pattern_engine_note">Same effect as auto matching: when placed, it is generated for one bar to fit the song\'s tempo and palette. Duplicating copies it as an editable step list (approximation).</string>
 </resources>

@@ -140,7 +140,7 @@ fun EffectPattern.toPreset(palette: PaletteSet? = null): EffectPreset {
         spf = first.spf,
         fade = first.fade,
         patternId = id,
-        subLabel = formatBeatsLabel(totalBeatsTenths)
+        subLabel = if (engine != null) Loc.str(R.string.pattern_engine_length) else formatBeatsLabel(totalBeatsTenths)
     )
 }
 

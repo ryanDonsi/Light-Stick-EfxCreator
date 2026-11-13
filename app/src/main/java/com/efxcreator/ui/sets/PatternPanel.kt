@@ -190,6 +190,13 @@ fun EffectPatternsPanel(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                                if (pattern.engine != null) {
+                                    Text(
+                                        Loc.str(R.string.pattern_engine_note),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                                 Text(
                                     Loc.str(R.string.pattern_panel_7, pattern.steps.size, formatBeats(pattern.totalBeatsTenths)),
                                     style = MaterialTheme.typography.labelMedium,
@@ -212,7 +219,8 @@ fun EffectPatternsPanel(
                                 }
                             }
                             IconButton(onClick = {
-                                editing = pattern.copy(id = patternsVm.newId(), name = Loc.str(R.string.pattern_panel_10, pattern.name), builtIn = false) to true
+                                // 엔진 이펙트를 복제하면 단계 목록(근사값)으로 복사되어 편집할 수 있다
+                                editing = pattern.copy(id = patternsVm.newId(), name = Loc.str(R.string.pattern_panel_10, pattern.name), builtIn = false, engine = null, engineBallad = false) to true
                             }) { Icon(Icons.Default.ContentCopy, contentDescription = Loc.str(R.string.pattern_panel_11)) }
                             if (!pattern.builtIn) {
                                 IconButton(onClick = { deleting = pattern }) {

@@ -648,4 +648,6 @@
     <string name="pattern_cycle_length" formatted="false">循环 %1$d色 × %2$d%3$s = %4$s拍</string>
     <string name="pattern_cycle_bar_note">小节 = 歌曲的每小节拍数（自动生成时），手动放置时按4拍计算</string>
     <string name="pattern_cycle_summary" formatted="false">循环 %1$d%2$s</string>
+    <string name="pattern_engine_length">1小节</string>
+    <string name="pattern_engine_note">与自动匹配相同的效果：放置时会按歌曲的速度和调色板生成1小节。复制后会变为可编辑的步骤列表（近似值）。</string>
 </resources>

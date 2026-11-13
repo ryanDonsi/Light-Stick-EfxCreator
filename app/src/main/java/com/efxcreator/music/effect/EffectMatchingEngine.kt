@@ -121,6 +121,18 @@ interface EffectMatchingEngine {
     fun buildCustomPalette(set: PaletteSet): Palette
 
     /**
+     * 이펙트 라이브러리의 엔진 이펙트: 자동 매칭이 박마다 만드는 프레임을 [startMs, endMs) 구간에 똑같이 만든다.
+     * 구간의 종류(색을 고르는 기준)는 이펙트마다 정해 둔다: 펄스/깜빡임=VERSE, 색 순환=CHORUS, 호흡=INTRO, 고정=BREAK.
+     * @param beatMs 한 박의 길이(ms)
+     * @param beatsPerBar 마디당 비트 수
+     * @param isBalladMode 발라드 모드 여부 (색 순환의 전환 시간)
+     */
+    fun effectFrames(
+        palette: Palette, engine: FgEngine, startMs: Long, endMs: Long,
+        beatMs: Long, beatsPerBar: Int, isBalladMode: Boolean
+    ): List<Pair<Long, ByteArray>> = emptyList()
+
+    /**
      * 섹션 그룹으로부터 이펙트 프레임 생성
      *
      * @param palette 색상 팔레트

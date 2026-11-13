@@ -65,7 +65,15 @@ data class EffectPattern(
     /** 기본 제공 이펙트: 수정/삭제할 수 없고, 복제해서 고쳐 쓸 수 있다 */
     val builtIn: Boolean = false,
     /** 한 줄 설명 (기본 제공 이펙트에 쓴다) */
-    val description: String = ""
+    val description: String = "",
+    /**
+     * 자동 매칭 엔진의 이펙트 이름([com.efxcreator.music.effect.EffectMatchingEngine.FgEngine]). 값이 있으면 이 항목은
+     * 단계 목록이 아니라 **엔진이 만드는 이펙트 그대로**를 곡의 템포와 팔레트에 맞춰 만든다 ([steps] 는 복제해서 고칠 때 쓰는 근사값).
+     * 이전 버전에서 저장한 패턴은 null.
+     */
+    val engine: String? = null,
+    /** 엔진 이펙트를 발라드 모드로 만들지 (색 순환의 전환 시간이 달라진다) */
+    val engineBallad: Boolean = false
 ) {
     /** 순환하는 단계를 색마다 하나씩 풀어 쓴 단계 목록 (실제로 타임라인/기기에 나가는 단계) */
     fun expandedSteps(beatsPerBar: Int = PatternStep.DEFAULT_BEATS_PER_BAR): List<PatternStep> =
@@ -155,24 +163,24 @@ object BuiltInPatterns {
     val ALL: List<EffectPattern> get() = listOf(
         // 엔진의 ON_PULSE 는 2박마다 한 번 울린다: 대표색을 짧게(엔진은 한 박의 44%, 여기서는 가장 가까운 0.4박) 켰다가, 나머지 1.6박 동안 검정으로 Transit 3 만에 꺼진 채 유지
         EffectPattern(
-            id = "builtin_on_pulse", name = Loc.str(R.string.effect_pattern_7), builtIn = true,
+            id = "builtin_on_pulse", name = Loc.str(R.string.effect_pattern_7), builtIn = true, engine = "ON_PULSE",
             description = Loc.str(R.string.effect_pattern_8),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 4, fg = PatternColors.MAIN, frames = 0),
                 PatternStep(type = "ON", beatsTenths = 16, fg = PatternColors.BLACK, frames = 3)
             )
         ),
-        // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 2.5초 한 사이클 @SPF 100)
+        // 대표색이 부드럽게 밝아졌다 어두워짐 (엔진과 같게 한 사이클 = 1마디: 120BPM 기준 Period 20 = 2초 @SPF 100)
         EffectPattern(
-            id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true,
+            id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true, engine = "BREATH",
             description = Loc.str(R.string.effect_pattern_10),
             steps = listOf(
-                PatternStep(type = "BREATH", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 25)
+                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 20)
             )
         ),
         // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 0.5초 한 사이클 @SPF 100)
         EffectPattern(
-            id = "builtin_blink", name = Loc.str(R.string.effect_pattern_11), builtIn = true,
+            id = "builtin_blink", name = Loc.str(R.string.effect_pattern_11), builtIn = true, engine = "BLINK",
             description = Loc.str(R.string.effect_pattern_12),
             steps = listOf(
                 PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5)
@@ -180,7 +188,7 @@ object BuiltInPatterns {
         ),
         // 박자마다 대표색 → 보조색1 → 2 → 3 으로 즉시 바뀐다 (Transit 0)
         EffectPattern(
-            id = "builtin_on_rotate", name = Loc.str(R.string.effect_pattern_13), builtIn = true,
+            id = "builtin_on_rotate", name = Loc.str(R.string.effect_pattern_13), builtIn = true, engine = "ON_TRANSIT_ROTATE",
             description = Loc.str(R.string.effect_pattern_14),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0),
@@ -191,7 +199,7 @@ object BuiltInPatterns {
         ),
         // 같은 색 순서이지만 Transit 2 로 부드럽게 넘어가는 전환
         EffectPattern(
-            id = "builtin_on_transit_rotate", name = Loc.str(R.string.effect_pattern_15), builtIn = true,
+            id = "builtin_on_transit_rotate", name = Loc.str(R.string.effect_pattern_15), builtIn = true, engine = "ON_TRANSIT_ROTATE", engineBallad = true,
             description = Loc.str(R.string.effect_pattern_16),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 2),
@@ -202,7 +210,7 @@ object BuiltInPatterns {
         ),
         // 대표색을 켠 채 그대로 유지
         EffectPattern(
-            id = "builtin_freeze", name = Loc.str(R.string.effect_pattern_17), builtIn = true,
+            id = "builtin_freeze", name = Loc.str(R.string.effect_pattern_17), builtIn = true, engine = "FREEZE",
             description = Loc.str(R.string.effect_pattern_18),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0)

@@ -183,6 +183,14 @@ fun EfxTabletEditorScreen(
         }
     }
 
+    // 엔진 이펙트(기본 제공 라이브러리)를 놓을 때 쓰는 팔레트: 고른 팔레트 세트가 있으면 그 세트로, 없으면 엔진이 곡에 맞춰 고른 팔레트
+    val enginePalette = remember(songSetsRev, paletteSets, autoPalette) {
+        val id = setsVm.songPaletteSetId(projectId)
+        val set = paletteSets.firstOrNull { it.id == id }
+        if (set != null) runCatching { com.efxcreator.music.effect.EffectMatchingEngineRouter.createEngine().buildCustomPalette(set) }.getOrNull()
+        else autoPalette
+    }
+
     val bleConnected by bleVm.connected.collectAsState()
     val patterns by patternsVm.patterns.collectAsState()
 
@@ -350,6 +358,23 @@ fun EfxTabletEditorScreen(
             if (pattern == null) {
                 Toast.makeText(context, Loc.str(R.string.efx_tablet_editor_screen_1), Toast.LENGTH_SHORT).show()
                 return
+            }
+            // 엔진 이펙트(기본 제공): 자동 매칭과 같은 방식으로 1마디 길이를 곡의 템포와 팔레트에 맞춰 만든다
+            val engineKind = pattern.engine?.let {
+                runCatching { com.efxcreator.music.effect.EffectMatchingEngine.FgEngine.valueOf(it) }.getOrNull()
+            }
+            if (engineKind != null && enginePalette != null) {
+                val beatMs = beatLengthAt(ts)
+                val barBeats = analysis?.engineInput?.beatsPerBar ?: PatternStep.DEFAULT_BEATS_PER_BAR
+                val lengthMs = beatMs * barBeats
+                val engineEntries = com.efxcreator.music.effect.EffectMatchingEngineRouter.createEngine()
+                    .effectFrames(enginePalette, engineKind, ts, ts + lengthMs, beatMs, barBeats, pattern.engineBallad)
+                    .map { (t, bytes) -> EfxEntry(t, com.lightstick.types.LSEffectPayload.fromByteArray(bytes)) }
+                if (engineEntries.isNotEmpty()) {
+                    pendingSelectTs = ts
+                    editVm.addTimelineEntries(engineEntries, replaceFromMs = ts, replaceToMs = ts + lengthMs)
+                    return
+                }
             }
             // 색 역할은 현재 곡에 적용된 팔레트 세트로 풀어 넣는다 (없으면 기본 팔레트)
             val palette = effectivePalette
