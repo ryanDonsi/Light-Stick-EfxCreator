@@ -31,10 +31,24 @@ data class PatternStep(
     /** 한 색을 유지하는 순환 단위 크기 (1~3). 단위는 [cycleByBar] 가 정한다 */
     val cycleUnit: Int = 1,
     /** true 면 순환 단위가 바(마디), false 면 비트(박) */
-    val cycleByBar: Boolean = false
+    val cycleByBar: Boolean = false,
+    /**
+     * 주기(BLINK/BREATH/STROBE)를 박 단위로 정한다 (박의 1/10 단위, 10 = 1박). 0 이면 [frames] 를 그대로 쓴다.
+     * 값이 있으면 놓을 때 곡의 박 길이로 프레임 수를 계산해서(프레임 = 주기 길이 ÷ SPF) BPM 이 달라도 같은 박자감이 유지된다.
+     */
+    val periodBeatsTenths: Int = 0
 ) {
     val beats: Float get() = beatsTenths / 10f
     val effectType: EffectType get() = runCatching { EffectType.valueOf(type) }.getOrDefault(EffectType.ON)
+
+    /** 주기를 박 단위로 정했는가 (주기를 쓰는 BLINK/BREATH/STROBE 만 해당) */
+    val isPeriodSynced: Boolean get() = periodBeatsTenths > 0 && type in PERIOD_TYPES
+
+    /** 실제 페이로드에 넣을 프레임 수. 박 단위 주기면 [beatMs](한 박의 길이)로 계산하고, 아니면 저장된 [frames] 그대로 */
+    fun resolvedFrames(beatMs: Long?): Int =
+        if (beatMs != null && isPeriodSynced)
+            Math.round(beatMs * periodBeatsTenths / 10.0 / spf.coerceAtLeast(1)).toInt().coerceIn(1, 255)
+        else frames
 
     /** 순환에 쓰는 색 목록 (순환을 쓰지 않으면 빈 목록) */
     val cycleColors: List<String> get() = fgCycle.orEmpty()
@@ -54,6 +68,7 @@ data class PatternStep(
     companion object {
         /** 곡의 박자 정보가 없을 때 바(마디) 하나를 몇 박으로 볼지 (4/4) */
         const val DEFAULT_BEATS_PER_BAR = 4
+        private val PERIOD_TYPES = setOf("BLINK", "BREATH", "STROBE")
     }
 }
 
@@ -118,18 +133,18 @@ object PatternColors {
 object PatternResolver {
 
     /** 단계 하나의 페이로드. 색은 [palette] 로 풀어 만든다 */
-    fun payload(step: PatternStep, palette: PaletteSet?): LSEffectPayload =
-        payloadWith(step) { ref -> PatternColors.resolve(ref, palette) }
+    fun payload(step: PatternStep, palette: PaletteSet?, beatMs: Long? = null): LSEffectPayload =
+        payloadWith(step, beatMs) { ref -> PatternColors.resolve(ref, palette) }
 
     /** 색 역할(화이트, 보조색1 …)을 [resolve] 로 풀어 단계 하나의 페이로드를 만든다 (자동 생성 엔진도 이 방식으로 쓴다) */
-    fun payloadWith(step: PatternStep, resolve: (String) -> RgbColor): LSEffectPayload {
+    fun payloadWith(step: PatternStep, beatMs: Long? = null, resolve: (String) -> RgbColor): LSEffectPayload {
         val type = step.effectType
         val fg = if (type == EffectType.OFF) RgbColor(0, 0, 0) else resolve(step.fg)
         val twoColor = type == EffectType.BLINK || type == EffectType.BREATH || type == EffectType.STROBE
         val bg = if (twoColor) resolve(step.bg) else RgbColor(0, 0, 0)
         return LSEffectPayload(
             effectType = type, color = fg.toLs(), backgroundColor = bg.toLs(),
-            period = step.frames, spf = step.spf, fade = step.fade,
+            period = step.resolvedFrames(beatMs), spf = step.spf, fade = step.fade,
             randomColor = 0, randomDelay = 0, duration = 0, effectIndex = 0
         )
     }
@@ -149,7 +164,7 @@ object PatternResolver {
     ): List<EfxEntry> {
         var t = startMs
         return pattern.expandedSteps(beatsPerBar).map { step ->
-            EfxEntry(t, payload(step, palette)).also { t += durationMs(step, beatMs) }
+            EfxEntry(t, payload(step, palette, beatMs)).also { t += durationMs(step, beatMs) }
         }
     }
 }
@@ -175,7 +190,7 @@ object BuiltInPatterns {
             id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true, engine = "BREATH",
             description = Loc.str(R.string.effect_pattern_10),
             steps = listOf(
-                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 20)
+                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 20, periodBeatsTenths = 40)
             )
         ),
         // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 0.5초 한 사이클 @SPF 100)
@@ -183,7 +198,7 @@ object BuiltInPatterns {
             id = "builtin_blink", name = Loc.str(R.string.effect_pattern_11), builtIn = true, engine = "BLINK",
             description = Loc.str(R.string.effect_pattern_12),
             steps = listOf(
-                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5)
+                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5, periodBeatsTenths = 10)
             )
         ),
         // 박자마다 대표색 → 보조색1 → 2 → 3 으로 즉시 바뀐다 (Transit 0)

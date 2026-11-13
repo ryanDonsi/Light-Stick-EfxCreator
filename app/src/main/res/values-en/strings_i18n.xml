@@ -650,4 +650,7 @@
     <string name="pattern_cycle_summary" formatted="false">cycle %1$d %2$s</string>
     <string name="pattern_engine_length">1 bar</string>
     <string name="pattern_engine_note">Same effect as auto matching: when placed, it is generated for one bar to fit the song\'s tempo and palette. Duplicating copies it as an editable step list (approximation).</string>
+    <string name="pattern_period_sync_toggle">Period in beats (follows tempo)</string>
+    <string name="pattern_period_sync_hint">The frame count is calculated from the song\'s BPM when placed (frames = beat length ÷ SPF). Changing SPF keeps the same rhythm.</string>
+    <string name="pattern_period_sync_unit">beats</string>
 </resources>

@@ -650,4 +650,7 @@
     <string name="pattern_cycle_summary" formatted="false">循环 %1$d%2$s</string>
     <string name="pattern_engine_length">1小节</string>
     <string name="pattern_engine_note">与自动匹配相同的效果：放置时会按歌曲的速度和调色板生成1小节。复制后会变为可编辑的步骤列表（近似值）。</string>
+    <string name="pattern_period_sync_toggle">周期按拍计算（跟随速度）</string>
+    <string name="pattern_period_sync_hint">放置时会按歌曲的BPM计算帧数（帧数 = 拍长 ÷ SPF）。更改SPF不会改变节奏感。</string>
+    <string name="pattern_period_sync_unit">拍</string>
 </resources>
