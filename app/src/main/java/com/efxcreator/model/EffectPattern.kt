@@ -35,7 +35,11 @@ data class PatternStep(
     /** 주기(BLINK/BREATH/STROBE)를 비트 단위로 저장한다 (비트의 1/10 단위, 10 = 1비트). 0 이면 아래 [frames] 또는 단계 길이로 대신한다 */
     val periodBeatsTenths: Int = 0,
     /** 전환 시간(ON/OFF)을 비트 단위로 저장한다 (비트의 1/10 단위). 0 이면 [frames] 를 쓴다 */
-    val transitBeatsTenths: Int = 0
+    val transitBeatsTenths: Int = 0,
+    /** 랜덤 색상: 응원봉이 색을 무작위로 고르게 한다 (OFF 에는 없음) */
+    val randomColor: Boolean = false,
+    /** 랜덤 딜레이를 비트 단위로 저장한다 (비트의 1/10 단위, 0 = 없음). 기기마다 시작 시점이 조금씩 어긋나는 효과 */
+    val randomDelayBeatsTenths: Int = 0
 ) {
     val beats: Float get() = beatsTenths / 10f
     val effectType: EffectType get() = runCatching { EffectType.valueOf(type) }.getOrDefault(EffectType.ON)
@@ -65,6 +69,10 @@ data class PatternStep(
             else -> 0
         }
     }
+
+    /** 페이로드에 넣을 랜덤 딜레이. 비트 값을 곡의 박 길이와 SPF 로 주기·전환 시간과 같은 방식으로 환산한다 (없으면 0) */
+    fun resolvedRandomDelay(beatMs: Long?): Int =
+        if (beatMs != null && randomDelayBeatsTenths > 0) beatsToFrames(beatMs, randomDelayBeatsTenths) else 0
 
     private fun beatsToFrames(beatMs: Long, tenths: Int): Int =
         Math.round(beatMs * tenths / 10.0 / spf.coerceAtLeast(1)).toInt().coerceIn(1, 255)
@@ -176,7 +184,8 @@ object PatternResolver {
         return LSEffectPayload(
             effectType = type, color = fg.toLs(), backgroundColor = bg.toLs(),
             period = step.resolvedFrames(beatMs), spf = step.spf, fade = step.fade,
-            randomColor = 0, randomDelay = 0, duration = 0, effectIndex = 0
+            randomColor = if (step.randomColor && type != EffectType.OFF) 1 else 0,
+            randomDelay = step.resolvedRandomDelay(beatMs), duration = 0, effectIndex = 0
         )
     }
 
@@ -221,7 +230,7 @@ object BuiltInPatterns {
             id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true, engine = "BREATH",
             description = Loc.str(R.string.effect_pattern_10),
             steps = listOf(
-                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, periodBeatsTenths = 40)
+                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, periodBeatsTenths = 40, randomDelayBeatsTenths = 4)
             )
         ),
         // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 0.5초 한 사이클 @SPF 100)

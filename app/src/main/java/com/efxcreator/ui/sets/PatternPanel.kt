@@ -454,6 +454,29 @@ private fun StepEditor(
                     modifier = Modifier.weight(1f)
                 )
             }
+            // 랜덤 딜레이(비트 단위)와 랜덤 색상: 기기마다 이펙트 시작과 색이 조금씩 달라지는 효과
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                LabeledBeatsField(
+                    "${Loc.str(R.string.label_random_delay)} (${Loc.str(R.string.dlg_beat_unit)})",
+                    step.randomDelayBeatsTenths, 0, Modifier.weight(1f)
+                ) { onChange(step.copy(randomDelayBeatsTenths = it)) }
+                if (step.type != "OFF") {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Switch(checked = step.randomColor, onCheckedChange = { onChange(step.copy(randomColor = it)) })
+                        Text(Loc.str(R.string.label_random_color), style = MaterialTheme.typography.labelLarge)
+                    }
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
             Text(
                 Loc.str(R.string.pattern_beat_hint, TimelineMath.formatFrames(step.resolvedFrames(REF_BEAT_MS), step.spf), TimelineMath.frameUnitLabel(step.spf)),
                 style = MaterialTheme.typography.labelSmall,
