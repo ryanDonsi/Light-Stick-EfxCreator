@@ -31,24 +31,21 @@ data class PatternStep(
     /** 한 색을 유지하는 순환 단위 크기 (1~3). 단위는 [cycleByBar] 가 정한다 */
     val cycleUnit: Int = 1,
     /** true 면 순환 단위가 바(마디), false 면 비트(박) */
-    val cycleByBar: Boolean = false,
-    /**
-     * 주기(BLINK/BREATH/STROBE)를 박 단위로 정한다 (박의 1/10 단위, 10 = 1박). 0 이면 [frames] 를 그대로 쓴다.
-     * 값이 있으면 놓을 때 곡의 박 길이로 프레임 수를 계산해서(프레임 = 주기 길이 ÷ SPF) BPM 이 달라도 같은 박자감이 유지된다.
-     */
-    val periodBeatsTenths: Int = 0
+    val cycleByBar: Boolean = false
 ) {
     val beats: Float get() = beatsTenths / 10f
     val effectType: EffectType get() = runCatching { EffectType.valueOf(type) }.getOrDefault(EffectType.ON)
 
-    /** 주기를 박 단위로 정했는가 (주기를 쓰는 BLINK/BREATH/STROBE 만 해당) */
-    val isPeriodSynced: Boolean get() = periodBeatsTenths > 0 && type in PERIOD_TYPES
-
-    /** 실제 페이로드에 넣을 프레임 수. 박 단위 주기면 [beatMs](한 박의 길이)로 계산하고, 아니면 저장된 [frames] 그대로 */
+    /**
+     * 실제 페이로드에 넣을 프레임 수.
+     * 주기를 쓰는 BLINK/BREATH/STROBE 는 **단위 이펙트의 길이(박)가 곧 주기**다: [frames] 가 0 이면 단계 길이를 곡의 박 길이([beatMs])로
+     * 환산한 시간을 SPF 로 나눠 프레임 수를 계산한다 (BPM·SPF 가 달라도 같은 박자감). [frames] 를 직접 입력하면(1 이상) 그 값을 그대로 쓴다.
+     */
     fun resolvedFrames(beatMs: Long?): Int =
-        if (beatMs != null && isPeriodSynced)
-            Math.round(beatMs * periodBeatsTenths / 10.0 / spf.coerceAtLeast(1)).toInt().coerceIn(1, 255)
-        else frames
+        if (beatMs != null && frames == 0 && type in PERIOD_TYPES) {
+            val lengthMs = Math.round(beatsTenths / 10.0 * beatMs / 10.0) * 10L
+            Math.round(lengthMs / spf.coerceAtLeast(1).toDouble()).toInt().coerceIn(1, 255)
+        } else frames
 
     /** 순환에 쓰는 색 목록 (순환을 쓰지 않으면 빈 목록) */
     val cycleColors: List<String> get() = fgCycle.orEmpty()
@@ -185,12 +182,12 @@ object BuiltInPatterns {
                 PatternStep(type = "ON", beatsTenths = 16, fg = PatternColors.BLACK, frames = 3)
             )
         ),
-        // 대표색이 부드럽게 밝아졌다 어두워짐 (엔진과 같게 한 사이클 = 1마디: 120BPM 기준 Period 20 = 2초 @SPF 100)
+        // 대표색이 부드럽게 밝아졌다 어두워짐 (엔진과 같게 한 사이클 = 1마디: 단계 길이 4박이 곧 주기)
         EffectPattern(
             id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true, engine = "BREATH",
             description = Loc.str(R.string.effect_pattern_10),
             steps = listOf(
-                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 20, periodBeatsTenths = 40)
+                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 0)
             )
         ),
         // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 0.5초 한 사이클 @SPF 100)
@@ -198,7 +195,7 @@ object BuiltInPatterns {
             id = "builtin_blink", name = Loc.str(R.string.effect_pattern_11), builtIn = true, engine = "BLINK",
             description = Loc.str(R.string.effect_pattern_12),
             steps = listOf(
-                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5, periodBeatsTenths = 10)
+                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 0)
             )
         ),
         // 박자마다 대표색 → 보조색1 → 2 → 3 으로 즉시 바뀐다 (Transit 0)

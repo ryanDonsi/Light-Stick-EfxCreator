@@ -650,7 +650,6 @@
     <string name="pattern_cycle_summary" formatted="false">순환 %1$d%2$s</string>
     <string name="pattern_engine_length">1마디</string>
     <string name="pattern_engine_note">자동 매칭 엔진과 같은 이펙트: 놓을 때 곡의 템포와 팔레트에 맞춰 1마디 길이로 만들어집니다. 복제하면 편집할 수 있는 단계 목록(근사값)으로 복사됩니다.</string>
-    <string name="pattern_period_sync_toggle">주기를 박 단위로 (템포에 맞춤)</string>
-    <string name="pattern_period_sync_hint">곡의 BPM에 맞춰 놓을 때 프레임 수가 계산됩니다 (프레임 = 박 길이 ÷ SPF). SPF를 바꿔도 박자감은 그대로입니다.</string>
-    <string name="pattern_period_sync_unit">박</string>
+    <string name="pattern_period_label">주기 (프레임, 0 = 길이에 맞춤)</string>
+    <string name="pattern_period_auto_hint">주기 = 위의 길이(박): 놓을 때 곡의 BPM에 맞춰 계산됩니다. 직접 정하려면 프레임 값을 입력하세요.</string>
 </resources>

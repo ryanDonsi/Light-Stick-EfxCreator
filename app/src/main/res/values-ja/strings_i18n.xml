@@ -650,7 +650,6 @@
     <string name="pattern_cycle_summary" formatted="false">循環 %1$d%2$s</string>
     <string name="pattern_engine_length">1小節</string>
     <string name="pattern_engine_note">自動マッチングと同じエフェクト: 配置時に曲のテンポとパレットに合わせて1小節分が作られます。複製すると編集できるステップ一覧（近似値）としてコピーされます。</string>
-    <string name="pattern_period_sync_toggle">周期を拍単位で（テンポに合わせる）</string>
-    <string name="pattern_period_sync_hint">配置時に曲のBPMに合わせてフレーム数が計算されます（フレーム = 拍の長さ ÷ SPF）。SPFを変えても拍感は変わりません。</string>
-    <string name="pattern_period_sync_unit">拍</string>
+    <string name="pattern_period_label">周期（フレーム、0 = 長さに合わせる）</string>
+    <string name="pattern_period_auto_hint">周期 = 上の長さ（拍）。配置時に曲のBPMに合わせて計算されます。手動で決める場合はフレーム値を入力してください。</string>
 </resources>

@@ -103,11 +103,7 @@ fun PatternStep.summary(index: Int): String {
         isTwoColor(type) -> " · $fgText / ${PatternColors.label(bg)}"
         else -> " · $fgText"
     }
-    val frame = when {
-        isPeriodSynced -> " · ${Loc.str(R.string.label_period)} ${formatBeats(periodBeatsTenths)}${Loc.str(R.string.pattern_period_sync_unit)}"
-        frames > 0 -> " · ${if (type == "ON" || type == "OFF") Loc.str(R.string.label_transit) else Loc.str(R.string.label_period)} ${frames}f"
-        else -> ""
-    }
+    val frame = if (frames > 0) " · ${if (type == "ON" || type == "OFF") Loc.str(R.string.label_transit) else Loc.str(R.string.label_period)} ${frames}f" else ""
     val lengthBeats = if (isCycling) expanded().sumOf { it.beatsTenths } / 10f else beats
     return Loc.str(R.string.pattern_panel_1, index + 1, type, "%.1f".format(Locale.US, lengthBeats), colors, frame)
 }
@@ -425,28 +421,14 @@ private fun StepEditor(
                 }
                 CycleControls(step, onChange)
             }
-            // 주기를 쓰는 이펙트(BLINK/BREATH/STROBE)는 주기를 박 단위로 정할 수 있다 (곡의 BPM 에 맞춰 프레임 수가 계산된다)
-            if (isTwoColor(step.type)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Switch(
-                        checked = step.periodBeatsTenths > 0,
-                        onCheckedChange = { on -> onChange(step.copy(periodBeatsTenths = if (on) 10 else 0)) }
-                    )
-                    Text(Loc.str(R.string.pattern_period_sync_toggle), style = MaterialTheme.typography.labelLarge)
-                    if (step.periodBeatsTenths > 0) {
-                        BeatsField(step.periodBeatsTenths) { onChange(step.copy(periodBeatsTenths = it)) }
-                        Text(Loc.str(R.string.pattern_panel_26), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                if (step.periodBeatsTenths > 0) {
-                    Text(Loc.str(R.string.pattern_period_sync_hint), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                if (!step.isPeriodSynced) NumberTextField(
+                NumberTextField(
                     value = step.frames,
                     onValueChange = { onChange(step.copy(frames = it)) },
-                    label = if (step.type == "ON" || step.type == "OFF") Loc.str(R.string.pattern_panel_28) else Loc.str(R.string.pattern_panel_29),
+                    label = when {
+                        step.type == "ON" || step.type == "OFF" -> Loc.str(R.string.pattern_panel_28)
+                        else -> Loc.str(R.string.pattern_period_label)
+                    },
                     range = 0..255,
                     modifier = Modifier.weight(1f)
                 )
@@ -466,7 +448,8 @@ private fun StepEditor(
                 )
             }
             Text(
-                "= ${TimelineMath.formatFrames(step.frames, step.spf)}  ·  ${TimelineMath.frameUnitLabel(step.spf)}",
+                if (isTwoColor(step.type) && step.frames == 0) Loc.str(R.string.pattern_period_auto_hint)
+                else "= ${TimelineMath.formatFrames(step.frames, step.spf)}  ·  ${TimelineMath.frameUnitLabel(step.spf)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
