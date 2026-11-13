@@ -322,8 +322,6 @@
     <string name="pattern_panel_25">延长0.1拍</string>
     <string name="pattern_panel_26">拍（0.1为单位）</string>
     <string name="pattern_panel_27">颜色 (FG)</string>
-    <string name="pattern_panel_28">过渡时间（帧）</string>
-    <string name="pattern_panel_29">周期（帧）</string>
     <string name="pattern_panel_30" formatted="false">亮度（%）</string>
     <string name="pattern_panel_31">默认调色板（第一个内置）</string>
     <string name="pattern_panel_32">颜色预览</string>
@@ -650,6 +648,7 @@
     <string name="pattern_cycle_summary" formatted="false">循环 %1$d%2$s</string>
     <string name="pattern_engine_length">1小节</string>
     <string name="pattern_engine_note">与自动匹配相同的效果：放置时会按歌曲的速度和调色板生成1小节。复制后会变为可编辑的步骤列表（近似值）。</string>
-    <string name="pattern_period_label">周期（帧，0 = 与长度一致）</string>
-    <string name="pattern_period_auto_hint">周期 = 上方的长度（拍）：放置时按歌曲BPM计算。如需手动设置，请输入帧数。</string>
+    <string name="pattern_transit_beats_label">过渡时间（拍）</string>
+    <string name="pattern_period_beats_label">周期（拍）</string>
+    <string name="pattern_beat_hint">放置时按歌曲BPM换算为帧 · 120BPM时 %1$s · %2$s</string>
 </resources>

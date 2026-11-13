@@ -322,8 +322,6 @@
     <string name="pattern_panel_25">Lengthen by 0.1 beat</string>
     <string name="pattern_panel_26">beats (0.1 steps)</string>
     <string name="pattern_panel_27">Color (FG)</string>
-    <string name="pattern_panel_28">Transit (frames)</string>
-    <string name="pattern_panel_29">Period (frames)</string>
     <string name="pattern_panel_30" formatted="false">Brightness (%)</string>
     <string name="pattern_panel_31">Default palette (first built-in)</string>
     <string name="pattern_panel_32">Color preview</string>
@@ -650,6 +648,7 @@
     <string name="pattern_cycle_summary" formatted="false">cycle %1$d %2$s</string>
     <string name="pattern_engine_length">1 bar</string>
     <string name="pattern_engine_note">Same effect as auto matching: when placed, it is generated for one bar to fit the song\'s tempo and palette. Duplicating copies it as an editable step list (approximation).</string>
-    <string name="pattern_period_label">Period (frames, 0 = match length)</string>
-    <string name="pattern_period_auto_hint">Period = the length above (in beats), calculated from the song\'s BPM when placed. Enter a frame value to set it manually.</string>
+    <string name="pattern_transit_beats_label">Transition (beats)</string>
+    <string name="pattern_period_beats_label">Period (beats)</string>
+    <string name="pattern_beat_hint">Calculated into frames from the song\'s BPM when placed · at 120 BPM: %1$s · %2$s</string>
 </resources>

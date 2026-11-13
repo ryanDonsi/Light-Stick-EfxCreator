@@ -89,6 +89,7 @@ private fun isTwoColor(type: String) = type == "BLINK" || type == "BREATH" || ty
 
 private const val MAX_BEATS_TENTHS = 320   // 32박
 private const val MAX_STEPS = 32
+private const val REF_BEAT_MS = 500L   // 120 BPM: 입력한 비트 값이 프레임으로 얼마가 되는지 보여 주는 기준
 private const val MIN_BEAT_MS = 250   // 240 BPM
 private const val MAX_BEAT_MS = 1500  // 40 BPM
 
@@ -103,7 +104,13 @@ fun PatternStep.summary(index: Int): String {
         isTwoColor(type) -> " · $fgText / ${PatternColors.label(bg)}"
         else -> " · $fgText"
     }
-    val frame = if (frames > 0) " · ${if (type == "ON" || type == "OFF") Loc.str(R.string.label_transit) else Loc.str(R.string.label_period)} ${frames}f" else ""
+    val beatUnit = Loc.str(R.string.dlg_beat_unit)
+    val frame = when {
+        isPeriodType && periodBeatsTenths > 0 -> " · ${Loc.str(R.string.label_period)} ${formatBeats(periodBeatsTenths)}$beatUnit"
+        isTransitType && transitBeatsTenths > 0 -> " · ${Loc.str(R.string.label_transit)} ${formatBeats(transitBeatsTenths)}$beatUnit"
+        frames > 0 -> " · ${if (isTransitType) Loc.str(R.string.label_transit) else Loc.str(R.string.label_period)} ${frames}f"
+        else -> ""
+    }
     val lengthBeats = if (isCycling) expanded().sumOf { it.beatsTenths } / 10f else beats
     return Loc.str(R.string.pattern_panel_1, index + 1, type, "%.1f".format(Locale.US, lengthBeats), colors, frame)
 }
@@ -297,7 +304,7 @@ fun PatternEditorDialog(
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initial.name) }
-    val steps = remember { initial.steps.toMutableStateList() }
+    val steps = remember { initial.steps.map { it.withBeatUnits() }.toMutableStateList() }
     val total = steps.sumOf { step -> step.expanded().sumOf { it.beatsTenths } }
 
     AlertDialog(
@@ -383,7 +390,7 @@ private fun StepEditor(
                 STEP_TYPES.forEach { t ->
                     FilterChip(
                         selected = step.type == t,
-                        onClick = { onChange(step.copy(type = t)) },
+                        onClick = { onChange(changeStepType(step, t)) },
                         label = { Text(t) }
                     )
                 }
@@ -422,16 +429,16 @@ private fun StepEditor(
                 CycleControls(step, onChange)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                NumberTextField(
-                    value = step.frames,
-                    onValueChange = { onChange(step.copy(frames = it)) },
-                    label = when {
-                        step.type == "ON" || step.type == "OFF" -> Loc.str(R.string.pattern_panel_28)
-                        else -> Loc.str(R.string.pattern_period_label)
-                    },
-                    range = 0..255,
-                    modifier = Modifier.weight(1f)
-                )
+                // 전환 시간(ON/OFF)과 주기(BLINK/BREATH/STROBE)는 비트 단위로 저장하고, 놓을 때 곡의 BPM·SPF 로 프레임 수를 계산한다
+                if (step.isTransitType) {
+                    LabeledBeatsField(Loc.str(R.string.pattern_transit_beats_label), step.transitBeatsTenths, 0, Modifier.weight(1f)) {
+                        onChange(step.copy(transitBeatsTenths = it, frames = 0))
+                    }
+                } else {
+                    LabeledBeatsField(Loc.str(R.string.pattern_period_beats_label), step.periodBeatsTenths, 1, Modifier.weight(1f)) {
+                        onChange(step.copy(periodBeatsTenths = it, frames = 0))
+                    }
+                }
                 NumberTextField(
                     value = step.spf,
                     onValueChange = { onChange(step.copy(spf = it)) },
@@ -448,8 +455,7 @@ private fun StepEditor(
                 )
             }
             Text(
-                if (isTwoColor(step.type) && step.frames == 0) Loc.str(R.string.pattern_period_auto_hint)
-                else "= ${TimelineMath.formatFrames(step.frames, step.spf)}  ·  ${TimelineMath.frameUnitLabel(step.spf)}",
+                Loc.str(R.string.pattern_beat_hint, TimelineMath.formatFrames(step.resolvedFrames(REF_BEAT_MS), step.spf), TimelineMath.frameUnitLabel(step.spf)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -502,7 +508,36 @@ private fun CycleControls(step: PatternStep, onChange: (PatternStep) -> Unit) {
     }
 }
 
-/** 박자 길이 입력: 소수점 한 자리 (0.1 ~ 32.0). 입력 중 "0." 같은 값도 허용한다 */
+/** 이펙트 종류를 바꿀 때: 주기를 쓰는 종류로 바꾸면 주기를 현재 길이로 채워 둔다 (이미 정한 값이 있으면 유지) */
+private fun changeStepType(step: PatternStep, type: String): PatternStep {
+    val next = step.copy(type = type)
+    return if (next.isPeriodType && next.periodBeatsTenths == 0) next.copy(periodBeatsTenths = next.beatsTenths) else next
+}
+
+/** 라벨이 있는 비트 단위 입력 (소수점 한 자리). [minTenths] 가 0 이면 0 도 입력할 수 있다 */
+@Composable
+private fun LabeledBeatsField(label: String, tenths: Int, minTenths: Int, modifier: Modifier = Modifier, onChange: (Int) -> Unit) {
+    var text by remember(tenths) { mutableStateOf(formatBeats(tenths)) }
+    OutlinedTextField(
+        value = text,
+        onValueChange = { raw ->
+            val filtered = raw.filter { it.isDigit() || it == '.' }
+            val dot = filtered.indexOf('.')
+            val limited = if (dot >= 0) filtered.take(dot + 2) else filtered   // 소수점 아래 한 자리
+            text = limited
+            limited.toFloatOrNull()?.let { v ->
+                val t = Math.round(v * 10f).coerceIn(minTenths, MAX_BEATS_TENTHS)
+                if (t != tenths) onChange(t)
+            }
+        },
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = modifier
+    )
+}
+
+/** 비트 길이 입력: 소수점 한 자리 (0.1 ~ 32.0). 입력 중 "0." 같은 값도 허용한다 */
 @Composable
 private fun BeatsField(tenths: Int, onChange: (Int) -> Unit) {
     var text by remember(tenths) { mutableStateOf(formatBeats(tenths)) }

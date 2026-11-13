@@ -13,15 +13,15 @@
     <string name="effect_pattern_5">보조색2</string>
     <string name="effect_pattern_6">보조색3</string>
     <string name="effect_pattern_7">펄스</string>
-    <string name="effect_pattern_8">2박에 걸쳐 짧게 켜졌다 꺼지는 강조 (ON_PULSE)</string>
+    <string name="effect_pattern_8">2비트에 걸쳐 짧게 켜졌다 꺼지는 강조 (ON_PULSE)</string>
     <string name="effect_pattern_9">호흡</string>
     <string name="effect_pattern_10">부드럽게 밝아졌다 어두워짐 (BREATH)</string>
     <string name="effect_pattern_11">블링크</string>
-    <string name="effect_pattern_12">박자에 맞춰 깜빡임 (BLINK)</string>
+    <string name="effect_pattern_12">비트에 맞춰 깜빡임 (BLINK)</string>
     <string name="effect_pattern_13">색 회전 (비트 강조)</string>
-    <string name="effect_pattern_14">박자마다 색이 즉시 바뀜 (ON_ROTATE, 전환 시간 0)</string>
+    <string name="effect_pattern_14">비트마다 색이 즉시 바뀜 (ON_ROTATE, 전환 시간 0)</string>
     <string name="effect_pattern_15">색 회전 (부드러움)</string>
-    <string name="effect_pattern_16">박자마다 색이 부드럽게 바뀜 (ON_TRANSIT_ROTATE, 전환 시간 2)</string>
+    <string name="effect_pattern_16">비트마다 색이 부드럽게 바뀜 (ON_TRANSIT_ROTATE, 전환 시간 0.4비트)</string>
     <string name="effect_pattern_17">고정</string>
     <string name="effect_pattern_18">특정 색을 켠 채 유지 (FREEZE)</string>
     <string name="effect_pattern_19">끄기</string>
@@ -42,11 +42,11 @@
     <string name="effect_sets_8">브레이크(무음)</string>
     <string name="effect_sets_9">아웃트로</string>
     <string name="effect_sets_10">엔딩</string>
-    <string name="effect_sets_11">박자마다 짧게 켜졌다 돌아오는 강조</string>
-    <string name="effect_sets_12">박자에 맞춰 깜빡임</string>
+    <string name="effect_sets_11">비트마다 짧게 켜졌다 돌아오는 강조</string>
+    <string name="effect_sets_12">비트에 맞춰 깜빡임</string>
     <string name="effect_sets_13">부드럽게 밝아졌다 어두워짐</string>
     <string name="effect_sets_14">색 회전</string>
-    <string name="effect_sets_15">마디마다 색이 바뀌며 전환</string>
+    <string name="effect_sets_15">바마다 색이 바뀌며 전환</string>
     <string name="effect_sets_16">특정 색을 켠 채 유지</string>
     <string name="effect_sets_17">이 섹션은 이펙트 없이 꺼 둠</string>
     <string name="effect_sets_18">자동</string>
@@ -63,8 +63,8 @@
     <string name="effect_sets_29">힙합/R&amp;B</string>
     <string name="effect_sets_30">록</string>
     <string name="effect_sets_31">BREATH (호흡)</string>
-    <string name="effect_sets_32" formatted="false">발라드·힙합/R&amp;B: BREATH(마디마다 색 순환). 그 외: 마디 에너지가 섹션 안에서 상위 20%(80% 이상)면 BLINK, 나머지는 ON_PULSE(2박마다)</string>
-    <string name="effect_sets_33">ON_TRANSIT_ROTATE (박마다 색 회전)</string>
+    <string name="effect_sets_32" formatted="false">발라드·힙합/R&amp;B: BREATH(바마다 색 순환). 그 외: 바 에너지가 섹션 안에서 상위 20%(80% 이상)면 BLINK, 나머지는 ON_PULSE(2비트마다)</string>
+    <string name="effect_sets_33">ON_TRANSIT_ROTATE (비트마다 색 회전)</string>
     <string name="effect_sets_34">FREEZE (한 색 고정)</string>
     <string name="effect_sets_35">OFF_TRANSIT (서서히 꺼짐)</string>
     <string name="effect_sets_36">OFF_TRANSIT (꺼짐)</string>
@@ -160,7 +160,7 @@
     <string name="settings_screen_15">EFX 저장 위치 · 음악 불러오기 위치</string>
     <string name="settings_screen_16">응원봉 검색 · 연결 · 관리</string>
     <string name="settings_screen_17">이펙트 라이브러리</string>
-    <string name="settings_screen_18">박자 단위 이펙트 묶음 만들기</string>
+    <string name="settings_screen_18">비트 단위 이펙트 묶음 만들기</string>
     <string name="settings_screen_19">이펙트 세트</string>
     <string name="settings_screen_20">섹션별 이펙트 규칙</string>
     <string name="settings_screen_21">팔레트 세트</string>
@@ -295,13 +295,13 @@
     <string name="timeline_math_1">1프레임 = %1$s (SPF %2$s)</string>
     <string name="timeline_math_2">마스터 · 모든 그룹 (0)</string>
     <string name="timeline_math_3">전체 그룹 지정 (0xFFFFFFFF)</string>
-    <string name="pattern_panel_1">%1$s. %2$s %3$s박%4$s%5$s</string>
+    <string name="pattern_panel_1">%1$s. %2$s %3$s비트%4$s%5$s</string>
     <string name="pattern_panel_2">이펙트 추가</string>
     <string name="pattern_panel_3">이펙트 묶음 만들기</string>
-    <string name="pattern_panel_4">예) 펄스 = ① ON 0.4박(대표색) → ② ON 1.6박(검정, 전환 시간 3). 길이는 박자 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. 기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.</string>
+    <string name="pattern_panel_4">예) 펄스 = ① ON 0.4비트(대표색) → ② ON 1.6비트(검정, 전환 시간 0.6비트). 길이는 비트 단위(소수점 한 자리)이고, 색은 팔레트 세트의 역할로 지정해 팔레트마다 다른 색으로 쓸 수 있습니다. 기본 제공 이펙트는 복제해서 고쳐 쓸 수 있고, 모든 이펙트는 에디터의 내 라이브러리에 나타납니다.</string>
     <string name="pattern_panel_5">아직 직접 만든 이펙트가 없습니다. \"이펙트 추가\" 로 만들어 보세요.</string>
     <string name="pattern_panel_6">기본 제공</string>
-    <string name="pattern_panel_7">%1$s단계 · 총 %2$s박</string>
+    <string name="pattern_panel_7">%1$s단계 · 총 %2$s비트</string>
     <string name="pattern_panel_8">디바이스 테스트</string>
     <string name="pattern_panel_9">수정</string>
     <string name="pattern_panel_10">%1$s 복사본</string>
@@ -311,23 +311,21 @@
     <string name="pattern_panel_14">\'%1$s\' 을(를) 삭제할까요? 내 라이브러리에 연결된 칸은 타임라인에 넣을 수 없게 됩니다(칸에서 연결을 바꿔 주세요). 이미 타임라인에 넣은 이펙트에는 영향이 없습니다.</string>
     <string name="pattern_panel_15">이펙트 수정</string>
     <string name="pattern_panel_16">이름 (예: 펄스)</string>
-    <string name="pattern_panel_17">단계 %1$s개 · 총 %2$s박</string>
+    <string name="pattern_panel_17">단계 %1$s개 · 총 %2$s비트</string>
     <string name="pattern_panel_18">단계 추가</string>
     <string name="pattern_panel_19">%1$s단계</string>
     <string name="pattern_panel_20">위로</string>
     <string name="pattern_panel_21">아래로</string>
     <string name="pattern_panel_22">단계 삭제</string>
     <string name="pattern_panel_23">길이</string>
-    <string name="pattern_panel_24">0.1박 줄이기</string>
-    <string name="pattern_panel_25">0.1박 늘리기</string>
-    <string name="pattern_panel_26">박 (0.1 단위)</string>
+    <string name="pattern_panel_24">0.1비트 줄이기</string>
+    <string name="pattern_panel_25">0.1비트 늘리기</string>
+    <string name="pattern_panel_26">비트 (0.1 단위)</string>
     <string name="pattern_panel_27">색 (FG)</string>
-    <string name="pattern_panel_28">전환 시간 (프레임)</string>
-    <string name="pattern_panel_29">주기 (프레임)</string>
     <string name="pattern_panel_30" formatted="false">밝기 (%)</string>
     <string name="pattern_panel_31">기본 팔레트 (내장 첫 번째)</string>
     <string name="pattern_panel_32">색 미리보기</string>
-    <string name="pattern_panel_33">1박 (ms)</string>
+    <string name="pattern_panel_33">1비트 (ms)</string>
     <string name="pattern_panel_34">반복</string>
     <string name="pattern_panel_35">정지</string>
     <string name="pattern_panel_36">디바이스에서 테스트</string>
@@ -337,10 +335,10 @@
     <string name="set_editors_3">이름</string>
     <string name="set_editors_4">색 슬롯 (눌러서 선택)</string>
     <string name="set_editors_5">빠른 선택</string>
-    <string name="set_editors_6">대표색은 곡 전체의 기준색이고, 단계색 3개는 마디·섹션이 바뀔 때 번갈아 쓰입니다. 어두운 톤은 대표색에서 자동으로 만들어집니다.</string>
+    <string name="set_editors_6">대표색은 곡 전체의 기준색이고, 단계색 3개는 바·섹션이 바뀔 때 번갈아 쓰입니다. 어두운 톤은 대표색에서 자동으로 만들어집니다.</string>
     <string name="set_editors_7">이펙트 세트 추가</string>
     <string name="set_editors_8">이펙트 세트 수정</string>
-    <string name="set_editors_9">섹션마다 \"자동\"(아래에 표시된 기본 동작) 또는 직접 정한 규칙을 씁니다. 규칙은 마디/섹션 에너지 같은 조건에 따라 이펙트를 고르며, 이펙트 라이브러리에서 만든 이펙트도 쓸 수 있습니다.</string>
+    <string name="set_editors_9">섹션마다 \"자동\"(아래에 표시된 기본 동작) 또는 직접 정한 규칙을 씁니다. 규칙은 바/섹션 에너지 같은 조건에 따라 이펙트를 고르며, 이펙트 라이브러리에서 만든 이펙트도 쓸 수 있습니다.</string>
     <string name="set_editors_10">직접 지정</string>
     <string name="set_editors_11">"자동: "</string>
     <string name="set_editors_12">규칙 추가</string>
@@ -350,8 +348,8 @@
     <string name="set_editors_16">규칙 삭제</string>
     <string name="set_editors_17">곡 분위기</string>
     <string name="set_editors_18">전체</string>
-    <string name="set_editors_19">마디 에너지</string>
-    <string name="set_editors_20" formatted="false">섹션 안에서의 순위 (100% = 가장 센 마디)</string>
+    <string name="set_editors_19">바 에너지</string>
+    <string name="set_editors_20" formatted="false">섹션 안에서의 순위 (100% = 가장 센 바)</string>
     <string name="set_editors_21">섹션 에너지</string>
     <string name="set_editors_22" formatted="false">곡 전체 섹션 중 상대 에너지 (100% = 가장 센 섹션)</string>
     <string name="set_editors_23" formatted="false">이상 (%)</string>
@@ -360,7 +358,7 @@
     <string name="set_editors_26">%1$s단계 · %2$s</string>
     <string name="set_editors_27">라이브러리 · %1$s</string>
     <string name="set_editors_28">(삭제된 이펙트)</string>
-    <string name="set_editors_29">마디 에너지 %1$s</string>
+    <string name="set_editors_29">바 에너지 %1$s</string>
     <string name="set_editors_30">섹션 에너지 %1$s</string>
     <string name="set_editors_31">발라드·힙합/R&amp;B</string>
     <string name="set_editors_32">발라드 외</string>
@@ -645,11 +643,12 @@
     <string name="pattern_cycle_unit">순환 단위</string>
     <string name="pattern_cycle_beat">비트</string>
     <string name="pattern_cycle_bar">바</string>
-    <string name="pattern_cycle_length" formatted="false">순환 %1$d색 × %2$d%3$s = %4$s박</string>
-    <string name="pattern_cycle_bar_note">바 = 곡의 박자 수(자동 생성 시), 직접 넣을 때는 4박 기준</string>
+    <string name="pattern_cycle_length" formatted="false">순환 %1$d색 × %2$d%3$s = %4$s비트</string>
+    <string name="pattern_cycle_bar_note">바 = 곡의 바당 비트 수(자동 생성 시), 직접 넣을 때는 4비트 기준</string>
     <string name="pattern_cycle_summary" formatted="false">순환 %1$d%2$s</string>
-    <string name="pattern_engine_length">1마디</string>
-    <string name="pattern_engine_note">자동 매칭 엔진과 같은 이펙트: 놓을 때 곡의 템포와 팔레트에 맞춰 1마디 길이로 만들어집니다. 복제하면 편집할 수 있는 단계 목록(근사값)으로 복사됩니다.</string>
-    <string name="pattern_period_label">주기 (프레임, 0 = 길이에 맞춤)</string>
-    <string name="pattern_period_auto_hint">주기 = 위의 길이(박): 놓을 때 곡의 BPM에 맞춰 계산됩니다. 직접 정하려면 프레임 값을 입력하세요.</string>
+    <string name="pattern_engine_length">1바</string>
+    <string name="pattern_engine_note">자동 매칭 엔진과 같은 이펙트: 놓을 때 곡의 템포와 팔레트에 맞춰 1바 길이로 만들어집니다. 복제하면 편집할 수 있는 단계 목록(근사값)으로 복사됩니다.</string>
+    <string name="pattern_transit_beats_label">전환 시간 (비트)</string>
+    <string name="pattern_period_beats_label">주기 (비트)</string>
+    <string name="pattern_beat_hint">곡의 BPM에 맞춰 놓을 때 프레임으로 계산됩니다 · 120BPM 기준 %1$s · %2$s</string>
 </resources>
