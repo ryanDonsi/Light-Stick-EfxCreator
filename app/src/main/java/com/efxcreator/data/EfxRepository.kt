@@ -592,10 +592,12 @@ class EfxRepository(private val context: Context) {
             }
             path == PreferencesManager.EFX_PATH_DEFAULT || path.isEmpty() -> Loc.str(R.string.efx_default_unset)
             path.startsWith("content://") -> {
-                Loc.str(R.string.efx_repository_4, describeTreeUri(path))
+                if (EfxFolderSetup.hasWriteAccess(context, path)) Loc.str(R.string.efx_repository_4, describeTreeUri(path))
+                else Loc.str(R.string.efx_access_lost, describeTreeUri(path))
             }
             else -> {
-                Loc.str(R.string.efx_repository_4, friendlyPath(path))
+                // 예전 방식의 절대 경로는 이제 권한 없이 쓸 수 없다
+                Loc.str(R.string.efx_access_lost, friendlyPath(path))
             }
         }
     }

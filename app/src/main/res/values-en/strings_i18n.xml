@@ -651,4 +651,5 @@
     <string name="pattern_transit_beats_label">Transition (beats)</string>
     <string name="pattern_period_beats_label">Period (beats)</string>
     <string name="pattern_beat_hint">Calculated into frames from the song\'s BPM when placed · at 120 BPM: %1$s · %2$s</string>
+    <string name="efx_access_lost">Folder access was lost, so copies cannot be created. Please choose the folder again. (%1$s)</string>
 </resources>

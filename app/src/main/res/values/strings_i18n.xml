@@ -651,4 +651,5 @@
     <string name="pattern_transit_beats_label">전환 시간 (비트)</string>
     <string name="pattern_period_beats_label">주기 (비트)</string>
     <string name="pattern_beat_hint">곡의 BPM에 맞춰 놓을 때 프레임으로 계산됩니다 · 120BPM 기준 %1$s · %2$s</string>
+    <string name="efx_access_lost">접근 권한이 없어 폴더 사본을 만들 수 없습니다. 폴더를 다시 지정해 주세요. (%1$s)</string>
 </resources>

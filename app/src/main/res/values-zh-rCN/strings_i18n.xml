@@ -651,4 +651,5 @@
     <string name="pattern_transit_beats_label">过渡时间（拍）</string>
     <string name="pattern_period_beats_label">周期（拍）</string>
     <string name="pattern_beat_hint">放置时按歌曲BPM换算为帧 · 120BPM时 %1$s · %2$s</string>
+    <string name="efx_access_lost">没有文件夹访问权限，无法创建副本。请重新指定文件夹。（%1$s）</string>
 </resources>
