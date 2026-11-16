@@ -18,6 +18,13 @@
         android:theme="@style/Theme.EfxCreator"
         tools:targetApi="31">
 
+        <!-- Android 16(targetSdk 36)부터 큰 화면(최소 폭 600dp 이상)에서는 screenOrientation 등 방향/크기 제한이 무시된다.
+             이 앱은 가로 화면 기준으로 설계되어 있어 이전 동작(가로 고정)을 유지한다. API 36 에서만 쓸 수 있는 임시 해제이므로,
+             targetSdk 37 로 올리기 전에 세로 화면 레이아웃을 지원하거나 대안을 마련해야 한다. -->
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+            android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
