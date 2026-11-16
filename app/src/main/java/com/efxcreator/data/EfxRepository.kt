@@ -102,7 +102,6 @@ class EfxRepository(private val context: Context) {
 
         return try {
             val json = metadataFile.readText()
-            Log.d(TAG, "Loading metadata: $json")
             val type = object : TypeToken<List<EfxProjectMetadata>>() {}.type
             val projects: List<EfxProjectMetadata> = gson.fromJson(json, type) ?: emptyList()
             Log.d(TAG, "Loaded ${projects.size} projects")
@@ -485,7 +484,7 @@ class EfxRepository(private val context: Context) {
 
         if (oldPath == newPath) {
             // 같은 위치라도 (예: 권한을 방금 허용함) 사본을 다시 맞춘다
-            EfxFolderMirror(context).syncAll()
+            EfxFolderMirror(context).syncAllAsync()
             return
         }
 
@@ -504,7 +503,7 @@ class EfxRepository(private val context: Context) {
         if (newPath.startsWith("content://")) {
             Log.d(TAG, "New path is URI, skipping file migration")
             // 새 폴더에 공연명/곡명.efx 사본을 만들어 둔다
-            EfxFolderMirror(context).syncAll()
+            EfxFolderMirror(context).syncAllAsync()
             return
         }
 
@@ -526,7 +525,7 @@ class EfxRepository(private val context: Context) {
             }
         }
 
-        EfxFolderMirror(context).syncAll()
+        EfxFolderMirror(context).syncAllAsync()
         Log.d(TAG, "EFX storage path changed successfully")
     }
 

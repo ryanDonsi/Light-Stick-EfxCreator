@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
+import com.efxcreator.model.EfxProjectMetadata
+import com.efxcreator.model.Show
 import java.io.File
 
 /**
@@ -48,15 +50,22 @@ class EfxFolderMirror(private val context: Context) {
     }
 
     /** 이 곡의 사본을 현재 이름/공연에 맞는 위치에 만든다 (이미 있으면 덮어쓴다) */
-    fun sync(projectId: String) {
+    fun sync(projectId: String) = syncOne(projectId, null, null, null)
+
+    private fun syncOne(
+        projectId: String,
+        cachedRoot: Root?,
+        cachedMetas: List<EfxProjectMetadata>?,
+        cachedShows: List<Show>?
+    ) {
         try {
             val repo = EfxRepository(context)
-            val root = resolveRoot() ?: return
-            val metas = repo.loadProjectsMetadata()
+            val root = cachedRoot ?: resolveRoot() ?: return
+            val metas = cachedMetas ?: repo.loadProjectsMetadata()
             val meta = metas.firstOrNull { it.id == projectId } ?: return
             val source = repo.getEfxFile(projectId).takeIf { it.exists() && it.length() > 0 } ?: return
 
-            val shows = ShowRepository(context).load()
+            val shows = cachedShows ?: ShowRepository(context).load()
             val show = shows.firstOrNull { projectId in it.songIds }
             if (show == null) {
                 // 공연에 속하지 않은 곡은 폴더 사본을 두지 않는다 (공연명 폴더가 없으므로)
@@ -96,7 +105,15 @@ class EfxFolderMirror(private val context: Context) {
 
     /** 저장소 위치가 바뀌었을 때 등, 모든 곡의 사본을 다시 만든다 */
     fun syncAll() {
-        EfxRepository(context).loadProjectsMetadata().forEach { sync(it.id) }
+        val root = resolveRoot() ?: return
+        val metas = EfxRepository(context).loadProjectsMetadata()
+        val shows = ShowRepository(context).load()
+        metas.forEach { syncOne(it.id, root, metas, shows) }
+    }
+
+    /** 곡이 많으면 오래 걸리므로(SAF 쓰기) 화면을 막지 않도록 백그라운드에서 맞춘다 */
+    fun syncAllAsync() {
+        Thread({ syncAll() }, "efx-mirror-all").start()
     }
 
     private fun writeCopy(root: Root, folderName: String, fileName: String, source: File) {
