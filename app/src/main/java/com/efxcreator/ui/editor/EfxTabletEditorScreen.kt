@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -732,19 +733,33 @@ fun EfxTabletEditorScreen(
     }
 
     if (showBpmDialog) {
+        val styles = com.efxcreator.music.style.MusicStyleClassifier.MusicStyle.entries.map { it.name }
+        var style by remember { mutableStateOf(analysis?.musicStyle ?: styles.first()) }
         var text by remember { mutableStateOf((currentBpm ?: 120).toString()) }
         val value = text.toIntOrNull()
         val valid = value != null && value in 40..240
+        val changed = style != analysis?.musicStyle || value != currentBpm
         AlertDialog(
             onDismissRequest = { showBpmDialog = false },
-            title = { Text(Loc.str(R.string.efx_bpm_dialog_title)) },
+            title = { Text(Loc.str(R.string.efx_music_info_title)) },
             text = {
                 Column {
+                    Text(Loc.str(R.string.efx_music_info_genre), style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        styles.forEach { st ->
+                            FilterChip(selected = style == st, onClick = { style = st }, label = { Text(st) })
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = text,
                         onValueChange = { v -> text = v.filter { it.isDigit() }.take(3) },
                         singleLine = true,
-                        suffix = { Text("BPM") },
+                        label = { Text("BPM (40~240)") },
                         isError = !valid,
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -752,20 +767,23 @@ fun EfxTabletEditorScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        Loc.str(R.string.efx_bpm_dialog_note),
+                        Loc.str(R.string.efx_music_info_note, entries.size),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             },
             confirmButton = {
                 TextButton(
-                    enabled = valid && value != currentBpm,
+                    enabled = valid && changed && !applying,
                     onClick = {
-                        editVm.setBpm(value!!)
+                        val options = setsVm.rememberSelection(
+                            setsVm.songEffectSetId(projectId), setsVm.songPaletteSetId(projectId)
+                        )
+                        editVm.updateMusicInfo(style, value!!, options)
                         showBpmDialog = false
                     }
-                ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
+                ) { Text(Loc.str(R.string.efx_music_info_apply)) }
             },
             dismissButton = { TextButton(onClick = { showBpmDialog = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )

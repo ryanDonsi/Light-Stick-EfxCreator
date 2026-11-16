@@ -654,7 +654,8 @@
     <string name="efx_access_lost">접근 권한이 없어 폴더 사본을 만들 수 없습니다. 폴더를 다시 지정해 주세요. (%1$s)</string>
     <string name="efx_mirror_progress">폴더에 곡 사본을 만드는 중입니다…</string>
     <string name="efx_mirror_done">폴더 사본 만들기를 마쳤습니다</string>
-    <string name="efx_bpm_dialog_title">BPM 변경</string>
-    <string name="efx_bpm_dialog_note">입력한 BPM으로 비트 격자를 다시 만듭니다. 마디 첫 박 위치는 그대로 두고, 이미 배치한 이펙트는 바뀌지 않습니다. 이펙트도 새 비트에 맞추려면 \"세트 적용\"을 사용하세요. (40~240)</string>
-    <string name="efx_bpm_changed">BPM을 %1$d(으)로 바꿔 비트를 다시 만들었습니다</string>
+    <string name="efx_music_info_title">음악 정보 수정</string>
+    <string name="efx_music_info_genre">장르</string>
+    <string name="efx_music_info_note">현재 이펙트 %1$d개가 모두 새로 생성된 이펙트로 교체됩니다. 직접 고친 내용도 사라집니다. (되돌리기로 복구할 수 있습니다) 장르는 팔레트와 규칙, BPM은 비트 격자(마디 첫 박 위치는 유지)에 반영됩니다.</string>
+    <string name="efx_music_info_apply">수정하고 이펙트 재생성</string>
 </resources>

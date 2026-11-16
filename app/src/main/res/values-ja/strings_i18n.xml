@@ -654,7 +654,8 @@
     <string name="efx_access_lost">フォルダへのアクセス権がないためコピーを作成できません。フォルダを再度指定してください。（%1$s）</string>
     <string name="efx_mirror_progress">フォルダに曲のコピーを作成しています…</string>
     <string name="efx_mirror_done">フォルダへのコピー作成が完了しました</string>
-    <string name="efx_bpm_dialog_title">BPMを変更</string>
-    <string name="efx_bpm_dialog_note">入力したBPMでビートグリッドを作り直します。小節の先頭拍の位置は維持され、すでに配置したエフェクトは変わりません。エフェクトも新しいビートに合わせるには「セット適用」を使ってください。(40〜240)</string>
-    <string name="efx_bpm_changed">BPMを%1$dに変更してビートを再生成しました</string>
+    <string name="efx_music_info_title">音楽情報の編集</string>
+    <string name="efx_music_info_genre">ジャンル</string>
+    <string name="efx_music_info_note">現在のエフェクト%1$d個がすべて新しく生成したものに置き換わります。手動の編集も失われます(元に戻せます)。ジャンルはパレットとルール、BPMはビートグリッド(小節の先頭拍は維持)に反映されます。</string>
+    <string name="efx_music_info_apply">修正してエフェクトを再生成</string>
 </resources>
