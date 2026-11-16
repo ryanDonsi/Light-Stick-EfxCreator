@@ -429,7 +429,13 @@ fun EfxTabletEditorScreen(
                 analyzing = analyzing,
                 applying = applying,
                 entryCount = entries.size,
-                genre = analysis?.musicStyle,
+                genre = analysis?.let { a ->
+                    // 비트 간격의 중앙값으로 BPM 을 구해 장르 옆에 괄호로 붙인다 (비트가 부족하면 장르만)
+                    val gaps = a.beatTimesMs.zipWithNext { x, y -> y - x }.filter { it in 100L..3000L }.sorted()
+                    val bpm = gaps.getOrNull(gaps.size / 2)?.let { (60000.0 / it).roundToInt() }
+                    listOfNotNull(a.musicStyle?.takeIf { it.isNotBlank() }, bpm?.let { "($it BPM)" })
+                        .joinToString(" ").ifBlank { null }
+                },
                 deviceConnected = bleConnected != null,
                 canUndo = canUndo,
                 canRedo = canRedo,
