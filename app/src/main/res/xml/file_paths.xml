@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <files-path name="efx_files" path="." />
-    <external-files-path name="external_efx_files" path="." />
-    <external-path name="external_storage" path="." />
+    <!-- EFX 공유용으로 내보낸 사본만 FileProvider 로 열 수 있다 (EfxRepository.exportEfxBatch 가 만드는 폴더) -->
+    <external-files-path name="efx_exports" path="EfxExports/" />
 </paths>
