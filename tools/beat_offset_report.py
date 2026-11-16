@@ -87,9 +87,17 @@ def report(rec):
     bpm_app = 60000.0 / period
     gt_gaps = sorted(b - a for a, b in zip(gt_sorted, gt_sorted[1:]) if 100 < b - a < 3000)
     gp = median(gt_gaps) if gt_gaps else period
+    # GT 템포가 앱과 크게 다르면(예: 2배/절반 템포) 오프셋 비교가 의미 없다
+    gt_bpm = 60000.0 / gp
+    if abs(gt_bpm - bpm_app) / bpm_app > 0.04:
+        print(f"\n  GT 템포({gt_bpm:.1f} BPM)가 앱({bpm_app:.1f} BPM)과 달라 오프셋 진단을 건너뜁니다.")
+        return
     pts = []
     prev_o = None
+    lo, hi = gt_sorted[0] - gp / 2, gt_sorted[-1] + gp / 2
     for a in sorted(app):
+        if not (lo <= a <= hi):      # GT 가 시작하기 전/끝난 뒤의 앱 비트는 비교 대상이 아니다
+            continue
         g = nearest(gt_sorted, a)
         if g is None:
             continue

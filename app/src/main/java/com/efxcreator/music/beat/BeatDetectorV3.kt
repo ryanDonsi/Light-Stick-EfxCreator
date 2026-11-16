@@ -2010,7 +2010,7 @@ object BeatDetectorV3 {
 
         // 사용자가 BPM 을 지정한 경우: 추적기가 곡 중간에 위상을 바꿔 타는 문제를 막기 위해,
         // 신뢰할 만한 비트로 "시작 시각 + 일정 주기" 격자를 맞춰 곡 전체를 그 격자로 다시 만든다.
-        // 비트의 절반 이상이 격자에 들어맞지 않으면(템포가 흔들리는 곡) 추적 결과를 그대로 쓴다.
+        // 격자에 들어맞는 비트가 전체의 35% 미만이면(템포가 흔들리는 곡) 추적 결과를 그대로 쓴다.
         val beats: List<TimedBeat> = params.forcedBpm
             ?.let { fitBeatGrid(trackedBeats, 60000.0 / it, durationMs) }
             ?: trackedBeats
@@ -2963,16 +2963,45 @@ object BeatDetectorV3 {
     /**
      * [beats] 에서 일정한 주기의 격자(t = a + k*T)를 강건하게 맞춘다.
      * 격자에서 [GRID_INLIER_MS] 이내인 비트만으로 최소제곱을 반복해 시작 시각 a 와 주기 T 를 구하고(T 는 초기값의 ±1.5% 이내),
-     * 0..[durationMs] 전체를 그 격자로 채운다. 비트가 너무 적거나 인라이어가 절반 미만이면 null(적용 안 함).
+     * 0..[durationMs] 전체를 그 격자로 채운다. 비트가 너무 적거나 인라이어가 35% 미만이면 null(적용 안 함).
      */
     private fun fitBeatGrid(beats: List<TimedBeat>, periodMs: Double, durationMs: Long): List<TimedBeat>? {
         if (beats.size < 16 || periodMs <= 0.0) return null
         val times = beats.map { it.timeMs.toDouble() }
-        val t0 = times.first()
-        var period = periodMs
-        // 초기 위상: 각 비트의 (t - k*T) 의 중앙값
-        fun phases(p: Double) = times.map { t -> t - Math.round((t - t0) / p) * p }
-        var a = phases(period).sorted().let { it[it.size / 2] }
+        // 비트 시각은 10ms 단위로 반올림돼 있어 "간격의 중앙값"은 실제 주기와 어긋난다(예: 실제 625ms 가 620ms 로 보임).
+        // 그래서 입력 BPM 은 대략의 값으로만 쓰고, 추적된 비트의 32/16/8박 구간 평균 간격의 중앙값으로 주기를 다시 잡는다.
+        // 입력값과 3% 넘게 다르면 입력값을 그대로 쓴다.
+        val seedMs = run {
+            var found = periodMs
+            for (span in intArrayOf(32, 16, 8)) {
+                if (times.size > span + 8) {
+                    val sp = (0 until times.size - span).map { (times[it + span] - times[it]) / span }.sorted()
+                    val m = sp[sp.size / 2]
+                    if (kotlin.math.abs(m - periodMs) / periodMs <= 0.03) { found = m; break }
+                }
+            }
+            found
+        }
+        var period = seedMs
+        // 초기 위상: 비트 시각을 주기로 접은 값(t mod T)의 최빈 위치.
+        // 추적기가 곡 중간에 반 박자 위상을 갈아타면 위상이 두 무리로 갈리는데, 중앙값은 그 사이를 고르므로 최빈값을 쓴다.
+        val binMs = 10.0
+        val nBins = Math.ceil(period / binMs).toInt().coerceAtLeast(4)
+        val hist = IntArray(nBins)
+        val folded = times.map { t -> ((t % period) + period) % period }
+        for (f in folded) hist[((f / period) * nBins).toInt().coerceIn(0, nBins - 1)]++
+        // 이웃 칸을 합산(원형)해 ±1칸 흔들림에 둔감하게 한다
+        val smooth = IntArray(nBins) { i -> hist[(i + nBins - 1) % nBins] + hist[i] + hist[(i + 1) % nBins] }
+        val peak = smooth.indices.maxByOrNull { smooth[it] } ?: 0
+        val peakCenter = (peak + 0.5) / nBins * period
+        // 최빈 위치 ±30ms 안의 위상들의 평균(원형 차이로 계산)으로 시작 위상을 정한다
+        var sumDiff = 0.0; var cnt = 0
+        for (f in folded) {
+            var d = f - peakCenter
+            if (d > period / 2) d -= period else if (d < -period / 2) d += period
+            if (kotlin.math.abs(d) <= 30.0) { sumDiff += d; cnt++ }
+        }
+        var a = peakCenter + (if (cnt > 0) sumDiff / cnt else 0.0)
         var inliers = 0
         repeat(6) {
             val ks = ArrayList<Double>(); val ts = ArrayList<Double>()
@@ -2988,11 +3017,12 @@ object BeatDetectorV3 {
             var sxx = 0.0; var sxy = 0.0
             for (i in ks.indices) { sxx += (ks[i] - mk) * (ks[i] - mk); sxy += (ks[i] - mk) * (ts[i] - mt) }
             if (sxx <= 1e-9) return null
-            val newT = (sxy / sxx).coerceIn(periodMs * 0.985, periodMs * 1.015)
+            val newT = (sxy / sxx).coerceIn(seedMs * 0.985, seedMs * 1.015)
             val newA = mt - newT * mk
             period = newT; a = newA
         }
-        if (inliers < beats.size / 2) return null
+        // 위상이 두 무리(박/엇박)로 갈린 곡도 있으므로, 최빈 무리가 전체의 35% 이상이면 그 위상을 따른다
+        if (inliers < beats.size * 0.35) return null
         val out = ArrayList<TimedBeat>()
         var k = Math.ceil(-a / period).toLong()
         while (true) {
