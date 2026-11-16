@@ -2,7 +2,11 @@ package com.efxcreator.data
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
+import com.efxcreator.R
 import androidx.documentfile.provider.DocumentFile
 import com.efxcreator.model.EfxProjectMetadata
 import com.efxcreator.model.Show
@@ -84,8 +88,14 @@ class EfxFolderMirror(private val context: Context) {
             val previous = spf.getString(projectId, null)
             if (previous != null && previous != target) deleteCopy(root, previous)
 
+            // 저장 위치·내용·위치가 그대로이고 사본도 있으면 다시 쓰지 않는다 (같은 폴더를 다시 고를 때 빠르게 끝낸다)
+            val stamp = "${prefs.efxStoragePath}|${source.length()}|${source.lastModified()}|$target"
+            if (previous == target && spf.getString("stamp_$projectId", null) == stamp && copyExists(root, folderName, fileName)) {
+                return
+            }
+
             writeCopy(root, folderName, fileName, source)
-            spf.edit().putString(projectId, target).apply()
+            spf.edit().putString(projectId, target).putString("stamp_$projectId", stamp).apply()
             Log.d(TAG, "Mirrored $projectId → $target")
         } catch (e: Exception) {
             Log.e(TAG, "Mirror sync failed for $projectId", e)
@@ -97,7 +107,7 @@ class EfxFolderMirror(private val context: Context) {
         try {
             val previous = spf.getString(projectId, null) ?: return
             resolveRoot()?.let { deleteCopy(it, previous) }
-            spf.edit().remove(projectId).apply()
+            spf.edit().remove(projectId).remove("stamp_$projectId").apply()
         } catch (e: Exception) {
             Log.e(TAG, "Mirror remove failed for $projectId", e)
         }
@@ -111,9 +121,23 @@ class EfxFolderMirror(private val context: Context) {
         metas.forEach { syncOne(it.id, root, metas, shows) }
     }
 
+    private fun toast(resId: Int) {
+        Handler(Looper.getMainLooper()).post { Toast.makeText(context, resId, Toast.LENGTH_SHORT).show() }
+    }
+
     /** 곡이 많으면 오래 걸리므로(SAF 쓰기) 화면을 막지 않도록 백그라운드에서 맞춘다 */
     fun syncAllAsync() {
-        Thread({ syncAll() }, "efx-mirror-all").start()
+        if (resolveRoot() == null) return
+        toast(R.string.efx_mirror_progress)
+        Thread({
+            syncAll()
+            toast(R.string.efx_mirror_done)
+        }, "efx-mirror-all").start()
+    }
+
+    private fun copyExists(root: Root, folder: String, name: String): Boolean = when (root) {
+        is Root.Path -> File(File(root.dir, folder), name).isFile
+        is Root.Tree -> root.dir.findFile(folder)?.takeIf { it.isDirectory }?.findFile(name) != null
     }
 
     private fun writeCopy(root: Root, folderName: String, fileName: String, source: File) {

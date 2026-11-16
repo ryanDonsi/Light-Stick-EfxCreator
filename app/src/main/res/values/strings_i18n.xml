@@ -652,4 +652,6 @@
     <string name="pattern_period_beats_label">주기 (비트)</string>
     <string name="pattern_beat_hint">곡의 BPM에 맞춰 놓을 때 프레임으로 계산됩니다 · 120BPM 기준 %1$s · %2$s</string>
     <string name="efx_access_lost">접근 권한이 없어 폴더 사본을 만들 수 없습니다. 폴더를 다시 지정해 주세요. (%1$s)</string>
+    <string name="efx_mirror_progress">폴더에 곡 사본을 만드는 중입니다…</string>
+    <string name="efx_mirror_done">폴더 사본 만들기를 마쳤습니다</string>
 </resources>

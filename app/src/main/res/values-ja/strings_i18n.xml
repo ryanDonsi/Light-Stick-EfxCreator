@@ -652,4 +652,6 @@
     <string name="pattern_period_beats_label">周期（拍）</string>
     <string name="pattern_beat_hint">配置時に曲のBPMに合わせてフレームに計算されます · 120BPM基準 %1$s · %2$s</string>
     <string name="efx_access_lost">フォルダへのアクセス権がないためコピーを作成できません。フォルダを再度指定してください。（%1$s）</string>
+    <string name="efx_mirror_progress">フォルダに曲のコピーを作成しています…</string>
+    <string name="efx_mirror_done">フォルダへのコピー作成が完了しました</string>
 </resources>
