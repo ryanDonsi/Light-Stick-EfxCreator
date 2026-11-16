@@ -114,7 +114,10 @@ import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.model.PatternResolver
 import com.efxcreator.model.PatternStep
 import com.lightstick.efx.EfxEntry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.isActive
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -222,6 +225,7 @@ fun EfxTabletEditorScreen(
     var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     var showApplyDialog by remember { mutableStateOf(false) }
     var showBpmDialog by remember { mutableStateOf(false) }
+    val exportScope = androidx.compose.runtime.rememberCoroutineScope()
     // 비트 간격의 중앙값으로 구한 BPM (비트가 부족하면 null)
     val currentBpm = remember(analysis) {
         val gaps = analysis?.beatTimesMs.orEmpty().zipWithNext { x, y -> y - x }.filter { it in 100L..3000L }.sorted()
@@ -436,6 +440,21 @@ fun EfxTabletEditorScreen(
                 hasMusic = musicFile != null,
                 infoReady = analysis?.engineInput != null && !analyzing,
                 onEditInfo = { showBpmDialog = true },
+                onExportBeatCheck = {
+                    val a = analysis
+                    val id = efx?.header?.musicId
+                    if (a == null || id == null) return@EditorTopBar
+                    exportScope.launch {
+                        val files = withContext(Dispatchers.IO) {
+                            runCatching { com.efxcreator.data.BeatCheckExport.export(context, id, entries, a) }.getOrNull()
+                        }
+                        if (files == null) {
+                            android.widget.Toast.makeText(context, Loc.str(R.string.efx_beatcheck_failed), android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            shareBeatCheckFiles(context, files)
+                        }
+                    }
+                },
                 analyzing = analyzing,
                 applying = applying,
                 entryCount = entries.size,
@@ -877,6 +896,7 @@ private fun EditorTopBar(
     hasMusic: Boolean,
     infoReady: Boolean,
     onEditInfo: () -> Unit,
+    onExportBeatCheck: () -> Unit,
     analyzing: Boolean,
     applying: Boolean,
     entryCount: Int,
@@ -1015,6 +1035,11 @@ private fun EditorTopBar(
                         text = { Text(Loc.str(R.string.efx_music_menu_info)) },
                         enabled = infoReady,
                         onClick = { musicMenu = false; onEditInfo() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Loc.str(R.string.efx_music_menu_beatcheck)) },
+                        enabled = infoReady,
+                        onClick = { musicMenu = false; onExportBeatCheck() }
                     )
                 }
             }
@@ -1480,5 +1505,26 @@ private fun SelectedEntryPanel(
                 Text(Loc.str(R.string.efx_edit_screen_15))
             }
         }
+    }
+}
+
+
+/** Beat Accuracy Checker 용 파일(타임라인/섹션 바이너리)을 시스템 공유 창으로 내보낸다 */
+private fun shareBeatCheckFiles(context: android.content.Context, files: List<java.io.File>) {
+    try {
+        val uris = ArrayList(files.map {
+            androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it)
+        })
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "application/octet-stream"
+            putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, uris)
+            clipData = android.content.ClipData.newRawUri(null, uris[0]).also { clip ->
+                uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+            }
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(intent, Loc.str(R.string.efx_music_menu_beatcheck)))
+    } catch (e: Exception) {
+        android.util.Log.e("EfxTabletEditor", "Error sharing beat-check files", e)
     }
 }

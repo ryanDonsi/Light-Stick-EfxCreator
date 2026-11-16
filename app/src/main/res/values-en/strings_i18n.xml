@@ -661,4 +661,6 @@
     <string name="efx_music_menu_label">Music info</string>
     <string name="efx_music_menu_change">Change music file</string>
     <string name="efx_music_menu_info">Edit BPM / genre</string>
+    <string name="efx_music_menu_beatcheck">Export for accuracy check</string>
+    <string name="efx_beatcheck_failed">Could not create the accuracy-check files</string>
 </resources>

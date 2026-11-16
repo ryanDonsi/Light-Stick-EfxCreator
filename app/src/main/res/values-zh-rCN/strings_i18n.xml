@@ -661,4 +661,6 @@
     <string name="efx_music_menu_label">音乐信息</string>
     <string name="efx_music_menu_change">更换音乐文件</string>
     <string name="efx_music_menu_info">修改 BPM / 流派</string>
+    <string name="efx_music_menu_beatcheck">导出用于准确度检查</string>
+    <string name="efx_beatcheck_failed">无法创建准确度检查文件</string>
 </resources>

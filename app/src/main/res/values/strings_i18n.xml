@@ -661,4 +661,6 @@
     <string name="efx_music_menu_label">음악 정보</string>
     <string name="efx_music_menu_change">음악 파일 변경</string>
     <string name="efx_music_menu_info">BPM / 장르 수정</string>
+    <string name="efx_music_menu_beatcheck">정확도 검사용 내보내기</string>
+    <string name="efx_beatcheck_failed">정확도 검사용 파일을 만들지 못했습니다</string>
 </resources>

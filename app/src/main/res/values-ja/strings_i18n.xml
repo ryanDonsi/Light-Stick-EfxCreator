@@ -661,4 +661,6 @@
     <string name="efx_music_menu_label">音楽情報</string>
     <string name="efx_music_menu_change">音楽ファイルを変更</string>
     <string name="efx_music_menu_info">BPM / ジャンルを編集</string>
+    <string name="efx_music_menu_beatcheck">精度チェック用に書き出し</string>
+    <string name="efx_beatcheck_failed">精度チェック用ファイルを作成できませんでした</string>
 </resources>
