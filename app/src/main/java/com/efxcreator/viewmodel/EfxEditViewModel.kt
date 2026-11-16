@@ -326,7 +326,8 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * 곡 정보(장르, BPM)를 고치고 그 값으로 이펙트를 전체 다시 만든다.
-     * - [style] 은 MusicStyle 이름. 바꾸면 장르 기반 팔레트와 규칙이 달라진다.
+     * - [style] 은 MusicStyle 이름. 바꾸면 장르 기반 팔레트와 규칙이 달라진다. 장르를 직접 바꾸지 않고 BPM 만
+     *   바꾸면 재분석 결과의 장르가 새로 적용된다.
      * - [bpm] 을 바꾸면 그 값으로 비트 분석을 다시 돌려 비트·섹션·에너지를 새로 구한다. 음악 파일이 없거나
      *   재분석이 실패하면 마디 첫 박(downbeat) 기준의 균일한 격자로 대신한다.
      * 고친 값은 저장된 분석 결과에 반영되어 다음에 열어도 유지된다. 이펙트 교체는 작업본에 반영되므로 되돌리기가 된다.
@@ -340,6 +341,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val regrid = currentBpmOf(analysis) != bpm
             var base = analysis
+            var reanalyzed = false
             if (regrid) {
                 val file = _musicFile.value
                 var retracked: MusicAnalysis? = null
@@ -357,11 +359,14 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
                 // 음악 파일이 없거나 재분석이 실패하면 균일한 격자로 대신한다
-                base = retracked?.takeIf { it.engineInput != null && it.beatTimesMs.isNotEmpty() }
-                    ?: withContext(Dispatchers.Default) { rebuildBeatGrid(analysis, input, beatMs) }
+                val good = retracked?.takeIf { it.engineInput != null && it.beatTimesMs.isNotEmpty() }
+                reanalyzed = good != null
+                base = good ?: withContext(Dispatchers.Default) { rebuildBeatGrid(analysis, input, beatMs) }
             }
-            // 장르는 사용자가 고른 값을 우선한다 (재분석이 다시 분류해도 덮어쓴다)
-            val updated = base.copy(musicStyle = style, engineInput = base.engineInput?.copy(musicStyle = style))
+            // 장르: 사용자가 칩으로 직접 바꿨으면 그 값을, 그대로 두고 BPM 만 바꿨으면 재분석이 새로 분류한 값을 쓴다
+            val styleEdited = style != analysis.musicStyle
+            val finalStyle = if (styleEdited || !reanalyzed) style else (base.musicStyle ?: style)
+            val updated = base.copy(musicStyle = finalStyle, engineInput = base.engineInput?.copy(musicStyle = finalStyle))
             withContext(Dispatchers.IO) { repository.saveAnalysis(projectId, updated) }
             _analysis.value = updated
             applySets(options, null)
