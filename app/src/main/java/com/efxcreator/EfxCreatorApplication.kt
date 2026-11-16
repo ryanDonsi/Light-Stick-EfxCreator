@@ -20,8 +20,9 @@ class EfxCreatorApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // 스캔/연결 문제 진단을 위해 SDK 패킷·연결 로그(태그 'Lightstick')를 켠다
-        LSBluetooth.setDebugLoggingEnabled(true)
+        // 스캔/연결 문제 진단용 SDK 패킷·연결 로그(태그 'Lightstick')는 디버그 빌드에서만 켠다.
+        // 릴리스(release/releaseTest)에서는 기기 MAC 주소 등이 로그에 남지 않도록 끈다.
+        LSBluetooth.setDebugLoggingEnabled(BuildConfig.DEBUG)
 
         // Light-Stick-Music 과 동일한 장치 이름 필터
         val filter = DeviceFilter.Builder()
