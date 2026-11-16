@@ -52,8 +52,8 @@ class AutoEfxGenerator {
     }
 
     /** 이펙트는 만들지 않고 파형/섹션/비트 분석 결과만 필요할 때 사용한다. */
-    suspend fun analyze(musicFile: File): MusicAnalysis = withContext(Dispatchers.Default) {
-        val r = runPipeline(musicFile, computeMusicId(musicFile))
+    suspend fun analyze(musicFile: File, forcedBeatMs: Long? = null): MusicAnalysis = withContext(Dispatchers.Default) {
+        val r = runPipeline(musicFile, computeMusicId(musicFile), forcedBeatMs = forcedBeatMs)
         r.analysis ?: throw GenerationException(Loc.str(R.string.auto_efx_generator_2))
     }
 
@@ -81,7 +81,8 @@ class AutoEfxGenerator {
     }
 
     private suspend fun runPipeline(
-        musicFile: File, musicId: Int, options: GenerationOptions = GenerationOptions()
+        musicFile: File, musicId: Int, options: GenerationOptions = GenerationOptions(),
+        forcedBeatMs: Long? = null
     ): GenerationResult {
         coroutineContext.ensureActive()
         return try {
@@ -89,7 +90,8 @@ class AutoEfxGenerator {
                 musicPath = musicFile.absolutePath,
                 musicId = musicId,
                 paletteSize = AutoTimelineConfig.PALETTE_SIZE,
-                options = options
+                options = options,
+                forcedBeatMs = forcedBeatMs
             )
         } catch (e: Exception) {
             throw GenerationException(Loc.str(R.string.auto_efx_generator_6, e.message), e)

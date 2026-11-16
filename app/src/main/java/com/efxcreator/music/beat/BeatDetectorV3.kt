@@ -176,7 +176,9 @@ object BeatDetectorV3 {
         // V3 추가 파라미터
         val useTempogram: Boolean = true,  // Tempogram 사용 여부
         val halfTempoRatio: Float = 0.60f,
-        val doubleTempoRatio: Float = 0.55f
+        val doubleTempoRatio: Float = 0.55f,
+        /** 지정하면 BPM 자동 추정 결과 대신 이 비트 간격(ms)으로 비트를 추적한다 (사용자가 BPM 을 직접 고친 경우) */
+        val forcedBeatMs: Long? = null
     )
 
     /**
@@ -1898,7 +1900,7 @@ object BeatDetectorV3 {
 
         // Method B: 섹션 중앙값 기반 BPM 보정 (V3.7)
         val methodBBpm: Float
-        val finalBeatMs: Long
+        val autoBeatMs: Long
         val octaveCorrectionReason: String
         val methodSelectionReason: String
 
@@ -1925,14 +1927,17 @@ object BeatDetectorV3 {
             // Step 3: Method A (Global AC, bestBpm) vs Method B (Section Median, methodBBpm) 선택
             // 미스매치 곡들의 경우 Global BPM이 정확할 수 있으므로 비교 후 결정
             val selectionResult = selectBetweenMethodsAandB(bestBpm, methodBBpm, methodABeatMs, isCompoundMeterCandidate)
-            finalBeatMs = selectionResult.beatMs
+            autoBeatMs = selectionResult.beatMs
             methodSelectionReason = selectionResult.reason
         } else {
             methodBBpm = 0f
-            finalBeatMs = methodABeatMs
+            autoBeatMs = methodABeatMs
             octaveCorrectionReason = "NO_SECTIONS: no section BPMs collected"
             methodSelectionReason = "NO_SECTIONS: using Global AC directly"
         }
+
+        // 사용자가 BPM 을 지정했으면 자동 추정값 대신 그 값으로 비트를 추적한다
+        val finalBeatMs: Long = params.forcedBeatMs ?: autoBeatMs
 
         // V3.5 FIX: Generate actual beat positions using dpBeatTracker
         // ════════════════════════════════════════════════════════════════════════════════

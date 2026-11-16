@@ -737,7 +737,7 @@ fun EfxTabletEditorScreen(
         var style by remember { mutableStateOf(analysis?.musicStyle ?: styles.first()) }
         var text by remember { mutableStateOf((currentBpm ?: 120).toString()) }
         val value = text.toIntOrNull()
-        val valid = value != null && value in 40..240
+        val valid = value != null && value in 50..160
         val changed = style != analysis?.musicStyle || value != currentBpm
         AlertDialog(
             onDismissRequest = { showBpmDialog = false },
@@ -759,7 +759,7 @@ fun EfxTabletEditorScreen(
                         value = text,
                         onValueChange = { v -> text = v.filter { it.isDigit() }.take(3) },
                         singleLine = true,
-                        label = { Text("BPM (40~240)") },
+                        label = { Text("BPM (50~160)") },
                         isError = !valid,
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Number

@@ -656,6 +656,6 @@
     <string name="efx_mirror_done">Finished creating folder copies</string>
     <string name="efx_music_info_title">Edit music info</string>
     <string name="efx_music_info_genre">Genre</string>
-    <string name="efx_music_info_note">All %1$d current effects will be replaced with newly generated ones, including manual edits (you can undo). Genre affects the palette and rules; BPM rebuilds the beat grid (the first beat of the bar stays).</string>
+    <string name="efx_music_info_note">All %1$d current effects will be replaced with newly generated ones, including manual edits (you can undo). Genre affects the palette and rules; BPM re-runs beat analysis with that tempo (takes a few seconds).</string>
     <string name="efx_music_info_apply">Apply and regenerate</string>
 </resources>
