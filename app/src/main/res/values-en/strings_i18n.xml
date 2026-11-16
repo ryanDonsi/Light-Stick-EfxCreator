@@ -654,4 +654,7 @@
     <string name="efx_access_lost">Folder access was lost, so copies cannot be created. Please choose the folder again. (%1$s)</string>
     <string name="efx_mirror_progress">Creating song copies in the folder…</string>
     <string name="efx_mirror_done">Finished creating folder copies</string>
+    <string name="efx_bpm_dialog_title">Change BPM</string>
+    <string name="efx_bpm_dialog_note">Rebuilds the beat grid with this BPM. The first beat of the bar stays where it is, and effects already placed are not changed. Use \"Apply sets\" to regenerate effects on the new beats. (40–240)</string>
+    <string name="efx_bpm_changed">Beat grid rebuilt at %1$d BPM</string>
 </resources>

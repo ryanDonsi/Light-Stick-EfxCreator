@@ -654,4 +654,7 @@
     <string name="efx_access_lost">没有文件夹访问权限，无法创建副本。请重新指定文件夹。（%1$s）</string>
     <string name="efx_mirror_progress">正在文件夹中创建歌曲副本…</string>
     <string name="efx_mirror_done">文件夹副本创建完成</string>
+    <string name="efx_bpm_dialog_title">修改 BPM</string>
+    <string name="efx_bpm_dialog_note">按输入的 BPM 重新生成节拍网格。小节第一拍的位置保持不变，已放置的效果不会改变。如需让效果适配新节拍，请使用“应用套装”。(40–240)</string>
+    <string name="efx_bpm_changed">已按 %1$d BPM 重新生成节拍</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.efxcreator.viewmodel
 
+import com.efxcreator.music.EngineInput
+import com.efxcreator.music.EngineBeat
 import android.app.Application
 import android.net.Uri
 import android.util.Log
@@ -88,6 +90,8 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
     val saving: StateFlow<Boolean> = _saving.asStateFlow()
 
     companion object {
+        private const val MIN_EDIT_BEAT_MS = 250L   // 240 BPM
+        private const val MAX_EDIT_BEAT_MS = 1500L  // 40 BPM
         private const val TAG = "EfxEditViewModel"
         /** Undo 로 되돌릴 수 있는 최대 편집 횟수 */
         private const val MAX_HISTORY = 100
@@ -318,6 +322,45 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 _applying.value = false
             }
         }
+    }
+
+    /**
+     * 곡의 BPM 을 [bpm] 으로 바꿔 비트 격자를 다시 만든다.
+     * 마디 첫 박(downbeat)을 기준으로 앞뒤 일정한 간격의 비트를 만들고, 각 비트의 에너지·섹션 정보는
+     * 가장 가까운 기존 비트에서 가져온다. 이미 배치한 이펙트는 그대로 두며(필요하면 "세트 적용"으로 다시 생성),
+     * 저장된 분석 결과에 반영해 다음에 열어도 유지된다.
+     */
+    fun setBpm(bpm: Int) {
+        val projectId = _metadata.value?.id ?: return
+        val analysis = _analysis.value ?: return
+        val input = analysis.engineInput ?: return
+        val beatMs = Math.round(60000.0 / bpm)
+        if (beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS || input.beats.isEmpty()) return
+        viewModelScope.launch {
+            val updated = withContext(Dispatchers.Default) { rebuildBeatGrid(analysis, input, beatMs) }
+            withContext(Dispatchers.IO) { repository.saveAnalysis(projectId, updated) }
+            _analysis.value = updated
+            _message.value = Loc.str(R.string.efx_bpm_changed, bpm)
+        }
+    }
+
+    private fun rebuildBeatGrid(analysis: MusicAnalysis, input: EngineInput, beatMs: Long): MusicAnalysis {
+        val anchor = input.downbeatMs
+        val perBar = input.beatsPerBar.coerceAtLeast(1)
+        val first = -Math.floorDiv(anchor, beatMs)               // 0 이상이 되는 가장 앞 비트의 번호
+        val last = Math.floorDiv(input.durationMs - anchor, beatMs)
+        val old = input.beats
+        val times = ArrayList<Long>()
+        val newBeats = ArrayList<EngineBeat>()
+        var j = 0
+        for (k in first..last) {
+            val t = anchor + k * beatMs
+            while (j + 1 < old.size && kotlin.math.abs(old[j + 1].timeMs - t) <= kotlin.math.abs(old[j].timeMs - t)) j++
+            times += t
+            newBeats += old[j].copy(timeMs = t, beatInBar = Math.floorMod(k, perBar.toLong()).toInt())
+        }
+        val newInput = input.copy(beatTimesMs = times, globalBeatMs = beatMs, beats = newBeats)
+        return analysis.copy(beatTimesMs = times, engineInput = newInput)
     }
 
     /** [range] 안의 기존 엔트리를 [newEntries] 로 교체한다 (작업본에만 반영 — 저장은 [save]). */

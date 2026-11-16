@@ -220,6 +220,12 @@ fun EfxTabletEditorScreen(
     var showNameDialog by remember { mutableStateOf(false) }
     var devicePopup by remember { mutableStateOf(DevicePopup.NONE) }
     var showApplyDialog by remember { mutableStateOf(false) }
+    var showBpmDialog by remember { mutableStateOf(false) }
+    // 비트 간격의 중앙값으로 구한 BPM (비트가 부족하면 null)
+    val currentBpm = remember(analysis) {
+        val gaps = analysis?.beatTimesMs.orEmpty().zipWithNext { x, y -> y - x }.filter { it in 100L..3000L }.sorted()
+        gaps.getOrNull(gaps.size / 2)?.let { (60000.0 / it).roundToInt() }
+    }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var deviceLoaded by remember { mutableStateOf(false) }
 
@@ -429,13 +435,9 @@ fun EfxTabletEditorScreen(
                 analyzing = analyzing,
                 applying = applying,
                 entryCount = entries.size,
-                genre = analysis?.let { a ->
-                    // 비트 간격의 중앙값으로 BPM 을 구해 장르 옆에 괄호로 붙인다 (비트가 부족하면 장르만)
-                    val gaps = a.beatTimesMs.zipWithNext { x, y -> y - x }.filter { it in 100L..3000L }.sorted()
-                    val bpm = gaps.getOrNull(gaps.size / 2)?.let { (60000.0 / it).roundToInt() }
-                    listOfNotNull(a.musicStyle?.takeIf { it.isNotBlank() }, bpm?.let { "($it BPM)" })
-                        .joinToString(" ").ifBlank { null }
-                },
+                genre = analysis?.musicStyle,
+                bpm = currentBpm,
+                onEditBpm = { if (analysis?.engineInput != null) showBpmDialog = true },
                 deviceConnected = bleConnected != null,
                 canUndo = canUndo,
                 canRedo = canRedo,
@@ -729,6 +731,46 @@ fun EfxTabletEditorScreen(
         )
     }
 
+    if (showBpmDialog) {
+        var text by remember { mutableStateOf((currentBpm ?: 120).toString()) }
+        val value = text.toIntOrNull()
+        val valid = value != null && value in 40..240
+        AlertDialog(
+            onDismissRequest = { showBpmDialog = false },
+            title = { Text(Loc.str(R.string.efx_bpm_dialog_title)) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { v -> text = v.filter { it.isDigit() }.take(3) },
+                        singleLine = true,
+                        suffix = { Text("BPM") },
+                        isError = !valid,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                        )
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        Loc.str(R.string.efx_bpm_dialog_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = valid && value != currentBpm,
+                    onClick = {
+                        editVm.setBpm(value!!)
+                        showBpmDialog = false
+                    }
+                ) { Text(Loc.str(R.string.efx_edit_screen_21)) }
+            },
+            dismissButton = { TextButton(onClick = { showBpmDialog = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
+        )
+    }
+
     if (showApplyDialog) {
         // -1 = 곡 전체, 그 외 = analysis.sections 의 인덱스
         var scopeIndex by remember { mutableIntStateOf(-1) }
@@ -815,6 +857,8 @@ private fun EditorTopBar(
     applying: Boolean,
     entryCount: Int,
     genre: String?,
+    bpm: Int?,
+    onEditBpm: () -> Unit,
     deviceConnected: Boolean,
     canUndo: Boolean,
     canRedo: Boolean,
@@ -856,12 +900,16 @@ private fun EditorTopBar(
                 )
                 // 곡의 장르는 바뀌지 않으므로 제목 옆에 위에서부터 장르 > entries 순으로 표시한다
                 Column(modifier = Modifier.padding(start = 4.dp)) {
-                    if (!genre.isNullOrBlank()) {
+                    val genreText = listOfNotNull(genre?.takeIf { it.isNotBlank() }, bpm?.let { "($it BPM)" })
+                        .joinToString(" ")
+                    if (genreText.isNotEmpty()) {
+                        // 누르면 BPM 을 고쳐 비트 격자를 다시 만든다
                         Text(
-                            genre,
+                            genreText,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
+                            maxLines = 1,
+                            modifier = Modifier.clip(MaterialTheme.shapes.extraSmall).clickable(onClick = onEditBpm)
                         )
                     }
                     Text(
