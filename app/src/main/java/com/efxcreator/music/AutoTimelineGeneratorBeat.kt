@@ -63,9 +63,9 @@ class AutoTimelineGeneratorBeat {
     fun generateAnalyzed(
         musicPath: String, musicId: Int, paletteSize: Int,
         options: GenerationOptions = GenerationOptions(),
-        forcedBeatMs: Long? = null
+        forcedBpm: Double? = null
     ): GenerationResult {
-        val input = analyzeToInput(musicPath, forcedBeatMs)
+        val input = analyzeToInput(musicPath, forcedBpm)
             ?: return GenerationResult(emptyList(), emptyList(), null)
         val rendered = render(input, musicId, options)
         val sectionGroups = groupAnnotatedBeats(input.beats.map { it.toAnnotated() }, input.durationMs)
@@ -92,7 +92,7 @@ class AutoTimelineGeneratorBeat {
      * 느린 분석 단계: 비트 → 섹션 → 장르 검출. 결과를 [EngineInput] 으로 돌려준다.
      * 비트/envelope 를 얻지 못하면 null.
      */
-    fun analyzeToInput(musicPath: String, forcedBeatMs: Long? = null): EngineInput? {
+    fun analyzeToInput(musicPath: String, forcedBpm: Double? = null): EngineInput? {
         val fileName = musicPath.substringAfterLast("/").substringBeforeLast(".")
         val t0 = System.currentTimeMillis()
         Log.d(TAG, "analyze() start file=$fileName")
@@ -106,7 +106,7 @@ class AutoTimelineGeneratorBeat {
             hopMs = effectiveHopMs,
             minBeatMs = MIN_BEAT_MS,
             maxBeatMs = MAX_BEAT_MS,
-            forcedBeatMs = forcedBeatMs
+            forcedBpm = forcedBpm
         )
         val tBeat = System.currentTimeMillis() - t0
 

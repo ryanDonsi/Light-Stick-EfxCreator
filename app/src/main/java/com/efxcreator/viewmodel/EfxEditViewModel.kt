@@ -332,14 +332,14 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
      *   재분석이 실패하면 마디 첫 박(downbeat) 기준의 균일한 격자로 대신한다.
      * 고친 값은 저장된 분석 결과에 반영되어 다음에 열어도 유지된다. 이펙트 교체는 작업본에 반영되므로 되돌리기가 된다.
      */
-    fun updateMusicInfo(style: String, bpm: Int, options: GenerationOptions) {
+    fun updateMusicInfo(style: String, bpm: Double, options: GenerationOptions) {
         val projectId = _metadata.value?.id ?: return
         val analysis = _analysis.value ?: return
         val input = analysis.engineInput ?: return
         val beatMs = Math.round(60000.0 / bpm)
-        if (beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS || input.beats.isEmpty()) return
+        if (bpm <= 0.0 || beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS || input.beats.isEmpty()) return
         viewModelScope.launch {
-            val regrid = currentBpmOf(analysis) != bpm
+            val regrid = currentBpmOf(analysis)?.let { kotlin.math.abs(it - bpm) >= 0.05 } ?: true
             var base = analysis
             var reanalyzed = false
             if (regrid) {
@@ -349,7 +349,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                     // 지정한 BPM 으로 비트 분석을 다시 돌린다 (실제 소리의 onset 에 맞춰 비트를 추적, 몇 초 걸린다)
                     _analyzing.value = true
                     try {
-                        retracked = autoEfxGenerator.analyze(file, beatMs)
+                        retracked = autoEfxGenerator.analyze(file, bpm)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -373,10 +373,17 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** 비트 간격의 중앙값으로 구한 BPM (비트가 부족하면 null) */
-    fun currentBpmOf(analysis: MusicAnalysis?): Int? {
-        val gaps = analysis?.beatTimesMs.orEmpty().zipWithNext { x, y -> y - x }.filter { it in 100L..3000L }.sorted()
-        return gaps.getOrNull(gaps.size / 2)?.let { Math.round(60000.0 / it).toInt() }
+    /**
+     * 비트 목록에서 구한 BPM (소수 첫째 자리까지, 비트가 부족하면 null).
+     * 비트 8개 간격(8박)의 중앙값을 써서, 비트 시각이 정수 ms 라서 생기는 반올림 오차를 줄인다.
+     */
+    fun currentBpmOf(analysis: MusicAnalysis?): Double? {
+        val t = analysis?.beatTimesMs.orEmpty()
+        val span = 8
+        if (t.size <= span) return null
+        val gaps = (0 until t.size - span).map { (t[it + span] - t[it]) / span.toDouble() }
+            .filter { it in 100.0..3000.0 }.sorted()
+        return gaps.getOrNull(gaps.size / 2)?.let { Math.round(60000.0 / it * 10.0) / 10.0 }
     }
 
     private fun rebuildBeatGrid(analysis: MusicAnalysis, input: EngineInput, beatMs: Long): MusicAnalysis {

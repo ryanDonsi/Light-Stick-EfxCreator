@@ -63,6 +63,8 @@ object BeatDetectorV3 {
 
     // Tempogram 파라미터
     private const val TEMPOGRAM_TIME_FRAMES = 200  // 시간 축 프레임 수
+    /** 격자 맞춤에서 "격자에 들어맞는 비트"로 보는 허용 오차(ms) */
+    private const val GRID_INLIER_MS = 60.0
     private const val TEMPOGRAM_MIN_CONFIDENCE = 0.3f  // 신뢰도 최소값
 
     // V4.5: 하모닉 필터링 전(raw) 절반-lag(2배 BPM) 자기상관 비율 기반 옥타브 보정 임계값.
@@ -177,8 +179,8 @@ object BeatDetectorV3 {
         val useTempogram: Boolean = true,  // Tempogram 사용 여부
         val halfTempoRatio: Float = 0.60f,
         val doubleTempoRatio: Float = 0.55f,
-        /** 지정하면 BPM 자동 추정 결과 대신 이 비트 간격(ms)으로 비트를 추적한다 (사용자가 BPM 을 직접 고친 경우) */
-        val forcedBeatMs: Long? = null
+        /** 지정하면 BPM 자동 추정 결과 대신 이 BPM(소수 가능)으로 비트를 추적하고, 규칙적인 곡이면 격자로 맞춘다 (사용자가 BPM 을 직접 고친 경우) */
+        val forcedBpm: Double? = null
     )
 
     /**
@@ -1937,7 +1939,7 @@ object BeatDetectorV3 {
         }
 
         // 사용자가 BPM 을 지정했으면 자동 추정값 대신 그 값으로 비트를 추적한다
-        val finalBeatMs: Long = params.forcedBeatMs ?: autoBeatMs
+        val finalBeatMs: Long = params.forcedBpm?.let { Math.round(60000.0 / it) } ?: autoBeatMs
 
         // V3.5 FIX: Generate actual beat positions using dpBeatTracker
         // ════════════════════════════════════════════════════════════════════════════════
@@ -1979,7 +1981,7 @@ object BeatDetectorV3 {
         val durationMs = integratedOdf.size.toLong() * params.hopMs
         val phaseMs = if (finalBeatMs > 0L) estimatePhaseFromOdf(integratedOdf, finalBeatMs, params.hopMs) else 0L
 
-        val beats: List<TimedBeat> = if (finalBeatMs > 0L && integratedOdf.isNotEmpty()) {
+        val trackedBeats: List<TimedBeat> = if (finalBeatMs > 0L && integratedOdf.isNotEmpty()) {
             val dpTimes = dpBeatTracker(integratedOdf, finalBeatMs, params.hopMs, durationMs, anchorMs = phaseMs)
 
             if (dpTimes.isNotEmpty()) {
@@ -2005,6 +2007,13 @@ object BeatDetectorV3 {
         } else {
             emptyList()
         }
+
+        // 사용자가 BPM 을 지정한 경우: 추적기가 곡 중간에 위상을 바꿔 타는 문제를 막기 위해,
+        // 신뢰할 만한 비트로 "시작 시각 + 일정 주기" 격자를 맞춰 곡 전체를 그 격자로 다시 만든다.
+        // 비트의 절반 이상이 격자에 들어맞지 않으면(템포가 흔들리는 곡) 추적 결과를 그대로 쓴다.
+        val beats: List<TimedBeat> = params.forcedBpm
+            ?.let { fitBeatGrid(trackedBeats, 60000.0 / it, durationMs) }
+            ?: trackedBeats
 
         // 시간 서명 감지
         val timeSignature = if (beats.isNotEmpty() && integratedOdf.isNotEmpty()) {
@@ -2949,6 +2958,50 @@ object BeatDetectorV3 {
         val phaseMs = bestPhase.toLong() * hopMs
 
         return phaseMs
+    }
+
+    /**
+     * [beats] 에서 일정한 주기의 격자(t = a + k*T)를 강건하게 맞춘다.
+     * 격자에서 [GRID_INLIER_MS] 이내인 비트만으로 최소제곱을 반복해 시작 시각 a 와 주기 T 를 구하고(T 는 초기값의 ±1.5% 이내),
+     * 0..[durationMs] 전체를 그 격자로 채운다. 비트가 너무 적거나 인라이어가 절반 미만이면 null(적용 안 함).
+     */
+    private fun fitBeatGrid(beats: List<TimedBeat>, periodMs: Double, durationMs: Long): List<TimedBeat>? {
+        if (beats.size < 16 || periodMs <= 0.0) return null
+        val times = beats.map { it.timeMs.toDouble() }
+        val t0 = times.first()
+        var period = periodMs
+        // 초기 위상: 각 비트의 (t - k*T) 의 중앙값
+        fun phases(p: Double) = times.map { t -> t - Math.round((t - t0) / p) * p }
+        var a = phases(period).sorted().let { it[it.size / 2] }
+        var inliers = 0
+        repeat(6) {
+            val ks = ArrayList<Double>(); val ts = ArrayList<Double>()
+            for (t in times) {
+                val k = Math.round((t - a) / period).toDouble()
+                if (kotlin.math.abs(t - (a + k * period)) <= GRID_INLIER_MS) { ks += k; ts += t }
+            }
+            inliers = ks.size
+            if (inliers < 8) return null
+            // 최소제곱: t = a + k*T
+            val n = inliers.toDouble()
+            val mk = ks.average(); val mt = ts.average()
+            var sxx = 0.0; var sxy = 0.0
+            for (i in ks.indices) { sxx += (ks[i] - mk) * (ks[i] - mk); sxy += (ks[i] - mk) * (ts[i] - mt) }
+            if (sxx <= 1e-9) return null
+            val newT = (sxy / sxx).coerceIn(periodMs * 0.985, periodMs * 1.015)
+            val newA = mt - newT * mk
+            period = newT; a = newA
+        }
+        if (inliers < beats.size / 2) return null
+        val out = ArrayList<TimedBeat>()
+        var k = Math.ceil(-a / period).toLong()
+        while (true) {
+            val t = Math.round(a + k * period)
+            if (t > durationMs) break
+            if (t >= 0) out += TimedBeat(t, 0.8f)
+            k++
+        }
+        return out.takeIf { it.size >= 16 }
     }
 
     private fun dpBeatTracker(
