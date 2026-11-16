@@ -432,7 +432,10 @@ fun EfxTabletEditorScreen(
             EditorTopBar(
                 name = metadata?.name ?: "",
                 musicUriString = musicFile?.let { android.net.Uri.fromFile(it).toString() },
-                musicLabel = if (musicFile != null) Loc.str(R.string.efx_tablet_editor_screen_2) else Loc.str(R.string.efx_edit_screen_25),
+                musicLabel = if (musicFile != null) Loc.str(R.string.efx_music_menu_label) else Loc.str(R.string.efx_edit_screen_25),
+                hasMusic = musicFile != null,
+                infoReady = analysis?.engineInput != null && !analyzing,
+                onEditInfo = { showBpmDialog = true },
                 analyzing = analyzing,
                 applying = applying,
                 entryCount = entries.size,
@@ -871,6 +874,9 @@ private fun EditorTopBar(
     name: String,
     musicUriString: String?,
     musicLabel: String,
+    hasMusic: Boolean,
+    infoReady: Boolean,
+    onEditInfo: () -> Unit,
     analyzing: Boolean,
     applying: Boolean,
     entryCount: Int,
@@ -992,10 +998,25 @@ private fun EditorTopBar(
                 Text(if (applying) Loc.str(R.string.efx_tablet_editor_screen_22) else Loc.str(R.string.efx_tablet_editor_screen_23))
             }
             Spacer(Modifier.width(8.dp))
-            FilledTonalButton(onClick = onPickMusic) {
-                Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(musicLabel)
+            // 음악이 없으면 바로 선택기를, 있으면 "음악 정보" 메뉴(음악 파일 변경 / BPM·장르 수정)를 연다
+            var musicMenu by remember { mutableStateOf(false) }
+            Box {
+                FilledTonalButton(onClick = { if (hasMusic) musicMenu = true else onPickMusic() }) {
+                    Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(musicLabel)
+                }
+                DropdownMenu(expanded = musicMenu, onDismissRequest = { musicMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(Loc.str(R.string.efx_music_menu_change)) },
+                        onClick = { musicMenu = false; onPickMusic() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Loc.str(R.string.efx_music_menu_info)) },
+                        enabled = infoReady,
+                        onClick = { musicMenu = false; onEditInfo() }
+                    )
+                }
             }
             Spacer(Modifier.width(8.dp))
             FilledTonalButton(onClick = onDevice) {

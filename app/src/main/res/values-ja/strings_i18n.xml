@@ -658,4 +658,7 @@
     <string name="efx_music_info_genre">ジャンル</string>
     <string name="efx_music_info_note">現在のエフェクト%1$d個がすべて新しく生成したものに置き換わります。手動の編集も失われます(元に戻せます)。ジャンルはパレットとルールに、BPMはそのテンポでのビート再分析(数秒かかります)に反映されます。</string>
     <string name="efx_music_info_apply">修正してエフェクトを再生成</string>
+    <string name="efx_music_menu_label">音楽情報</string>
+    <string name="efx_music_menu_change">音楽ファイルを変更</string>
+    <string name="efx_music_menu_info">BPM / ジャンルを編集</string>
 </resources>
