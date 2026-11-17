@@ -669,5 +669,5 @@
     <string name="efx_beat_method_forced">Track with given BPM</string>
     <string name="efx_beat_method_forced_desc">You enter the BPM; beats are found by following the sound\nUse it when auto-estimate got the BPM wrong by half or double. It also keeps up with tempo changes</string>
     <string name="efx_beat_method_grid">Fixed tempo</string>
-    <string name="efx_beat_method_grid_desc">You enter a rough BPM; beats are locked to even spacing\nFor steady-tempo songs. Helps when beats slip by half a beat mid-song; not suited to songs whose tempo changes</string>
+    <string name="efx_beat_method_grid_desc">The app fine-tunes the BPM near your input; beats are locked to even spacing\nFor steady-tempo songs. Helps when beats slip by half a beat mid-song; not suited to songs whose tempo changes</string>
 </resources>

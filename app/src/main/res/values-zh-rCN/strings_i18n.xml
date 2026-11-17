@@ -669,5 +669,5 @@
     <string name="efx_beat_method_forced">按指定 BPM 追踪</string>
     <string name="efx_beat_method_forced_desc">BPM 由您输入，节拍跟随声音寻找\n当自动估计把 BPM 误判为一半或两倍时，输入正确的值重新寻找。速度变化的歌曲也能跟上</string>
     <string name="efx_beat_method_grid">固定速度</string>
-    <string name="efx_beat_method_grid_desc">BPM 输入大致值，节拍固定为均匀间隔\n适用于速度稳定的歌曲。适合中途节拍偏移半拍的情况，不适合速度变化的歌曲</string>
+    <string name="efx_beat_method_grid_desc">BPM 由应用在输入值附近精确调整，节拍固定为均匀间隔\n适用于速度稳定的歌曲。适合中途节拍偏移半拍的情况，不适合速度变化的歌曲</string>
 </resources>
