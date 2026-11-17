@@ -755,9 +755,12 @@ fun EfxTabletEditorScreen(
         val styles = com.efxcreator.music.style.MusicStyleClassifier.MusicStyle.entries.map { it.name }
         var style by remember { mutableStateOf(analysis?.musicStyle ?: styles.first()) }
         var text by remember { mutableStateOf("%.1f".format(java.util.Locale.US, currentBpm ?: 120.0)) }
+        var reanalyze by remember { mutableStateOf(false) }
+        var gridFit by remember { mutableStateOf(true) }
         val value = text.toDoubleOrNull()
         val valid = value != null && value in 50.0..160.0
-        val changed = style != analysis?.musicStyle || (value != null && (currentBpm == null || kotlin.math.abs(value - currentBpm) >= 0.05))
+        val changed = reanalyze || style != analysis?.musicStyle ||
+            (value != null && (currentBpm == null || kotlin.math.abs(value - currentBpm) >= 0.05))
         AlertDialog(
             onDismissRequest = { showBpmDialog = false },
             title = { Text(Loc.str(R.string.efx_music_info_title)) },
@@ -789,6 +792,23 @@ fun EfxTabletEditorScreen(
                         )
                     )
                     Spacer(Modifier.height(8.dp))
+                    // BPM 을 바꾸지 않아도 비트를 다시 분석할 수 있다. 격자 맞춤은 템포가 일정한 곡에서만 켠다.
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { reanalyze = !reanalyze }) {
+                        androidx.compose.material3.Checkbox(checked = reanalyze, onCheckedChange = { reanalyze = it })
+                        Text(Loc.str(R.string.efx_music_info_reanalyze), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { gridFit = !gridFit }) {
+                        androidx.compose.material3.Checkbox(checked = gridFit, onCheckedChange = { gridFit = it })
+                        Text(Loc.str(R.string.efx_music_info_gridfit), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text(
+                        Loc.str(R.string.efx_music_info_gridfit_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         Loc.str(R.string.efx_music_info_note, entries.size),
                         style = MaterialTheme.typography.bodySmall,
@@ -803,7 +823,7 @@ fun EfxTabletEditorScreen(
                         val options = setsVm.rememberSelection(
                             setsVm.songEffectSetId(projectId), setsVm.songPaletteSetId(projectId)
                         )
-                        editVm.updateMusicInfo(style, value!!, options)
+                        editVm.updateMusicInfo(style, value!!, options, reanalyze, gridFit)
                         showBpmDialog = false
                     }
                 ) { Text(Loc.str(R.string.efx_music_info_apply)) }

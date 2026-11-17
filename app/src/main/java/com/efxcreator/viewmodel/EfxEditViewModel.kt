@@ -330,16 +330,22 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
      *   바꾸면 재분석 결과의 장르가 새로 적용된다.
      * - [bpm] 을 바꾸면 그 값으로 비트 분석을 다시 돌려 비트·섹션·에너지를 새로 구한다. 음악 파일이 없거나
      *   재분석이 실패하면 마디 첫 박(downbeat) 기준의 균일한 격자로 대신한다.
+     * - [reanalyze] 가 true 면 BPM 이 그대로여도 비트를 다시 분석한다. [gridFit] 은 템포가 일정한 곡에서 추적 비트를
+     *   일정한 격자로 맞출지 여부(끄면 지정 BPM 으로 다시 추적만 한다).
      * 고친 값은 저장된 분석 결과에 반영되어 다음에 열어도 유지된다. 이펙트 교체는 작업본에 반영되므로 되돌리기가 된다.
      */
-    fun updateMusicInfo(style: String, bpm: Double, options: GenerationOptions) {
+    fun updateMusicInfo(
+        style: String, bpm: Double, options: GenerationOptions,
+        reanalyze: Boolean = false, gridFit: Boolean = true
+    ) {
         val projectId = _metadata.value?.id ?: return
         val analysis = _analysis.value ?: return
         val input = analysis.engineInput ?: return
         val beatMs = Math.round(60000.0 / bpm)
         if (bpm <= 0.0 || beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS || input.beats.isEmpty()) return
         viewModelScope.launch {
-            val regrid = currentBpmOf(analysis)?.let { kotlin.math.abs(it - bpm) >= 0.05 } ?: true
+            // BPM 을 바꿨거나, BPM 은 그대로 두고 비트를 다시 분석하라고 한 경우
+            val regrid = reanalyze || (currentBpmOf(analysis)?.let { kotlin.math.abs(it - bpm) >= 0.05 } ?: true)
             var base = analysis
             var reanalyzed = false
             if (regrid) {
@@ -349,7 +355,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                     // 지정한 BPM 으로 비트 분석을 다시 돌린다 (실제 소리의 onset 에 맞춰 비트를 추적, 몇 초 걸린다)
                     _analyzing.value = true
                     try {
-                        retracked = autoEfxGenerator.analyze(file, bpm)
+                        retracked = autoEfxGenerator.analyze(file, bpm, gridFit)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {

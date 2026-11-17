@@ -180,7 +180,9 @@ object BeatDetectorV3 {
         val halfTempoRatio: Float = 0.60f,
         val doubleTempoRatio: Float = 0.55f,
         /** 지정하면 BPM 자동 추정 결과 대신 이 BPM(소수 가능)으로 비트를 추적하고, 규칙적인 곡이면 격자로 맞춘다 (사용자가 BPM 을 직접 고친 경우) */
-        val forcedBpm: Double? = null
+        val forcedBpm: Double? = null,
+        /** [forcedBpm] 지정 시 추적 비트를 일정한 격자로 맞출지 (템포가 일정한 곡용) */
+        val gridFit: Boolean = true
     )
 
     /**
@@ -2012,6 +2014,7 @@ object BeatDetectorV3 {
         // 신뢰할 만한 비트로 "시작 시각 + 일정 주기" 격자를 맞춰 곡 전체를 그 격자로 다시 만든다.
         // 격자에 들어맞는 비트가 전체의 35% 미만이면(템포가 흔들리는 곡) 추적 결과를 그대로 쓴다.
         val beats: List<TimedBeat> = params.forcedBpm
+            ?.takeIf { params.gridFit }
             ?.let { fitBeatGrid(trackedBeats, 60000.0 / it, durationMs) }
             ?: trackedBeats
 

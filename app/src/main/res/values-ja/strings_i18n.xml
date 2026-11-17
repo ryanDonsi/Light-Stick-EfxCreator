@@ -663,4 +663,7 @@
     <string name="efx_music_menu_info">BPM / ジャンルを編集</string>
     <string name="efx_music_menu_beatcheck">精度チェック用に書き出し</string>
     <string name="efx_beatcheck_failed">精度チェック用ファイルを作成できませんでした</string>
+    <string name="efx_music_info_reanalyze">BPMはそのままビートを再分析</string>
+    <string name="efx_music_info_gridfit">一定テンポの曲:グリッドに合わせる</string>
+    <string name="efx_music_info_gridfit_note">曲の途中で半拍ずれる曲に有効です。テンポが変わる曲ではオフにしてください。</string>
 </resources>

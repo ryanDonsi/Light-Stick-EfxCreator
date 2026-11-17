@@ -663,4 +663,7 @@
     <string name="efx_music_menu_info">修改 BPM / 流派</string>
     <string name="efx_music_menu_beatcheck">导出用于准确度检查</string>
     <string name="efx_beatcheck_failed">无法创建准确度检查文件</string>
+    <string name="efx_music_info_reanalyze">保持 BPM 不变，重新分析节拍</string>
+    <string name="efx_music_info_gridfit">速度稳定的歌曲：节拍对齐网格</string>
+    <string name="efx_music_info_gridfit_note">适用于歌曲中途节拍偏移半拍的情况。速度会变化的歌曲请关闭。</string>
 </resources>

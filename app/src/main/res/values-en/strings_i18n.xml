@@ -663,4 +663,7 @@
     <string name="efx_music_menu_info">Edit BPM / genre</string>
     <string name="efx_music_menu_beatcheck">Export for accuracy check</string>
     <string name="efx_beatcheck_failed">Could not create the accuracy-check files</string>
+    <string name="efx_music_info_reanalyze">Re-analyze beats with the same BPM</string>
+    <string name="efx_music_info_gridfit">Steady tempo: fit beats to a grid</string>
+    <string name="efx_music_info_gridfit_note">Helps when beats slip by half a beat mid-song. Turn off for songs whose tempo changes.</string>
 </resources>

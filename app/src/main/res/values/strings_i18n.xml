@@ -663,4 +663,7 @@
     <string name="efx_music_menu_info">BPM / 장르 수정</string>
     <string name="efx_music_menu_beatcheck">정확도 검사용 내보내기</string>
     <string name="efx_beatcheck_failed">정확도 검사용 파일을 만들지 못했습니다</string>
+    <string name="efx_music_info_reanalyze">BPM 그대로 두고 비트 다시 분석</string>
+    <string name="efx_music_info_gridfit">일정한 템포 곡: 격자 맞춤</string>
+    <string name="efx_music_info_gridfit_note">비트가 곡 중간에 반 박자씩 엇나가는 곡에 효과적입니다. 템포가 변하는 곡은 끄세요.</string>
 </resources>
