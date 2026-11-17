@@ -664,10 +664,10 @@
     <string name="efx_music_menu_beatcheck">导出用于准确度检查</string>
     <string name="efx_beatcheck_failed">无法创建准确度检查文件</string>
     <string name="efx_beat_method_label">节拍分析方式</string>
-    <string name="efx_beat_method_auto">自动分析（默认）</string>
-    <string name="efx_beat_method_auto_desc">由分析器自行决定 BPM 和节拍（与首次分析相同）</string>
-    <string name="efx_beat_method_forced">指定 BPM</string>
-    <string name="efx_beat_method_forced_desc">按输入的 BPM 对照声音重新追踪节拍</string>
-    <string name="efx_beat_method_grid">指定 BPM + 网格对齐</string>
-    <string name="efx_beat_method_grid_desc">适用于速度稳定的歌曲：将追踪到的节拍对齐到规则网格。适合中途节拍偏移半拍的情况，不适合速度变化的歌曲</string>
+    <string name="efx_beat_method_auto">自动估计速度（默认）</string>
+    <string name="efx_beat_method_auto_desc">添加歌曲时自动分析所用的方式。由分析器自行决定 BPM，并按声音灵活地寻找节拍</string>
+    <string name="efx_beat_method_forced">按指定 BPM 追踪</string>
+    <string name="efx_beat_method_forced_desc">以输入的 BPM 为基准，跟随声音寻找节拍。速度略有变化也能跟上</string>
+    <string name="efx_beat_method_grid">固定速度</string>
+    <string name="efx_beat_method_grid_desc">将整首歌固定为同一 BPM 和均匀间隔。适用于速度稳定的歌曲，适合中途节拍偏移半拍的情况</string>
 </resources>

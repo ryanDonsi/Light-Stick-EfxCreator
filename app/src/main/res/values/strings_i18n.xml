@@ -664,10 +664,10 @@
     <string name="efx_music_menu_beatcheck">정확도 검사용 내보내기</string>
     <string name="efx_beatcheck_failed">정확도 검사용 파일을 만들지 못했습니다</string>
     <string name="efx_beat_method_label">비트 분석 방식</string>
-    <string name="efx_beat_method_auto">자동 분석 (기본)</string>
-    <string name="efx_beat_method_auto_desc">분석기가 BPM과 비트를 스스로 정합니다 (곡을 처음 분석할 때와 같은 방식)</string>
-    <string name="efx_beat_method_forced">BPM 지정</string>
-    <string name="efx_beat_method_forced_desc">입력한 BPM으로 소리에 맞춰 비트를 다시 추적합니다</string>
-    <string name="efx_beat_method_grid">BPM 지정 + 격자 맞춤</string>
-    <string name="efx_beat_method_grid_desc">템포가 일정한 곡용: 추적한 비트를 일정한 격자로 맞춥니다. 곡 중간에 반 박자씩 엇나갈 때 효과적이며, 템포가 변하는 곡에는 맞지 않습니다</string>
+    <string name="efx_beat_method_auto">템포 자동 추정 (기본)</string>
+    <string name="efx_beat_method_auto_desc">곡을 처음 추가할 때 자동 분석에서 쓰는 방식입니다. 분석기가 BPM을 스스로 정하고 소리에 맞춰 유연하게 비트를 찾습니다</string>
+    <string name="efx_beat_method_forced">지정 BPM으로 추적</string>
+    <string name="efx_beat_method_forced_desc">입력한 BPM을 기준으로 소리를 따라가며 비트를 찾습니다. 템포가 조금씩 변해도 따라갑니다</string>
+    <string name="efx_beat_method_grid">템포 고정</string>
+    <string name="efx_beat_method_grid_desc">곡 전체를 일정한 BPM과 일정한 간격으로 고정합니다. 템포가 일정한 곡용이며, 곡 중간에 반 박자씩 엇나갈 때 효과적입니다</string>
 </resources>
