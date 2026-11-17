@@ -43,6 +43,7 @@ import com.efxcreator.viewmodel.EfxListViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.viewmodel.ShowViewModel
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.efxcreator.ui.editor.PlayerSeekBar
@@ -606,13 +607,18 @@ fun EfxListScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(songs, key = { it.id }) { project ->
+                                // 이펙트 개수/음악 ID: 캐시가 있으면 바로 쓰고, 없으면 백그라운드에서 읽어 채운다 (메인 스레드에서 파일을 파싱하지 않는다)
+                                val stamp = viewModel.efxStamp(project.id)
+                                val songInfo by produceState(viewModel.cachedSongInfo(project.id), project.id, stamp) {
+                                    value = withContext(Dispatchers.IO) { viewModel.loadSongInfo(project.id) }
+                                }
                                 EfxProjectCard(
                                     modifier = Modifier.animateItem(),
                                     project = project,
                                     preview = preview,
                                     onTogglePlay = { previewScope.launch { preview.toggle(project.id) } },
-                                    entryCount = viewModel.getEntryCount(project.id),
-                                    musicId = viewModel.getMusicId(project.id),
+                                    entryCount = songInfo?.entryCount ?: 0,
+                                    musicId = songInfo?.musicId ?: 0,
                                     onEdit = {
                                         preview.handOffTo(project.id)
                                         onNavigateToEdit(project.id)

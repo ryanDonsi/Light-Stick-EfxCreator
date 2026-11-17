@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import kotlinx.coroutines.sync.withPermit
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -305,8 +307,11 @@ fun SongArt(
     modifier: Modifier = Modifier,
     overlay: @Composable BoxScope.() -> Unit = {}
 ) {
-    val bitmap by produceState<ImageBitmap?>(initialValue = null, musicUriString) {
-        value = withContext(Dispatchers.IO) { loadAlbumArt(musicUriString, 256) }
+    // 한 번 뽑은 이미지는 캐시에 두고 재사용한다 (스크롤하거나 화면을 오갈 때마다 mp3 를 다시 열지 않는다)
+    val bitmap by produceState<ImageBitmap?>(initialValue = AlbumArtCache.peek(musicUriString, 256), musicUriString) {
+        if (!AlbumArtCache.has(musicUriString, 256)) {
+            value = withContext(Dispatchers.IO) { AlbumArtCache.load(musicUriString, 256) }
+        }
     }
     Box(
         modifier = modifier
@@ -327,6 +332,47 @@ fun SongArt(
             )
         }
         overlay()
+    }
+}
+
+/**
+ * 앨범 아트 메모리 캐시.
+ * 키는 파일 경로+수정 시각+크기+크기 제한이라, 음악 파일이 바뀌면 자동으로 새로 뽑는다.
+ * 이미지가 없는 곡(null)도 기억해서 같은 파일을 반복해서 열지 않는다.
+ * 동시에 추출하는 수를 제한해, 목록을 열 때 mp3 를 수십 개 한꺼번에 여는 부담을 줄인다.
+ */
+private object AlbumArtCache {
+    private class Entry(val bitmap: ImageBitmap?, val bytes: Int)
+
+    private val cache = object : android.util.LruCache<String, Entry>(16 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Entry): Int = value.bytes.coerceAtLeast(1)
+    }
+    private val gate = kotlinx.coroutines.sync.Semaphore(2)
+
+    private fun keyOf(musicUriString: String?, maxPx: Int): String? {
+        val path = musicUriString?.let { Uri.parse(it).path } ?: return null
+        val file = java.io.File(path)
+        if (!file.exists()) return null
+        return "$path|${file.lastModified()}|${file.length()}|$maxPx"
+    }
+
+    /** 캐시에 있으면 그 이미지(없는 곡이면 null), 아직 모르면 null. 파일 상태만 조회하므로 메인 스레드에서 불러도 가볍다 */
+    fun peek(musicUriString: String?, maxPx: Int): ImageBitmap? =
+        keyOf(musicUriString, maxPx)?.let { cache.get(it)?.bitmap }
+
+    fun has(musicUriString: String?, maxPx: Int): Boolean =
+        keyOf(musicUriString, maxPx)?.let { cache.get(it) != null } ?: false
+
+    /** 캐시가 없으면 추출해서 캐시에 넣는다. 백그라운드에서 부른다 */
+    suspend fun load(musicUriString: String?, maxPx: Int): ImageBitmap? {
+        val key = keyOf(musicUriString, maxPx) ?: return null
+        cache.get(key)?.let { return it.bitmap }
+        return gate.withPermit {
+            cache.get(key)?.let { return@withPermit it.bitmap }   // 기다리는 동안 다른 곳에서 채웠을 수 있다
+            val bmp = loadAlbumArt(musicUriString, maxPx)
+            cache.put(key, Entry(bmp, bmp?.asAndroidBitmap()?.byteCount ?: 0))
+            bmp
+        }
     }
 }
 

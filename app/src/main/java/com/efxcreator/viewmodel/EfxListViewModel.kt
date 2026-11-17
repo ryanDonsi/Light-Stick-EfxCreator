@@ -74,9 +74,9 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
             _projects.value = loadedProjects
             Log.d(TAG, "Loaded ${loadedProjects.size} projects")
 
-            // 각 프로젝트 정보 출력
-            loadedProjects.forEach { project ->
-                Log.d(TAG, "Project: ${project.name} (${project.id})")
+            // 곡 카드에 필요한 정보를 미리 백그라운드에서 읽어 둔다 (카드를 그릴 때는 캐시만 본다)
+            launch(Dispatchers.IO) {
+                loadedProjects.forEach { runCatching { loadSongInfo(it.id) } }
             }
         }
     }
@@ -262,17 +262,29 @@ class EfxListViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun getEntryCount(projectId: String): Int {
-        val efx = repository.loadEfx(projectId)
-        val count = efx?.body?.entries?.size ?: 0
-        Log.d(TAG, "Project $projectId has $count entries")
-        return count
+    /** 곡 카드에 보이는 정보 (이펙트 개수, 음악 ID) */
+    data class SongInfo(val entryCount: Int, val musicId: Int)
+
+    // .efx 를 매번 파싱하지 않도록 파일이 바뀔 때까지 결과를 보관한다 (파일 수정 시각+크기가 같으면 그대로 쓴다)
+    private val infoCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, SongInfo>>()
+
+    /** 파일이 바뀌었는지 알아보는 값. 파일 상태만 조회하므로 메인 스레드에서 불러도 가볍다 */
+    fun efxStamp(projectId: String): Long {
+        val f = repository.getEfxFile(projectId)
+        return f.lastModified() * 31 + f.length()
     }
 
-    fun getMusicId(projectId: String): Int {
+    /** 캐시된 값 (없거나 파일이 바뀌었으면 null). 메인 스레드에서 불러도 가볍다 */
+    fun cachedSongInfo(projectId: String): SongInfo? =
+        infoCache[projectId]?.takeIf { it.first == efxStamp(projectId) }?.second
+
+    /** 곡 정보를 읽는다. 캐시가 유효하면 파일을 열지 않는다. 파일을 파싱할 수 있으니 백그라운드에서 부른다 */
+    fun loadSongInfo(projectId: String): SongInfo {
+        cachedSongInfo(projectId)?.let { return it }
+        val stamp = efxStamp(projectId)
         val efx = repository.loadEfx(projectId)
-        val musicId = efx?.header?.musicId ?: 0
-        Log.d(TAG, "Project $projectId has musicId: 0x${musicId.toUInt().toString(16).uppercase()}")
-        return musicId
+        val info = SongInfo(efx?.body?.entries?.size ?: 0, efx?.header?.musicId ?: 0)
+        infoCache[projectId] = stamp to info
+        return info
     }
 }
