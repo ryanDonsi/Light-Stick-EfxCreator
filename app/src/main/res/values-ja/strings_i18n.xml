@@ -665,7 +665,7 @@
     <string name="efx_beatcheck_failed">精度チェック用ファイルを作成できませんでした</string>
     <string name="efx_beat_method_label">ビート分析方式</string>
     <string name="efx_beat_method_auto">テンポ自動推定(既定)</string>
-    <string name="efx_beat_method_auto_desc">BPMは分析器が決め、ビートは音を追って探します\n曲を最初に追加するときに使う方式です。ほとんどの曲に合います</string>
+    <string name="efx_beat_method_auto_desc">BPMは分析器が決め(入力したBPMは無視)、ビートは音を追って探します\n曲を最初に追加するときに使う方式です。ほとんどの曲に合います</string>
     <string name="efx_beat_method_forced">指定BPMで追跡</string>
     <string name="efx_beat_method_forced_desc">BPMは自分で入力し、ビートは音を追って探します\n自動推定がBPMを半分や2倍に誤った場合に、正しい値を入れて探し直します。テンポが変わる曲にも追従します</string>
     <string name="efx_beat_method_grid">テンポ固定</string>
