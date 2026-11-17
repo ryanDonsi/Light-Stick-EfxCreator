@@ -656,7 +656,7 @@
     <string name="efx_mirror_done">文件夹副本创建完成</string>
     <string name="efx_music_info_title">歌曲分析设置</string>
     <string name="efx_music_info_genre">流派</string>
-    <string name="efx_music_info_note">ℹ 重新生成时会按所选方式重新分析节拍（需要几秒），然后将当前 %1$d 个效果替换为新生成的效果（包括手动修改），可以撤销。流派影响配色和规则。</string>
+    <string name="efx_music_info_note">ℹ 点击“重新分析并生成效果”时会按所选方式重新分析节拍（需要几秒），然后将当前 %1$d 个效果替换为新生成的效果（包括手动修改），可以撤销。流派影响配色和规则。</string>
     <string name="efx_music_info_genre_auto">自动分析</string>
     <string name="efx_music_info_current">当前: %1$s · %2$s BPM · %3$s</string>
     <string name="efx_music_info_bpm_auto">当前 %1$s BPM(由分析器决定)</string>
@@ -672,7 +672,7 @@
     <string name="efx_beat_method_auto">自动估计速度（默认）</string>
     <string name="efx_beat_method_auto_desc">BPM 由分析器决定（输入的 BPM 将被忽略），节拍跟随声音寻找\n添加歌曲时使用的方式，适合大多数歌曲</string>
     <string name="efx_beat_method_v1">基于整曲周期的估计</string>
-    <string name="efx_beat_method_v1_desc">根据整首歌反复出现的周期确定 BPM 和节拍(输入的 BPM 将被忽略)\n部分歌曲可能比默认方式更准。默认结果有偏差时可以试试</string>
+    <string name="efx_beat_method_v1_desc">BPM 由分析器根据整首歌的重复周期确定(输入的 BPM 将被忽略),节拍则跟随声音寻找\n部分歌曲可能比默认方式更准。默认结果有偏差时可以试试</string>
     <string name="efx_beat_method_forced">按指定 BPM 追踪</string>
     <string name="efx_beat_method_forced_desc">BPM 由您输入，节拍跟随声音寻找\n当自动估计把 BPM 误判为一半或两倍时，输入正确的值重新寻找。速度变化的歌曲也能跟上</string>
     <string name="efx_beat_method_grid">固定速度</string>

@@ -656,7 +656,7 @@
     <string name="efx_mirror_done">フォルダへのコピー作成が完了しました</string>
     <string name="efx_music_info_title">曲の分析設定</string>
     <string name="efx_music_info_genre">ジャンル</string>
-    <string name="efx_music_info_note">ℹ エフェクトを再生成すると、選択した方式でビートを再分析(数秒かかります)した後、現在の%1$d個のエフェクトを新しく生成したものに置き換えます。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに反映されます。</string>
+    <string name="efx_music_info_note">ℹ 「再分析してエフェクト生成」を押すと、選択した方式でビートを再分析(数秒かかります)した後、現在の%1$d個のエフェクトを新しく生成したものに置き換えます。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに反映されます。</string>
     <string name="efx_music_info_genre_auto">自動分析</string>
     <string name="efx_music_info_current">現在: %1$s · %2$s BPM · %3$s</string>
     <string name="efx_music_info_bpm_auto">現在 %1$s BPM(分析器が決定)</string>
@@ -672,7 +672,7 @@
     <string name="efx_beat_method_auto">テンポ自動推定(既定)</string>
     <string name="efx_beat_method_auto_desc">BPMは分析器が決め(入力したBPMは無視)、ビートは音を追って探します\n曲を最初に追加するときに使う方式です。ほとんどの曲に合います</string>
     <string name="efx_beat_method_v1">曲全体の周期ベース推定</string>
-    <string name="efx_beat_method_v1_desc">BPMとビートを曲全体で繰り返される周期から決めます(入力したBPMは無視)\n曲によっては既定の方式よりビートが合うことがあります。既定の結果がずれるときにお試しください</string>
+    <string name="efx_beat_method_v1_desc">BPMは曲全体の繰り返し周期から分析器が決め(入力したBPMは無視)、ビートは音に沿って探します\n曲によっては既定の方式よりビートが合うことがあります。既定の結果がずれるときにお試しください</string>
     <string name="efx_beat_method_forced">指定BPMで追跡</string>
     <string name="efx_beat_method_forced_desc">BPMは自分で入力し、ビートは音を追って探します\n自動推定がBPMを半分や2倍に誤った場合に、正しい値を入れて探し直します。テンポが変わる曲にも追従します</string>
     <string name="efx_beat_method_grid">テンポ固定</string>

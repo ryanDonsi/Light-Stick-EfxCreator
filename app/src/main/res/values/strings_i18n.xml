@@ -656,7 +656,7 @@
     <string name="efx_mirror_done">폴더 사본 만들기를 마쳤습니다</string>
     <string name="efx_music_info_title">곡 분석 설정</string>
     <string name="efx_music_info_genre">장르</string>
-    <string name="efx_music_info_note">ℹ 이펙트 재생성을 누르면 선택한 방식으로 비트를 다시 분석(몇 초 걸림)한 뒤, 현재 이펙트 %1$d개를 새로 만든 이펙트로 바꿉니다. 직접 고친 내용도 포함되며, 되돌리기로 복구할 수 있습니다. 장르는 팔레트와 규칙에 반영됩니다.</string>
+    <string name="efx_music_info_note">ℹ “다시 분석하고 이펙트 생성”을 누르면 선택한 방식으로 비트를 다시 분석(몇 초 걸림)한 뒤, 현재 이펙트 %1$d개를 새로 만든 이펙트로 바꿉니다. 직접 고친 내용도 포함되며, 되돌리기로 복구할 수 있습니다. 장르는 팔레트와 규칙에 반영됩니다.</string>
     <string name="efx_music_info_genre_auto">자동 분석</string>
     <string name="efx_music_info_current">현재: %1$s · %2$s BPM · %3$s</string>
     <string name="efx_music_info_bpm_auto">현재 %1$s BPM (분석기가 정합니다)</string>
@@ -672,7 +672,7 @@
     <string name="efx_beat_method_auto">템포 자동 추정 (기본)</string>
     <string name="efx_beat_method_auto_desc">BPM은 분석기가 정하고(입력한 BPM은 무시), 비트는 소리를 따라 찾습니다\n곡을 처음 추가할 때 쓰는 방식입니다. 대부분의 곡에 맞습니다</string>
     <string name="efx_beat_method_v1">전체 주기 기반 추정</string>
-    <string name="efx_beat_method_v1_desc">BPM과 비트를 곡 전체에서 반복되는 주기로 정합니다(입력한 BPM은 무시)\n곡에 따라 기본 방식보다 비트가 더 잘 맞을 수 있습니다. 기본 결과가 어긋날 때 시도해 보세요</string>
+    <string name="efx_beat_method_v1_desc">BPM은 곡 전체의 반복 주기로 분석기가 정하고(입력한 BPM은 무시), 비트는 소리를 따라 찾습니다\n곡에 따라 기본 방식보다 비트가 더 잘 맞을 수 있습니다. 기본 결과가 어긋날 때 시도해 보세요</string>
     <string name="efx_beat_method_forced">지정 BPM으로 추적</string>
     <string name="efx_beat_method_forced_desc">BPM은 직접 입력하고, 비트는 소리를 따라 찾습니다\n자동 추정이 BPM을 반이나 두 배로 잘못 잡았을 때 맞는 값을 넣어 다시 찾습니다. 템포가 변하는 곡도 따라갑니다</string>
     <string name="efx_beat_method_grid">템포 고정</string>
