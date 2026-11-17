@@ -671,8 +671,8 @@
     <string name="efx_beat_method_label">ビート分析方式</string>
     <string name="efx_beat_method_auto">テンポ自動推定(既定)</string>
     <string name="efx_beat_method_auto_desc">BPMは分析器が決め(入力したBPMは無視)、ビートは音を追って探します\n曲を最初に追加するときに使う方式です。ほとんどの曲に合います</string>
-    <string name="efx_beat_method_v1">別のエンジンで自動推定 (V1)</string>
-    <string name="efx_beat_method_v1_desc">BPMとビートはV1エンジンが決めます(入力したBPMは無視)\n既定の方式で結果がおかしい曲の比較に使います</string>
+    <string name="efx_beat_method_v1">曲全体の周期ベース推定</string>
+    <string name="efx_beat_method_v1_desc">BPMとビートを曲全体で繰り返される周期から決めます(入力したBPMは無視)\n曲によっては既定の方式よりビートが合うことがあります。既定の結果がずれるときにお試しください</string>
     <string name="efx_beat_method_forced">指定BPMで追跡</string>
     <string name="efx_beat_method_forced_desc">BPMは自分で入力し、ビートは音を追って探します\n自動推定がBPMを半分や2倍に誤った場合に、正しい値を入れて探し直します。テンポが変わる曲にも追従します</string>
     <string name="efx_beat_method_grid">テンポ固定</string>

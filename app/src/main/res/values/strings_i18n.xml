@@ -671,8 +671,8 @@
     <string name="efx_beat_method_label">비트 분석 방식</string>
     <string name="efx_beat_method_auto">템포 자동 추정 (기본)</string>
     <string name="efx_beat_method_auto_desc">BPM은 분석기가 정하고(입력한 BPM은 무시), 비트는 소리를 따라 찾습니다\n곡을 처음 추가할 때 쓰는 방식입니다. 대부분의 곡에 맞습니다</string>
-    <string name="efx_beat_method_v1">다른 엔진으로 자동 추정 (V1)</string>
-    <string name="efx_beat_method_v1_desc">BPM과 비트를 V1 엔진이 정합니다(입력한 BPM은 무시)\n기본 방식과 결과가 다른 곡에서 비교해 볼 때 쓰세요</string>
+    <string name="efx_beat_method_v1">전체 주기 기반 추정</string>
+    <string name="efx_beat_method_v1_desc">BPM과 비트를 곡 전체에서 반복되는 주기로 정합니다(입력한 BPM은 무시)\n곡에 따라 기본 방식보다 비트가 더 잘 맞을 수 있습니다. 기본 결과가 어긋날 때 시도해 보세요</string>
     <string name="efx_beat_method_forced">지정 BPM으로 추적</string>
     <string name="efx_beat_method_forced_desc">BPM은 직접 입력하고, 비트는 소리를 따라 찾습니다\n자동 추정이 BPM을 반이나 두 배로 잘못 잡았을 때 맞는 값을 넣어 다시 찾습니다. 템포가 변하는 곡도 따라갑니다</string>
     <string name="efx_beat_method_grid">템포 고정</string>
