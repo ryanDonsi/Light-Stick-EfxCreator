@@ -1086,11 +1086,14 @@ private fun EditorTopBar(
                         enabled = infoReady,
                         onClick = { musicMenu = false; onEditInfo() }
                     )
-                    DropdownMenuItem(
-                        text = { Text(Loc.str(R.string.efx_music_menu_beatcheck)) },
-                        enabled = infoReady,
-                        onClick = { musicMenu = false; onExportBeatCheck() }
-                    )
+                    // 개발용 기능이라 debug 빌드에서만 보인다 (release/releaseTest 에서는 메뉴 항목 자체가 없다)
+                    if (com.efxcreator.BuildConfig.DEBUG) {
+                        DropdownMenuItem(
+                            text = { Text(Loc.str(R.string.efx_music_menu_beatcheck)) },
+                            enabled = infoReady,
+                            onClick = { musicMenu = false; onExportBeatCheck() }
+                        )
+                    }
                 }
             }
             Spacer(Modifier.width(8.dp))
