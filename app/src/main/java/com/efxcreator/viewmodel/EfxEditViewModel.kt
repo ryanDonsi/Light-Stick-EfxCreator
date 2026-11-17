@@ -33,6 +33,8 @@ import com.efxcreator.core.Loc
 enum class BeatMethod {
     /** 분석기가 BPM 과 비트를 스스로 정한다 (곡을 처음 분석할 때와 같은 방식, 기본) */
     AUTO,
+    /** 다른 엔진(BeatDetectorV1)으로 BPM 과 비트를 스스로 정한다 (BPM 은 입력하지 않는다) */
+    AUTO_V1,
     /** 지정한 BPM 으로 소리의 onset 에 맞춰 다시 추적한다 */
     FORCED,
     /** 지정한 BPM 으로 추적한 뒤 일정한 격자로 맞춘다 (템포가 일정한 곡) */
@@ -350,7 +352,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         val projectId = _metadata.value?.id ?: return onDone()
         val analysis = _analysis.value ?: return onDone()
         val input = analysis.engineInput ?: return onDone()
-        val forced = method != BeatMethod.AUTO
+        val forced = method == BeatMethod.FORCED || method == BeatMethod.FORCED_GRID
         val beatMs = if (bpm != null && bpm > 0.0) Math.round(60000.0 / bpm) else 0L
         if (forced && (bpm == null || beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS)) return onDone()
         if (input.beats.isEmpty()) return onDone()
@@ -366,6 +368,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 try {
                     result = when (method) {
                         BeatMethod.AUTO -> autoEfxGenerator.analyze(file)
+                        BeatMethod.AUTO_V1 -> autoEfxGenerator.analyze(file, detectorVersion = 1)
                         BeatMethod.FORCED -> autoEfxGenerator.analyze(file, bpm, gridFit = false)
                         BeatMethod.FORCED_GRID -> autoEfxGenerator.analyze(file, bpm, gridFit = true)
                     }

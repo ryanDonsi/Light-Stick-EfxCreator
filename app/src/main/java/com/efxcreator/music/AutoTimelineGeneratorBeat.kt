@@ -64,9 +64,10 @@ class AutoTimelineGeneratorBeat {
         musicPath: String, musicId: Int, paletteSize: Int,
         options: GenerationOptions = GenerationOptions(),
         forcedBpm: Double? = null,
-        gridFit: Boolean = true
+        gridFit: Boolean = true,
+        detectorVersion: Int = AutoTimelineConfig.BEAT_DETECTOR_VERSION
     ): GenerationResult {
-        val input = analyzeToInput(musicPath, forcedBpm, gridFit)
+        val input = analyzeToInput(musicPath, forcedBpm, gridFit, detectorVersion)
             ?: return GenerationResult(emptyList(), emptyList(), null)
         val rendered = render(input, musicId, options)
         val sectionGroups = groupAnnotatedBeats(input.beats.map { it.toAnnotated() }, input.durationMs)
@@ -93,12 +94,15 @@ class AutoTimelineGeneratorBeat {
      * 느린 분석 단계: 비트 → 섹션 → 장르 검출. 결과를 [EngineInput] 으로 돌려준다.
      * 비트/envelope 를 얻지 못하면 null.
      */
-    fun analyzeToInput(musicPath: String, forcedBpm: Double? = null, gridFit: Boolean = true): EngineInput? {
+    fun analyzeToInput(
+        musicPath: String, forcedBpm: Double? = null, gridFit: Boolean = true,
+        detectorVersion: Int = AutoTimelineConfig.BEAT_DETECTOR_VERSION
+    ): EngineInput? {
         val fileName = musicPath.substringAfterLast("/").substringBeforeLast(".")
         val t0 = System.currentTimeMillis()
         Log.d(TAG, "analyze() start file=$fileName")
 
-        val detectorVer = AutoTimelineConfig.BEAT_DETECTOR_VERSION
+        val detectorVer = detectorVersion
         val effectiveHopMs = AutoTimelineConfig.beatDetectorHopMs(detectorVer)
 
         val beatInfo = BeatDetectorRouter.detect(

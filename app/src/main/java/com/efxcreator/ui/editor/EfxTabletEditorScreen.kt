@@ -772,9 +772,11 @@ fun EfxTabletEditorScreen(
         val value = text.toDoubleOrNull()
         // 자동 분석은 BPM 을 쓰지 않으므로 입력 검사를 하지 않는다
         val bpmValid = value != null && value in 50.0..160.0
-        val valid = method == BM.AUTO || bpmValid
+        val usesBpm = method == BM.FORCED || method == BM.FORCED_GRID
+        val valid = !usesBpm || bpmValid
         val methods = listOf(
             Triple(BM.AUTO, R.string.efx_beat_method_auto, R.string.efx_beat_method_auto_desc),
+            Triple(BM.AUTO_V1, R.string.efx_beat_method_v1, R.string.efx_beat_method_v1_desc),
             Triple(BM.FORCED, R.string.efx_beat_method_forced, R.string.efx_beat_method_forced_desc),
             Triple(BM.FORCED_GRID, R.string.efx_beat_method_grid, R.string.efx_beat_method_grid_desc)
         )
@@ -854,13 +856,13 @@ fun EfxTabletEditorScreen(
                             var dot = false
                             text = v.filter { c -> if (c == '.') (!dot).also { dot = true } else c.isDigit() }.take(6)
                         },
-                        enabled = method != BM.AUTO && !running,
+                        enabled = usesBpm && !running,
                         singleLine = true,
                         label = { Text("BPM") },
-                        isError = method != BM.AUTO && !bpmValid,
+                        isError = usesBpm && !bpmValid,
                         supportingText = {
                             Text(
-                                if (method == BM.AUTO)
+                                if (!usesBpm)
                                     Loc.str(R.string.efx_music_info_bpm_auto, currentBpm?.let { "%.1f".format(java.util.Locale.US, it) } ?: "-")
                                 else Loc.str(R.string.efx_music_info_bpm_range)
                             )
