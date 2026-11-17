@@ -656,14 +656,18 @@
     <string name="efx_mirror_done">フォルダへのコピー作成が完了しました</string>
     <string name="efx_music_info_title">音楽情報の編集</string>
     <string name="efx_music_info_genre">ジャンル</string>
-    <string name="efx_music_info_note">ℹ エフェクトを再生成すると、現在の%1$d個のエフェクトが新しく生成したものに置き換わります。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに、BPMはそのテンポでのビート再分析(数秒かかります)に反映されます。</string>
+    <string name="efx_music_info_note">ℹ エフェクトを再生成すると、選択した方式でビートを再分析(数秒かかります)した後、現在の%1$d個のエフェクトを新しく生成したものに置き換えます。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに反映されます。</string>
     <string name="efx_music_info_apply">エフェクトを再生成</string>
     <string name="efx_music_menu_label">音楽情報</string>
     <string name="efx_music_menu_change">音楽ファイルを変更</string>
     <string name="efx_music_menu_info">BPM / ジャンルを編集</string>
     <string name="efx_music_menu_beatcheck">精度チェック用に書き出し</string>
     <string name="efx_beatcheck_failed">精度チェック用ファイルを作成できませんでした</string>
-    <string name="efx_music_info_reanalyze">BPMはそのままビートを再分析</string>
-    <string name="efx_music_info_gridfit">一定テンポの曲:グリッドに合わせる</string>
-    <string name="efx_music_info_gridfit_note">曲の途中で半拍ずれる曲に有効です。テンポが変わる曲ではオフにしてください。</string>
+    <string name="efx_beat_method_label">ビート分析方式</string>
+    <string name="efx_beat_method_auto">自動分析(既定)</string>
+    <string name="efx_beat_method_auto_desc">分析器がBPMとビートを自動で決めます(最初の分析と同じ方式)</string>
+    <string name="efx_beat_method_forced">BPMを指定</string>
+    <string name="efx_beat_method_forced_desc">入力したBPMで音に合わせてビートを再追跡します</string>
+    <string name="efx_beat_method_grid">BPM指定+グリッド合わせ</string>
+    <string name="efx_beat_method_grid_desc">テンポが一定の曲向け:追跡したビートを一定のグリッドに合わせます。曲の途中で半拍ずれる場合に有効で、テンポが変わる曲には不向きです</string>
 </resources>

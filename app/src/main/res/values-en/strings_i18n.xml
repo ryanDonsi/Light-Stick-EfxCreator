@@ -656,14 +656,18 @@
     <string name="efx_mirror_done">Finished creating folder copies</string>
     <string name="efx_music_info_title">Edit music info</string>
     <string name="efx_music_info_genre">Genre</string>
-    <string name="efx_music_info_note">ℹ Regenerating replaces the current %1$d effects with newly generated ones, including any manual edits. You can undo it. Genre affects the palette and rules; BPM re-runs beat analysis with that tempo (takes a few seconds).</string>
+    <string name="efx_music_info_note">ℹ Regenerating re-analyzes beats with the selected method (takes a few seconds), then replaces the current %1$d effects with newly generated ones, including manual edits. You can undo it. Genre affects the palette and rules.</string>
     <string name="efx_music_info_apply">Regenerate effects</string>
     <string name="efx_music_menu_label">Music info</string>
     <string name="efx_music_menu_change">Change music file</string>
     <string name="efx_music_menu_info">Edit BPM / genre</string>
     <string name="efx_music_menu_beatcheck">Export for accuracy check</string>
     <string name="efx_beatcheck_failed">Could not create the accuracy-check files</string>
-    <string name="efx_music_info_reanalyze">Re-analyze beats with the same BPM</string>
-    <string name="efx_music_info_gridfit">Steady tempo: fit beats to a grid</string>
-    <string name="efx_music_info_gridfit_note">Helps when beats slip by half a beat mid-song. Turn off for songs whose tempo changes.</string>
+    <string name="efx_beat_method_label">Beat analysis method</string>
+    <string name="efx_beat_method_auto">Auto analysis (default)</string>
+    <string name="efx_beat_method_auto_desc">The analyzer decides BPM and beats on its own (same as the first analysis)</string>
+    <string name="efx_beat_method_forced">Specify BPM</string>
+    <string name="efx_beat_method_forced_desc">Re-tracks beats against the sound using the BPM you enter</string>
+    <string name="efx_beat_method_grid">Specify BPM + grid fit</string>
+    <string name="efx_beat_method_grid_desc">For steady-tempo songs: fits tracked beats to a regular grid. Helps when beats slip by half a beat mid-song; not suited to songs whose tempo changes</string>
 </resources>

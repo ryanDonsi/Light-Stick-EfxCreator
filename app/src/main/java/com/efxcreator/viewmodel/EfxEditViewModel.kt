@@ -29,6 +29,16 @@ import java.io.File
 import com.efxcreator.R
 import com.efxcreator.core.Loc
 
+/** 음악 정보 수정에서 고르는 비트 분석 방식 */
+enum class BeatMethod {
+    /** 분석기가 BPM 과 비트를 스스로 정한다 (곡을 처음 분석할 때와 같은 방식, 기본) */
+    AUTO,
+    /** 지정한 BPM 으로 소리의 onset 에 맞춰 다시 추적한다 */
+    FORCED,
+    /** 지정한 BPM 으로 추적한 뒤 일정한 격자로 맞춘다 (템포가 일정한 곡) */
+    FORCED_GRID
+}
+
 class EfxEditViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = EfxRepository(application)
@@ -328,48 +338,50 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
      * 곡 정보(장르, BPM)를 고치고 그 값으로 이펙트를 전체 다시 만든다.
      * - [style] 은 MusicStyle 이름. 바꾸면 장르 기반 팔레트와 규칙이 달라진다. 장르를 직접 바꾸지 않고 BPM 만
      *   바꾸면 재분석 결과의 장르가 새로 적용된다.
-     * - [bpm] 을 바꾸면 그 값으로 비트 분석을 다시 돌려 비트·섹션·에너지를 새로 구한다. 음악 파일이 없거나
-     *   재분석이 실패하면 마디 첫 박(downbeat) 기준의 균일한 격자로 대신한다.
-     * - [reanalyze] 가 true 면 BPM 이 그대로여도 비트를 다시 분석한다. [gridFit] 은 템포가 일정한 곡에서 추적 비트를
-     *   일정한 격자로 맞출지 여부(끄면 지정 BPM 으로 다시 추적만 한다).
+     * - [method] 로 비트 분석 방식을 고른다. 항상 비트를 다시 분석한 뒤 이펙트를 만든다.
+     *   AUTO(기본): 분석기가 BPM 을 스스로 정한다. FORCED: [bpm] 으로 다시 추적. FORCED_GRID: 추적 후 일정한 격자로 맞춘다.
+     *   음악 파일이 없거나 재분석이 실패하면 BPM 지정 방식은 마디 첫 박(downbeat) 기준 균일 격자로, 자동 분석은 현재 비트 유지로 대신한다.
      * 고친 값은 저장된 분석 결과에 반영되어 다음에 열어도 유지된다. 이펙트 교체는 작업본에 반영되므로 되돌리기가 된다.
      */
     fun updateMusicInfo(
-        style: String, bpm: Double, options: GenerationOptions,
-        reanalyze: Boolean = false, gridFit: Boolean = true
+        style: String, bpm: Double?, options: GenerationOptions, method: BeatMethod = BeatMethod.AUTO
     ) {
         val projectId = _metadata.value?.id ?: return
         val analysis = _analysis.value ?: return
         val input = analysis.engineInput ?: return
-        val beatMs = Math.round(60000.0 / bpm)
-        if (bpm <= 0.0 || beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS || input.beats.isEmpty()) return
+        val forced = method != BeatMethod.AUTO
+        val beatMs = if (bpm != null && bpm > 0.0) Math.round(60000.0 / bpm) else 0L
+        if (forced && (bpm == null || beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS)) return
+        if (input.beats.isEmpty()) return
         viewModelScope.launch {
-            // BPM 을 바꿨거나, BPM 은 그대로 두고 비트를 다시 분석하라고 한 경우
-            val regrid = reanalyze || (currentBpmOf(analysis)?.let { kotlin.math.abs(it - bpm) >= 0.05 } ?: true)
             var base = analysis
             var reanalyzed = false
-            if (regrid) {
-                val file = _musicFile.value
-                var retracked: MusicAnalysis? = null
-                if (file != null) {
-                    // 지정한 BPM 으로 비트 분석을 다시 돌린다 (실제 소리의 onset 에 맞춰 비트를 추적, 몇 초 걸린다)
-                    _analyzing.value = true
-                    try {
-                        retracked = autoEfxGenerator.analyze(file, bpm, gridFit)
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Re-analysis with forced BPM failed", e)
-                    } finally {
-                        _analyzing.value = false
+            val file = _musicFile.value
+            if (file != null) {
+                // 선택한 방식으로 비트 분석을 다시 돌린다 (몇 초 걸린다)
+                _analyzing.value = true
+                var result: MusicAnalysis? = null
+                try {
+                    result = when (method) {
+                        BeatMethod.AUTO -> autoEfxGenerator.analyze(file)
+                        BeatMethod.FORCED -> autoEfxGenerator.analyze(file, bpm, gridFit = false)
+                        BeatMethod.FORCED_GRID -> autoEfxGenerator.analyze(file, bpm, gridFit = true)
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Beat re-analysis failed ($method)", e)
+                } finally {
+                    _analyzing.value = false
                 }
-                // 음악 파일이 없거나 재분석이 실패하면 균일한 격자로 대신한다
-                val good = retracked?.takeIf { it.engineInput != null && it.beatTimesMs.isNotEmpty() }
-                reanalyzed = good != null
-                base = good ?: withContext(Dispatchers.Default) { rebuildBeatGrid(analysis, input, beatMs) }
+                val good = result?.takeIf { it.engineInput != null && it.beatTimesMs.isNotEmpty() }
+                if (good != null) { base = good; reanalyzed = true }
             }
-            // 장르: 사용자가 칩으로 직접 바꿨으면 그 값을, 그대로 두고 BPM 만 바꿨으면 재분석이 새로 분류한 값을 쓴다
+            // 재분석을 못 했을 때: BPM 지정 방식이면 균일한 격자로 대신하고, 자동 분석이면 현재 비트를 그대로 둔다
+            if (!reanalyzed && forced) {
+                base = withContext(Dispatchers.Default) { rebuildBeatGrid(analysis, input, beatMs) }
+            }
+            // 장르: 사용자가 직접 바꿨으면 그 값을, 그대로 두고 재분석한 경우엔 재분석이 새로 분류한 값을 쓴다
             val styleEdited = style != analysis.musicStyle
             val finalStyle = if (styleEdited || !reanalyzed) style else (base.musicStyle ?: style)
             val updated = base.copy(musicStyle = finalStyle, engineInput = base.engineInput?.copy(musicStyle = finalStyle))

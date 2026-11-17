@@ -754,10 +754,11 @@ fun EfxTabletEditorScreen(
         val styles = com.efxcreator.music.style.MusicStyleClassifier.MusicStyle.entries.map { it.name }
         var style by remember { mutableStateOf(analysis?.musicStyle ?: styles.first()) }
         var text by remember { mutableStateOf("%.1f".format(java.util.Locale.US, currentBpm ?: 120.0)) }
-        var reanalyze by remember { mutableStateOf(false) }
-        var gridFit by remember { mutableStateOf(true) }
+        var method by remember { mutableStateOf(com.efxcreator.viewmodel.BeatMethod.AUTO) }
         val value = text.toDoubleOrNull()
-        val valid = value != null && value in 50.0..160.0
+        // 자동 분석은 BPM 을 쓰지 않으므로 입력 검사를 하지 않는다
+        val bpmValid = value != null && value in 50.0..160.0
+        val valid = method == com.efxcreator.viewmodel.BeatMethod.AUTO || bpmValid
         AlertDialog(
             onDismissRequest = { showBpmDialog = false },
             title = { Text(Loc.str(R.string.efx_music_info_title)) },
@@ -785,6 +786,42 @@ fun EfxTabletEditorScreen(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
+                    // 비트 분석 방식: 자동 분석(기본) / BPM 지정 / BPM 지정 + 격자 맞춤
+                    Text(Loc.str(R.string.efx_beat_method_label), style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(4.dp))
+                    var methodMenu by remember { mutableStateOf(false) }
+                    val methods = listOf(
+                        Triple(com.efxcreator.viewmodel.BeatMethod.AUTO, R.string.efx_beat_method_auto, R.string.efx_beat_method_auto_desc),
+                        Triple(com.efxcreator.viewmodel.BeatMethod.FORCED, R.string.efx_beat_method_forced, R.string.efx_beat_method_forced_desc),
+                        Triple(com.efxcreator.viewmodel.BeatMethod.FORCED_GRID, R.string.efx_beat_method_grid, R.string.efx_beat_method_grid_desc)
+                    )
+                    Box {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { methodMenu = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(Loc.str(methods.first { it.first == method }.second), modifier = Modifier.weight(1f))
+                            Icon(androidx.compose.material.icons.Icons.Default.ArrowDropDown, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = methodMenu, onDismissRequest = { methodMenu = false }) {
+                            methods.forEach { (m, title, desc) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(Loc.str(title))
+                                            Text(
+                                                Loc.str(desc),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    },
+                                    onClick = { method = m; methodMenu = false }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = text,
                         onValueChange = { v ->
@@ -792,29 +829,13 @@ fun EfxTabletEditorScreen(
                             var dot = false
                             text = v.filter { c -> if (c == '.') (!dot).also { dot = true } else c.isDigit() }.take(6)
                         },
+                        enabled = method != com.efxcreator.viewmodel.BeatMethod.AUTO,
                         singleLine = true,
                         label = { Text("BPM (50~160)") },
-                        isError = !valid,
+                        isError = method != com.efxcreator.viewmodel.BeatMethod.AUTO && !bpmValid,
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
                         )
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    // BPM 을 바꾸지 않아도 비트를 다시 분석할 수 있다. 격자 맞춤은 템포가 일정한 곡에서만 켠다.
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { reanalyze = !reanalyze }) {
-                        androidx.compose.material3.Checkbox(checked = reanalyze, onCheckedChange = { reanalyze = it })
-                        Text(Loc.str(R.string.efx_music_info_reanalyze), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { gridFit = !gridFit }) {
-                        androidx.compose.material3.Checkbox(checked = gridFit, onCheckedChange = { gridFit = it })
-                        Text(Loc.str(R.string.efx_music_info_gridfit), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Text(
-                        Loc.str(R.string.efx_music_info_gridfit_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -826,12 +847,12 @@ fun EfxTabletEditorScreen(
             },
             confirmButton = {
                 TextButton(
-                    enabled = valid && !applying,   // 취소하면 아무것도 안 하고, 이펙트 재생성을 누르면 바뀐 값이 없어도 항상 재생성한다
+                    enabled = valid && !applying,   // 취소하면 아무것도 안 하고, 이펙트 재생성을 누르면 선택한 방식으로 비트를 다시 분석한 뒤 항상 재생성한다
                     onClick = {
                         val options = setsVm.rememberSelection(
                             setsVm.songEffectSetId(projectId), setsVm.songPaletteSetId(projectId)
                         )
-                        editVm.updateMusicInfo(style, value!!, options, reanalyze, gridFit)
+                        editVm.updateMusicInfo(style, value, options, method)
                         showBpmDialog = false
                     }
                 ) { Text(Loc.str(R.string.efx_music_info_apply)) }
