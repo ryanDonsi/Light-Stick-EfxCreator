@@ -657,7 +657,7 @@
     <string name="efx_music_info_title">Edit music info</string>
     <string name="efx_music_info_genre">Genre</string>
     <string name="efx_music_info_note">All %1$d current effects will be replaced with newly generated ones, including manual edits (you can undo). Genre affects the palette and rules; BPM re-runs beat analysis with that tempo (takes a few seconds).</string>
-    <string name="efx_music_info_apply">Apply and regenerate</string>
+    <string name="efx_music_info_apply">Regenerate effects</string>
     <string name="efx_music_menu_label">Music info</string>
     <string name="efx_music_menu_change">Change music file</string>
     <string name="efx_music_menu_info">Edit BPM / genre</string>

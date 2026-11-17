@@ -759,8 +759,6 @@ fun EfxTabletEditorScreen(
         var gridFit by remember { mutableStateOf(true) }
         val value = text.toDoubleOrNull()
         val valid = value != null && value in 50.0..160.0
-        val changed = reanalyze || style != analysis?.musicStyle ||
-            (value != null && (currentBpm == null || kotlin.math.abs(value - currentBpm) >= 0.05))
         AlertDialog(
             onDismissRequest = { showBpmDialog = false },
             title = { Text(Loc.str(R.string.efx_music_info_title)) },
@@ -818,7 +816,7 @@ fun EfxTabletEditorScreen(
             },
             confirmButton = {
                 TextButton(
-                    enabled = valid && changed && !applying,
+                    enabled = valid && !applying,   // 취소하면 아무것도 안 하고, 이펙트 재생성을 누르면 바뀐 값이 없어도 항상 재생성한다
                     onClick = {
                         val options = setsVm.rememberSelection(
                             setsVm.songEffectSetId(projectId), setsVm.songPaletteSetId(projectId)
