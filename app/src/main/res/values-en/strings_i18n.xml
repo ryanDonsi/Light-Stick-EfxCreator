@@ -654,13 +654,13 @@
     <string name="efx_access_lost">Folder access was lost, so copies cannot be created. Please choose the folder again. (%1$s)</string>
     <string name="efx_mirror_progress">Creating song copies in the folder…</string>
     <string name="efx_mirror_done">Finished creating folder copies</string>
-    <string name="efx_music_info_title">Edit music info</string>
+    <string name="efx_music_info_title">Song analysis settings</string>
     <string name="efx_music_info_genre">Genre</string>
     <string name="efx_music_info_note">ℹ Regenerating re-analyzes beats with the selected method (takes a few seconds), then replaces the current %1$d effects with newly generated ones, including manual edits. You can undo it. Genre affects the palette and rules.</string>
-    <string name="efx_music_info_apply">Regenerate effects</string>
+    <string name="efx_music_info_apply">Re-analyze & regenerate effects</string>
     <string name="efx_music_menu_label">Music info</string>
     <string name="efx_music_menu_change">Change music file</string>
-    <string name="efx_music_menu_info">Edit BPM / genre</string>
+    <string name="efx_music_menu_info">Song analysis settings</string>
     <string name="efx_music_menu_beatcheck">Export for accuracy check</string>
     <string name="efx_beatcheck_failed">Could not create the accuracy-check files</string>
     <string name="efx_beat_method_label">Beat analysis method</string>
