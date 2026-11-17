@@ -761,7 +761,9 @@ fun EfxTabletEditorScreen(
         var style by remember { mutableStateOf<String?>(analysis?.musicStyle?.takeIf { it in styles }) }
         // 지금 적용된 비트 분석 방식 (기록이 없는 곡은 처음 추가할 때의 자동 분석)
         val currentMethod = remember {
+            // V1 방식은 debug 빌드에서만 쓴다 (debug 로 분석해 둔 곡을 릴리스에서 열면 기본 방식으로 보인다)
             runCatching { BM.valueOf(analysis?.beatMethod ?: "") }.getOrDefault(BM.AUTO)
+                .let { if (it == BM.AUTO_V1 && !com.efxcreator.BuildConfig.DEBUG) BM.AUTO else it }
         }
         var method by remember { mutableStateOf(currentMethod) }
         var text by remember {
@@ -774,9 +776,12 @@ fun EfxTabletEditorScreen(
         val bpmValid = value != null && value in 50.0..160.0
         val usesBpm = method == BM.FORCED || method == BM.FORCED_GRID
         val valid = !usesBpm || bpmValid
-        val methods = listOf(
+        val methods = listOfNotNull(
             Triple(BM.AUTO, R.string.efx_beat_method_auto, R.string.efx_beat_method_auto_desc),
-            Triple(BM.AUTO_V1, R.string.efx_beat_method_v1, R.string.efx_beat_method_v1_desc),
+            // 비교 실험용: 체커 결과에서 V3 / 템포 고정보다 나은 곡이 없어 debug 빌드에서만 보인다
+            if (com.efxcreator.BuildConfig.DEBUG)
+                Triple(BM.AUTO_V1, R.string.efx_beat_method_v1, R.string.efx_beat_method_v1_desc)
+            else null,
             Triple(BM.FORCED, R.string.efx_beat_method_forced, R.string.efx_beat_method_forced_desc),
             Triple(BM.FORCED_GRID, R.string.efx_beat_method_grid, R.string.efx_beat_method_grid_desc)
         )
