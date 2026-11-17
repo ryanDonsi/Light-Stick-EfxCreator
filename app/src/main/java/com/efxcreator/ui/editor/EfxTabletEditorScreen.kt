@@ -761,9 +761,9 @@ fun EfxTabletEditorScreen(
         var style by remember { mutableStateOf<String?>(analysis?.musicStyle?.takeIf { it in styles }) }
         // 지금 적용된 비트 분석 방식 (기록이 없는 곡은 처음 추가할 때의 자동 분석)
         val currentMethod = remember {
-            // V1 방식은 debug 빌드에서만 쓴다 (debug 로 분석해 둔 곡을 릴리스에서 열면 기본 방식으로 보인다)
+            // V1, 지정 BPM 방식은 debug 빌드에서만 쓴다 (debug 로 분석해 둔 곡을 릴리스에서 열면 기본 방식으로 보인다)
             runCatching { BM.valueOf(analysis?.beatMethod ?: "") }.getOrDefault(BM.AUTO)
-                .let { if (it == BM.AUTO_V1 && !com.efxcreator.BuildConfig.DEBUG) BM.AUTO else it }
+                .let { if ((it == BM.AUTO_V1 || it == BM.FORCED) && !com.efxcreator.BuildConfig.DEBUG) BM.AUTO else it }
         }
         var method by remember { mutableStateOf(currentMethod) }
         var text by remember {
@@ -782,7 +782,10 @@ fun EfxTabletEditorScreen(
             if (com.efxcreator.BuildConfig.DEBUG)
                 Triple(BM.AUTO_V1, R.string.efx_beat_method_v1, R.string.efx_beat_method_v1_desc)
             else null,
-            Triple(BM.FORCED, R.string.efx_beat_method_forced, R.string.efx_beat_method_forced_desc),
+            // 지정 BPM 추적도 템포 고정으로 충분해서 debug 빌드에서만 보인다
+            if (com.efxcreator.BuildConfig.DEBUG)
+                Triple(BM.FORCED, R.string.efx_beat_method_forced, R.string.efx_beat_method_forced_desc)
+            else null,
             Triple(BM.FORCED_GRID, R.string.efx_beat_method_grid, R.string.efx_beat_method_grid_desc)
         )
         AlertDialog(
