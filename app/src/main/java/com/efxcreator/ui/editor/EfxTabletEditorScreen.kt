@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -766,12 +765,23 @@ fun EfxTabletEditorScreen(
                 Column {
                     Text(Loc.str(R.string.efx_music_info_genre), style = MaterialTheme.typography.labelMedium)
                     Spacer(Modifier.height(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.horizontalScroll(rememberScrollState())
-                    ) {
-                        styles.forEach { st ->
-                            FilterChip(selected = style == st, onClick = { style = st }, label = { Text(st) })
+                    // 장르는 드롭다운으로 고른다 (칩을 좌우로 밀 필요가 없다)
+                    var genreMenu by remember { mutableStateOf(false) }
+                    Box {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { genreMenu = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(style, modifier = Modifier.weight(1f))
+                            Icon(androidx.compose.material.icons.Icons.Default.ArrowDropDown, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = genreMenu, onDismissRequest = { genreMenu = false }) {
+                            styles.forEach { st ->
+                                DropdownMenuItem(
+                                    text = { Text(st) },
+                                    onClick = { style = st; genreMenu = false }
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(12.dp))
