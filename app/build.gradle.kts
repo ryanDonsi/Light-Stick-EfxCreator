@@ -39,6 +39,9 @@ android {
         }
     }
 
+    // releaseTest 는 release 소스셋을 그대로 쓴다 (정확도 검사용 내보내기 같은 debug 전용 코드 제외)
+    sourceSets.getByName("releaseTest").java.srcDir("src/release/java")
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
