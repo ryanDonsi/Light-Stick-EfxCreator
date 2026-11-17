@@ -761,9 +761,9 @@ fun EfxTabletEditorScreen(
         var style by remember { mutableStateOf<String?>(analysis?.musicStyle?.takeIf { it in styles }) }
         // 지금 적용된 비트 분석 방식 (기록이 없는 곡은 처음 추가할 때의 자동 분석)
         val currentMethod = remember {
-            // V1 방식은 debug 빌드에서만 쓴다 (debug 로 분석해 둔 곡을 릴리스에서 열면 기본 방식으로 보인다)
+            // V1, 지정 BPM 방식은 debug 빌드에서만 쓴다 (debug 로 분석해 둔 곡을 릴리스에서 열면 기본 방식으로 보인다)
             runCatching { BM.valueOf(analysis?.beatMethod ?: "") }.getOrDefault(BM.AUTO)
-                .let { if (it == BM.AUTO_V1 && !com.efxcreator.BuildConfig.DEBUG) BM.AUTO else it }
+                .let { if ((it == BM.AUTO_V1 || it == BM.FORCED) && !com.efxcreator.BuildConfig.DEBUG) BM.AUTO else it }
         }
         var method by remember { mutableStateOf(currentMethod) }
         var text by remember {
@@ -776,12 +776,14 @@ fun EfxTabletEditorScreen(
         val bpmValid = value != null && value in 50.0..160.0
         val usesBpm = method == BM.FORCED || method == BM.FORCED_GRID
         val valid = !usesBpm || bpmValid
-        // 순서: 자동 → BPM 지정 → 템포 고정, 마지막에 debug 전용 V1 (릴리스에서는 앞의 3개만 보인다)
+        // 순서: 자동 → 템포 고정. 지정 BPM 추적과 V1 은 비교 실험용이라 debug 빌드에서만 보인다
+        // (체커 결과에서 템포 고정이 BPM 보정까지 함께 해 주고, V1 은 V3 / 템포 고정보다 나은 곡이 없었다)
         val methods = listOfNotNull(
             Triple(BM.AUTO, R.string.efx_beat_method_auto, R.string.efx_beat_method_auto_desc),
-            Triple(BM.FORCED, R.string.efx_beat_method_forced, R.string.efx_beat_method_forced_desc),
             Triple(BM.FORCED_GRID, R.string.efx_beat_method_grid, R.string.efx_beat_method_grid_desc),
-            // 비교 실험용: 체커 결과에서 V3 / 템포 고정보다 나은 곡이 없어 debug 빌드에서만 보인다
+            if (com.efxcreator.BuildConfig.DEBUG)
+                Triple(BM.FORCED, R.string.efx_beat_method_forced, R.string.efx_beat_method_forced_desc)
+            else null,
             if (com.efxcreator.BuildConfig.DEBUG)
                 Triple(BM.AUTO_V1, R.string.efx_beat_method_v1, R.string.efx_beat_method_v1_desc)
             else null
@@ -853,30 +855,29 @@ fun EfxTabletEditorScreen(
                                 )
                             }
                         }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = text,
-                        onValueChange = { v ->
-                            // 숫자와 소수점 하나만 허용 (예: 96.8)
-                            var dot = false
-                            text = v.filter { c -> if (c == '.') (!dot).also { dot = true } else c.isDigit() }.take(6)
-                        },
-                        enabled = usesBpm && !running,
-                        singleLine = true,
-                        label = { Text("BPM") },
-                        isError = usesBpm && !bpmValid,
-                        supportingText = {
-                            Text(
-                                if (!usesBpm)
-                                    Loc.str(R.string.efx_music_info_bpm_auto, currentBpm?.let { "%.1f".format(java.util.Locale.US, it) } ?: "-")
-                                else Loc.str(R.string.efx_music_info_bpm_range)
+                        // BPM 은 이 방식을 고른 때만 그 항목 아래에 나타나, 방식의 일부로 보이게 한다
+                        if (method == m && (m == BM.FORCED_GRID || m == BM.FORCED)) {
+                            OutlinedTextField(
+                                value = text,
+                                onValueChange = { v ->
+                                    // 숫자와 소수점 하나만 허용 (예: 96.8)
+                                    var dot = false
+                                    text = v.filter { c -> if (c == '.') (!dot).also { dot = true } else c.isDigit() }.take(6)
+                                },
+                                enabled = !running,
+                                singleLine = true,
+                                label = { Text("BPM") },
+                                isError = !bpmValid,
+                                supportingText = { Text(Loc.str(R.string.efx_music_info_bpm_range)) },
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 48.dp, bottom = 4.dp)
                             )
-                        },
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
-                        )
-                    )
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
                     // 눌렀을 때 일어나는 일 (눈에 띄는 안내 상자)
                     androidx.compose.material3.Surface(
