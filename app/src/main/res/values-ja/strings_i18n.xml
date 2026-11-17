@@ -654,13 +654,13 @@
     <string name="efx_access_lost">フォルダへのアクセス権がないためコピーを作成できません。フォルダを再度指定してください。（%1$s）</string>
     <string name="efx_mirror_progress">フォルダに曲のコピーを作成しています…</string>
     <string name="efx_mirror_done">フォルダへのコピー作成が完了しました</string>
-    <string name="efx_music_info_title">音楽情報の編集</string>
+    <string name="efx_music_info_title">曲の分析設定</string>
     <string name="efx_music_info_genre">ジャンル</string>
     <string name="efx_music_info_note">ℹ エフェクトを再生成すると、選択した方式でビートを再分析(数秒かかります)した後、現在の%1$d個のエフェクトを新しく生成したものに置き換えます。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに反映されます。</string>
-    <string name="efx_music_info_apply">エフェクトを再生成</string>
+    <string name="efx_music_info_apply">再分析してエフェクト生成</string>
     <string name="efx_music_menu_label">音楽情報</string>
     <string name="efx_music_menu_change">音楽ファイルを変更</string>
-    <string name="efx_music_menu_info">BPM / ジャンルを編集</string>
+    <string name="efx_music_menu_info">曲の分析設定</string>
     <string name="efx_music_menu_beatcheck">精度チェック用に書き出し</string>
     <string name="efx_beatcheck_failed">精度チェック用ファイルを作成できませんでした</string>
     <string name="efx_beat_method_label">ビート分析方式</string>

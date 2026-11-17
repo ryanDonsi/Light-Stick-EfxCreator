@@ -654,13 +654,13 @@
     <string name="efx_access_lost">没有文件夹访问权限，无法创建副本。请重新指定文件夹。（%1$s）</string>
     <string name="efx_mirror_progress">正在文件夹中创建歌曲副本…</string>
     <string name="efx_mirror_done">文件夹副本创建完成</string>
-    <string name="efx_music_info_title">编辑音乐信息</string>
+    <string name="efx_music_info_title">歌曲分析设置</string>
     <string name="efx_music_info_genre">流派</string>
     <string name="efx_music_info_note">ℹ 重新生成时会按所选方式重新分析节拍（需要几秒），然后将当前 %1$d 个效果替换为新生成的效果（包括手动修改），可以撤销。流派影响配色和规则。</string>
-    <string name="efx_music_info_apply">重新生成效果</string>
+    <string name="efx_music_info_apply">重新分析并生成效果</string>
     <string name="efx_music_menu_label">音乐信息</string>
     <string name="efx_music_menu_change">更换音乐文件</string>
-    <string name="efx_music_menu_info">修改 BPM / 流派</string>
+    <string name="efx_music_menu_info">歌曲分析设置</string>
     <string name="efx_music_menu_beatcheck">导出用于准确度检查</string>
     <string name="efx_beatcheck_failed">无法创建准确度检查文件</string>
     <string name="efx_beat_method_label">节拍分析方式</string>
