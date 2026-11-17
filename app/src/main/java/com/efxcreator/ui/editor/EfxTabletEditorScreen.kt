@@ -810,7 +810,7 @@ fun EfxTabletEditorScreen(
                     Text(
                         Loc.str(R.string.efx_music_info_note, entries.size),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             },

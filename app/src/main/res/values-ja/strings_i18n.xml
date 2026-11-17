@@ -656,7 +656,7 @@
     <string name="efx_mirror_done">フォルダへのコピー作成が完了しました</string>
     <string name="efx_music_info_title">音楽情報の編集</string>
     <string name="efx_music_info_genre">ジャンル</string>
-    <string name="efx_music_info_note">現在のエフェクト%1$d個がすべて新しく生成したものに置き換わります。手動の編集も失われます(元に戻せます)。ジャンルはパレットとルールに、BPMはそのテンポでのビート再分析(数秒かかります)に反映されます。</string>
+    <string name="efx_music_info_note">ℹ エフェクトを再生成すると、現在の%1$d個のエフェクトが新しく生成したものに置き換わります。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに、BPMはそのテンポでのビート再分析(数秒かかります)に反映されます。</string>
     <string name="efx_music_info_apply">エフェクトを再生成</string>
     <string name="efx_music_menu_label">音楽情報</string>
     <string name="efx_music_menu_change">音楽ファイルを変更</string>

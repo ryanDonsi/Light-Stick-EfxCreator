@@ -656,7 +656,7 @@
     <string name="efx_mirror_done">文件夹副本创建完成</string>
     <string name="efx_music_info_title">编辑音乐信息</string>
     <string name="efx_music_info_genre">流派</string>
-    <string name="efx_music_info_note">当前 %1$d 个效果将全部替换为重新生成的效果，手动修改也会丢失（可撤销）。流派影响配色和规则，BPM 会按该速度重新分析节拍（需要几秒）。</string>
+    <string name="efx_music_info_note">ℹ 重新生成后，当前 %1$d 个效果将替换为新生成的效果（包括手动修改），可以撤销。流派影响配色和规则，BPM 会按该速度重新分析节拍（需要几秒）。</string>
     <string name="efx_music_info_apply">重新生成效果</string>
     <string name="efx_music_menu_label">音乐信息</string>
     <string name="efx_music_menu_change">更换音乐文件</string>
