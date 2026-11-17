@@ -344,16 +344,18 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
      * 고친 값은 저장된 분석 결과에 반영되어 다음에 열어도 유지된다. 이펙트 교체는 작업본에 반영되므로 되돌리기가 된다.
      */
     fun updateMusicInfo(
-        style: String?, bpm: Double?, options: GenerationOptions, method: BeatMethod = BeatMethod.AUTO
+        style: String?, bpm: Double?, options: GenerationOptions, method: BeatMethod = BeatMethod.AUTO,
+        onDone: () -> Unit = {}
     ) {
-        val projectId = _metadata.value?.id ?: return
-        val analysis = _analysis.value ?: return
-        val input = analysis.engineInput ?: return
+        val projectId = _metadata.value?.id ?: return onDone()
+        val analysis = _analysis.value ?: return onDone()
+        val input = analysis.engineInput ?: return onDone()
         val forced = method != BeatMethod.AUTO
         val beatMs = if (bpm != null && bpm > 0.0) Math.round(60000.0 / bpm) else 0L
-        if (forced && (bpm == null || beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS)) return
-        if (input.beats.isEmpty()) return
+        if (forced && (bpm == null || beatMs !in MIN_EDIT_BEAT_MS..MAX_EDIT_BEAT_MS)) return onDone()
+        if (input.beats.isEmpty()) return onDone()
         viewModelScope.launch {
+            try {
             var base = analysis
             var reanalyzed = false
             val file = _musicFile.value
@@ -400,6 +402,9 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
             withContext(Dispatchers.IO) { repository.saveAnalysis(projectId, updated) }
             _analysis.value = updated
             applySets(options, null)
+            } finally {
+                onDone()
+            }
         }
     }
 
