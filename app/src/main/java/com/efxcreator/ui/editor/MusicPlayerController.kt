@@ -56,8 +56,11 @@ class MusicPlayerController {
                 isReady = true
             }
             mp.setOnCompletionListener {
+                // 끝까지 재생하면 처음 재생 전 준비 상태(맨 앞, 정지)로 돌려놓는다.
+                // 기기 타임라인은 다음 재생 때 resumeTimeline(positionMs=0) 으로 처음부터 맞춰진다.
                 isPlaying = false
-                positionMs = durationMs
+                positionMs = 0L
+                runCatching { it.seekTo(0) }
             }
             mp.setOnErrorListener { _, what, extra ->
                 Log.e(TAG, "MediaPlayer error what=$what extra=$extra")
