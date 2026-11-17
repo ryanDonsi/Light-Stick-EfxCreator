@@ -442,8 +442,12 @@ fun EfxTabletEditorScreen(
                     val id = efx?.header?.musicId
                     if (a == null || id == null) return@EditorTopBar
                     exportScope.launch {
-                        val files = withContext(Dispatchers.IO) {
-                            runCatching { com.efxcreator.data.BeatCheckExport.export(context, id, entries, a) }.getOrNull()
+                        val files: List<java.io.File>? = withContext<List<java.io.File>?>(Dispatchers.IO) {
+                            try {
+                                com.efxcreator.data.BeatCheckExport.export(context, id, entries, a)
+                            } catch (e: Exception) {
+                                null
+                            }
                         }
                         if (files == null) {
                             android.widget.Toast.makeText(context, Loc.str(R.string.efx_beatcheck_failed), android.widget.Toast.LENGTH_SHORT).show()
