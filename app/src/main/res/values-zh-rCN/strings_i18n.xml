@@ -665,9 +665,9 @@
     <string name="efx_beatcheck_failed">无法创建准确度检查文件</string>
     <string name="efx_beat_method_label">节拍分析方式</string>
     <string name="efx_beat_method_auto">自动估计速度（默认）</string>
-    <string name="efx_beat_method_auto_desc">添加歌曲时自动分析所用的方式。由分析器自行决定 BPM，并按声音灵活地寻找节拍</string>
+    <string name="efx_beat_method_auto_desc">BPM 由分析器决定，节拍跟随声音寻找\n添加歌曲时使用的方式，适合大多数歌曲</string>
     <string name="efx_beat_method_forced">按指定 BPM 追踪</string>
-    <string name="efx_beat_method_forced_desc">以输入的 BPM 为基准，跟随声音寻找节拍。速度略有变化也能跟上</string>
+    <string name="efx_beat_method_forced_desc">BPM 由您输入，节拍跟随声音寻找\n当自动估计把 BPM 误判为一半或两倍时，输入正确的值重新寻找。速度变化的歌曲也能跟上</string>
     <string name="efx_beat_method_grid">固定速度</string>
-    <string name="efx_beat_method_grid_desc">将整首歌固定为同一 BPM 和均匀间隔。适用于速度稳定的歌曲，适合中途节拍偏移半拍的情况</string>
+    <string name="efx_beat_method_grid_desc">BPM 输入大致值，节拍固定为均匀间隔\n适用于速度稳定的歌曲。适合中途节拍偏移半拍的情况，不适合速度变化的歌曲</string>
 </resources>

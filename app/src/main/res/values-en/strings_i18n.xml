@@ -665,9 +665,9 @@
     <string name="efx_beatcheck_failed">Could not create the accuracy-check files</string>
     <string name="efx_beat_method_label">Beat analysis method</string>
     <string name="efx_beat_method_auto">Auto-estimate tempo (default)</string>
-    <string name="efx_beat_method_auto_desc">The method used by the automatic analysis when a song is first added. The analyzer decides the BPM itself and finds beats flexibly along the sound</string>
+    <string name="efx_beat_method_auto_desc">The analyzer decides the BPM; beats are found by following the sound\nThe method used when a song is first added. Suits most songs</string>
     <string name="efx_beat_method_forced">Track with given BPM</string>
-    <string name="efx_beat_method_forced_desc">Finds beats following the sound, based on the BPM you enter. It keeps up with small tempo changes</string>
+    <string name="efx_beat_method_forced_desc">You enter the BPM; beats are found by following the sound\nUse it when auto-estimate got the BPM wrong by half or double. It also keeps up with tempo changes</string>
     <string name="efx_beat_method_grid">Fixed tempo</string>
-    <string name="efx_beat_method_grid_desc">Locks the whole song to one BPM with even spacing. For steady-tempo songs; helps when beats slip by half a beat mid-song</string>
+    <string name="efx_beat_method_grid_desc">You enter a rough BPM; beats are locked to even spacing\nFor steady-tempo songs. Helps when beats slip by half a beat mid-song; not suited to songs whose tempo changes</string>
 </resources>
