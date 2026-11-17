@@ -656,7 +656,7 @@
     <string name="efx_mirror_done">フォルダへのコピー作成が完了しました</string>
     <string name="efx_music_info_title">曲の分析設定</string>
     <string name="efx_music_info_genre">ジャンル</string>
-    <string name="efx_music_info_note">ℹ 「再分析してエフェクト生成」を押すと、選択した方式でビートを再分析(数秒かかります)した後、現在の%1$d個のエフェクトを新しく生成したものに置き換えます。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに反映されます。</string>
+    <string name="efx_music_info_note">「再分析してエフェクト生成」を押すと、選択した方式でビートを再分析(数秒かかります)した後、現在の%1$d個のエフェクトを新しく生成したものに置き換えます。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに反映されます。</string>
     <string name="efx_music_info_genre_auto">自動分析</string>
     <string name="efx_music_info_current">現在: %1$s · %2$s BPM · %3$s</string>
     <string name="efx_music_info_bpm_range">50~160 の範囲で入力</string>

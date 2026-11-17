@@ -656,7 +656,7 @@
     <string name="efx_mirror_done">Finished creating folder copies</string>
     <string name="efx_music_info_title">Song analysis settings</string>
     <string name="efx_music_info_genre">Genre</string>
-    <string name="efx_music_info_note">ℹ Tapping “Re-analyze and regenerate effects” re-analyzes beats with the selected method (takes a few seconds), then replaces the current %1$d effects with newly generated ones, including manual edits. You can undo it. Genre affects the palette and rules.</string>
+    <string name="efx_music_info_note">Tapping “Re-analyze and regenerate effects” re-analyzes beats with the selected method (takes a few seconds), then replaces the current %1$d effects with newly generated ones, including manual edits. You can undo it. Genre affects the palette and rules.</string>
     <string name="efx_music_info_genre_auto">Auto-detect</string>
     <string name="efx_music_info_current">Now: %1$s · %2$s BPM · %3$s</string>
     <string name="efx_music_info_bpm_range">Enter 50–160</string>
