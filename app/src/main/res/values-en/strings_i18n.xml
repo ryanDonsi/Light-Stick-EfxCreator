@@ -657,6 +657,7 @@
     <string name="efx_music_info_title">Song analysis settings</string>
     <string name="efx_music_info_genre">Genre</string>
     <string name="efx_music_info_note">ℹ Regenerating re-analyzes beats with the selected method (takes a few seconds), then replaces the current %1$d effects with newly generated ones, including manual edits. You can undo it. Genre affects the palette and rules.</string>
+    <string name="efx_music_info_genre_auto">Auto-detect</string>
     <string name="efx_music_info_apply">Re-analyze and regenerate effects</string>
     <string name="efx_music_menu_label">Music info</string>
     <string name="efx_music_menu_change">Change music file</string>

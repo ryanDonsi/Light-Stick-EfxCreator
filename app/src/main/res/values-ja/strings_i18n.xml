@@ -657,6 +657,7 @@
     <string name="efx_music_info_title">曲の分析設定</string>
     <string name="efx_music_info_genre">ジャンル</string>
     <string name="efx_music_info_note">ℹ エフェクトを再生成すると、選択した方式でビートを再分析(数秒かかります)した後、現在の%1$d個のエフェクトを新しく生成したものに置き換えます。手動の編集も含まれますが、元に戻せます。ジャンルはパレットとルールに反映されます。</string>
+    <string name="efx_music_info_genre_auto">自動分析</string>
     <string name="efx_music_info_apply">再分析してエフェクト生成</string>
     <string name="efx_music_menu_label">音楽情報</string>
     <string name="efx_music_menu_change">音楽ファイルを変更</string>

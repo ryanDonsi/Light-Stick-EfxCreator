@@ -344,7 +344,7 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
      * 고친 값은 저장된 분석 결과에 반영되어 다음에 열어도 유지된다. 이펙트 교체는 작업본에 반영되므로 되돌리기가 된다.
      */
     fun updateMusicInfo(
-        style: String, bpm: Double?, options: GenerationOptions, method: BeatMethod = BeatMethod.AUTO
+        style: String?, bpm: Double?, options: GenerationOptions, method: BeatMethod = BeatMethod.AUTO
     ) {
         val projectId = _metadata.value?.id ?: return
         val analysis = _analysis.value ?: return
@@ -382,9 +382,21 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
                 base = withContext(Dispatchers.Default) { rebuildBeatGrid(analysis, input, beatMs) }
             }
             // 장르: 사용자가 직접 바꿨으면 그 값을, 그대로 두고 재분석한 경우엔 재분석이 새로 분류한 값을 쓴다
-            val styleEdited = style != analysis.musicStyle
-            val finalStyle = if (styleEdited || !reanalyzed) style else (base.musicStyle ?: style)
-            val updated = base.copy(musicStyle = finalStyle, engineInput = base.engineInput?.copy(musicStyle = finalStyle))
+            // style 이 null 이면 "자동 분석" 선택: 재분석한 분류를 쓰고, 재분석을 못 했으면 현재 장르를 그대로 둔다
+            val styleEdited = style != null && style != analysis.musicStyle
+            val finalStyle: String? = when {
+                styleEdited -> style
+                reanalyzed -> base.musicStyle ?: analysis.musicStyle
+                else -> analysis.musicStyle
+            }
+            // 재분석을 못 했고 자동 분석이었다면 방식 기록도 이전 그대로 둔다
+            val keepMethod = !reanalyzed && !forced
+            var updated = base.copy(
+                musicStyle = finalStyle,
+                beatMethod = if (keepMethod) analysis.beatMethod else method.name,
+                forcedBpm = if (keepMethod) analysis.forcedBpm else if (forced) bpm else null
+            )
+            if (finalStyle != null) updated = updated.copy(engineInput = updated.engineInput?.copy(musicStyle = finalStyle))
             withContext(Dispatchers.IO) { repository.saveAnalysis(projectId, updated) }
             _analysis.value = updated
             applySets(options, null)

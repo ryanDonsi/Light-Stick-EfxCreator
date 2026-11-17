@@ -752,9 +752,18 @@ fun EfxTabletEditorScreen(
 
     if (showBpmDialog) {
         val styles = com.efxcreator.music.style.MusicStyleClassifier.MusicStyle.entries.map { it.name }
-        var style by remember { mutableStateOf(analysis?.musicStyle ?: styles.first()) }
-        var text by remember { mutableStateOf("%.1f".format(java.util.Locale.US, currentBpm ?: 120.0)) }
-        var method by remember { mutableStateOf(com.efxcreator.viewmodel.BeatMethod.AUTO) }
+        // 현재 상태를 기본값으로 보여준다: 분석된 장르가 있으면 그 장르, 없으면 "자동 분석"(null)
+        var style by remember { mutableStateOf<String?>(analysis?.musicStyle?.takeIf { it in styles }) }
+        // 지금 적용된 비트 분석 방식 (기록이 없는 곡은 처음 추가할 때의 자동 분석)
+        var method by remember {
+            mutableStateOf(
+                runCatching { com.efxcreator.viewmodel.BeatMethod.valueOf(analysis?.beatMethod ?: "") }
+                    .getOrDefault(com.efxcreator.viewmodel.BeatMethod.AUTO)
+            )
+        }
+        var text by remember {
+            mutableStateOf("%.1f".format(java.util.Locale.US, analysis?.forcedBpm ?: currentBpm ?: 120.0))
+        }
         val value = text.toDoubleOrNull()
         // 자동 분석은 BPM 을 쓰지 않으므로 입력 검사를 하지 않는다
         val bpmValid = value != null && value in 50.0..160.0
@@ -773,10 +782,14 @@ fun EfxTabletEditorScreen(
                             onClick = { genreMenu = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(style, modifier = Modifier.weight(1f))
+                            Text(style ?: Loc.str(R.string.efx_music_info_genre_auto), modifier = Modifier.weight(1f))
                             Icon(androidx.compose.material.icons.Icons.Default.ArrowDropDown, contentDescription = null)
                         }
                         DropdownMenu(expanded = genreMenu, onDismissRequest = { genreMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(Loc.str(R.string.efx_music_info_genre_auto)) },
+                                onClick = { style = null; genreMenu = false }
+                            )
                             styles.forEach { st ->
                                 DropdownMenuItem(
                                     text = { Text(st) },

@@ -657,6 +657,7 @@
     <string name="efx_music_info_title">歌曲分析设置</string>
     <string name="efx_music_info_genre">流派</string>
     <string name="efx_music_info_note">ℹ 重新生成时会按所选方式重新分析节拍（需要几秒），然后将当前 %1$d 个效果替换为新生成的效果（包括手动修改），可以撤销。流派影响配色和规则。</string>
+    <string name="efx_music_info_genre_auto">自动分析</string>
     <string name="efx_music_info_apply">重新分析并生成效果</string>
     <string name="efx_music_menu_label">音乐信息</string>
     <string name="efx_music_menu_change">更换音乐文件</string>
