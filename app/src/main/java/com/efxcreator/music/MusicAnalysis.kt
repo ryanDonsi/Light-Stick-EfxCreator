@@ -19,7 +19,11 @@ data class MusicAnalysis(
      * 이펙트 세트/팔레트 세트를 바꿔 다시 생성하기 위한 엔진 입력.
      * 이 필드가 생기기 전에 저장된 분석 결과에는 없다(null) — 그 경우 다시 분석해야 한다.
      */
-    val engineInput: EngineInput? = null
+    val engineInput: EngineInput? = null,
+    /** 마지막으로 비트를 분석한 방식 (BeatMethod 이름). null 이면 처음 추가할 때의 자동 분석 */
+    val beatMethod: String? = null,
+    /** 지정 BPM 방식으로 분석했을 때 입력한 BPM (자동 분석이면 null) */
+    val forcedBpm: Double? = null
 ) {
     companion object {
         const val WAVEFORM_HOP_MS = 50

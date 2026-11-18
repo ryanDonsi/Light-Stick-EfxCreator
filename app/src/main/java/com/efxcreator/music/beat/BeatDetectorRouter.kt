@@ -77,10 +77,13 @@ object BeatDetectorRouter {
         hopMs:     Long = AutoTimelineConfig.beatDetectorHopMs(AutoTimelineConfig.BEAT_DETECTOR_VERSION),
         minBeatMs: Long,
         maxBeatMs: Long,
-        context: android.content.Context? = null
+        context: android.content.Context? = null,
+        /** V3 만: 지정하면 이 비트 간격(ms)으로 비트를 다시 추적한다 */
+        forcedBpm: Double? = null,
+        gridFit: Boolean = true
     ): BeatInfo = when (version) {
         1    -> detectV1(filePath, hopMs, minBeatMs, maxBeatMs)
-        else -> detectV3(filePath, hopMs, minBeatMs, maxBeatMs, context)
+        else -> detectV3(filePath, hopMs, minBeatMs, maxBeatMs, context, forcedBpm, gridFit)
     }
 
     // =========================================================================
@@ -111,7 +114,7 @@ object BeatDetectorRouter {
     }
 
     /** V3: Tempogram 기반 BPM 탐지 → BeatDetectorV3.detectPcm (V1처럼 PCM 직접 처리) */
-    private fun detectV3(filePath: String, hopMs: Long, minBeatMs: Long, maxBeatMs: Long, context: android.content.Context? = null): BeatInfo {
+    private fun detectV3(filePath: String, hopMs: Long, minBeatMs: Long, maxBeatMs: Long, context: android.content.Context? = null, forcedBpm: Double? = null, gridFit: Boolean = true): BeatInfo {
         val decoded = decodeWithEnvelopes(filePath, hopMs, collectPcm = true)
         if (decoded.pcm.isEmpty()) return emptyBeatInfo()
         val songTitle = java.io.File(filePath).nameWithoutExtension
@@ -121,7 +124,9 @@ object BeatDetectorRouter {
                 hopMs     = hopMs,
                 minBeatMs = minBeatMs.coerceAtLeast(375L),
                 maxBeatMs = maxBeatMs.coerceAtMost(1000L),
-                useTempogram = true
+                useTempogram = true,
+                forcedBpm = forcedBpm,
+                gridFit = gridFit
             ),
             songTitle,
             context

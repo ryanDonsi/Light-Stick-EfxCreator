@@ -2,8 +2,14 @@ package com.efxcreator.data
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
+import com.efxcreator.R
 import androidx.documentfile.provider.DocumentFile
+import com.efxcreator.model.EfxProjectMetadata
+import com.efxcreator.model.Show
 import java.io.File
 
 /**
@@ -39,11 +45,8 @@ class EfxFolderMirror(private val context: Context) {
         val path = prefs.efxStoragePath
         return when {
             path == PreferencesManager.EFX_PATH_INTERNAL -> null
-            // 기본값: Music/Effects (권한이 없으면 사본은 만들지 않고, 앱은 내부 저장소로 정상 동작)
-            path.isEmpty() || path == PreferencesManager.EFX_PATH_DEFAULT ->
-                if (PreferencesManager.canWriteFolders(context))
-                    PreferencesManager.defaultEfxDir().takeIf { it.isDirectory || it.mkdirs() }?.let { Root.Path(it) }
-                else null
+            // 폴더 미지정(기본값): 사본을 만들지 않고 앱 내부 저장소로만 동작한다
+            path.isEmpty() || path == PreferencesManager.EFX_PATH_DEFAULT -> null
             path.startsWith("content://") -> DocumentFile.fromTreeUri(context, Uri.parse(path))
                 ?.takeIf { it.canWrite() }?.let { Root.Tree(it) }
             else -> File(path).takeIf { it.isDirectory || it.mkdirs() }?.let { Root.Path(it) }
@@ -51,15 +54,22 @@ class EfxFolderMirror(private val context: Context) {
     }
 
     /** 이 곡의 사본을 현재 이름/공연에 맞는 위치에 만든다 (이미 있으면 덮어쓴다) */
-    fun sync(projectId: String) {
+    fun sync(projectId: String) = syncOne(projectId, null, null, null)
+
+    private fun syncOne(
+        projectId: String,
+        cachedRoot: Root?,
+        cachedMetas: List<EfxProjectMetadata>?,
+        cachedShows: List<Show>?
+    ) {
         try {
             val repo = EfxRepository(context)
-            val root = resolveRoot() ?: return
-            val metas = repo.loadProjectsMetadata()
+            val root = cachedRoot ?: resolveRoot() ?: return
+            val metas = cachedMetas ?: repo.loadProjectsMetadata()
             val meta = metas.firstOrNull { it.id == projectId } ?: return
             val source = repo.getEfxFile(projectId).takeIf { it.exists() && it.length() > 0 } ?: return
 
-            val shows = ShowRepository(context).load()
+            val shows = cachedShows ?: ShowRepository(context).load()
             val show = shows.firstOrNull { projectId in it.songIds }
             if (show == null) {
                 // 공연에 속하지 않은 곡은 폴더 사본을 두지 않는다 (공연명 폴더가 없으므로)
@@ -78,8 +88,14 @@ class EfxFolderMirror(private val context: Context) {
             val previous = spf.getString(projectId, null)
             if (previous != null && previous != target) deleteCopy(root, previous)
 
+            // 저장 위치·내용·위치가 그대로이고 사본도 있으면 다시 쓰지 않는다 (같은 폴더를 다시 고를 때 빠르게 끝낸다)
+            val stamp = "${prefs.efxStoragePath}|${source.length()}|${source.lastModified()}|$target"
+            if (previous == target && spf.getString("stamp_$projectId", null) == stamp && copyExists(root, folderName, fileName)) {
+                return
+            }
+
             writeCopy(root, folderName, fileName, source)
-            spf.edit().putString(projectId, target).apply()
+            spf.edit().putString(projectId, target).putString("stamp_$projectId", stamp).apply()
             Log.d(TAG, "Mirrored $projectId → $target")
         } catch (e: Exception) {
             Log.e(TAG, "Mirror sync failed for $projectId", e)
@@ -91,7 +107,7 @@ class EfxFolderMirror(private val context: Context) {
         try {
             val previous = spf.getString(projectId, null) ?: return
             resolveRoot()?.let { deleteCopy(it, previous) }
-            spf.edit().remove(projectId).apply()
+            spf.edit().remove(projectId).remove("stamp_$projectId").apply()
         } catch (e: Exception) {
             Log.e(TAG, "Mirror remove failed for $projectId", e)
         }
@@ -99,7 +115,29 @@ class EfxFolderMirror(private val context: Context) {
 
     /** 저장소 위치가 바뀌었을 때 등, 모든 곡의 사본을 다시 만든다 */
     fun syncAll() {
-        EfxRepository(context).loadProjectsMetadata().forEach { sync(it.id) }
+        val root = resolveRoot() ?: return
+        val metas = EfxRepository(context).loadProjectsMetadata()
+        val shows = ShowRepository(context).load()
+        metas.forEach { syncOne(it.id, root, metas, shows) }
+    }
+
+    private fun toast(resId: Int) {
+        Handler(Looper.getMainLooper()).post { Toast.makeText(context, resId, Toast.LENGTH_SHORT).show() }
+    }
+
+    /** 곡이 많으면 오래 걸리므로(SAF 쓰기) 화면을 막지 않도록 백그라운드에서 맞춘다 */
+    fun syncAllAsync() {
+        if (resolveRoot() == null) return
+        toast(R.string.efx_mirror_progress)
+        Thread({
+            syncAll()
+            toast(R.string.efx_mirror_done)
+        }, "efx-mirror-all").start()
+    }
+
+    private fun copyExists(root: Root, folder: String, name: String): Boolean = when (root) {
+        is Root.Path -> File(File(root.dir, folder), name).isFile
+        is Root.Tree -> root.dir.findFile(folder)?.takeIf { it.isDirectory }?.findFile(name) != null
     }
 
     private fun writeCopy(root: Root, folderName: String, fileName: String, source: File) {

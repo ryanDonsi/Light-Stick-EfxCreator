@@ -226,6 +226,8 @@ object SetCatalog {
     }
 
     private fun familyDisplayName(name: String) = when (name) {
+        "WARM" -> Loc.str(R.string.palette_set_warm)
+        "COLD" -> Loc.str(R.string.palette_set_cool)
         "PURPLE" -> Loc.str(R.string.effect_sets_40)
         "RED" -> Loc.str(R.string.effect_sets_41)
         "ORANGE_GOLD" -> Loc.str(R.string.effect_sets_42)

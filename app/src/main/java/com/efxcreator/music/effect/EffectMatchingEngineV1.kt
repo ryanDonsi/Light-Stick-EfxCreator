@@ -62,6 +62,18 @@ private val BLUE_SKYCYAN = LSColor(0, 232, 255)  // 하늘청록
 private val BLUE_AZURE   = LSColor(0, 116, 255)  // 파랑
 private val BLUE_PURE    = LSColor(0, 0, 255)    // 순수 파랑
 
+// Light-Stick-Music 의 WARM / COLD(쿨) 2계열 — 핵심 3색(순환색) + 남는 1색(accent: 단색 전용).
+// WARM = 핑크~노랑, COLD = 초록~보라. 색 값은 Music 의 PaletteCatalog 와 같다.
+private val WARM_PINK   = LSColor(255, 0, 125)   // 핑크 (accent)
+private val WARM_RED    = LSColor(255, 0, 0)     // 빨강
+private val WARM_ORANGE = LSColor(255, 51, 0)    // 주황
+private val WARM_YELLOW = LSColor(255, 255, 0)   // 노랑
+
+private val COLD_GREEN  = LSColor(0, 255, 0)     // 초록 (accent)
+private val COLD_TEAL   = LSColor(0, 255, 255)   // 청록
+private val COLD_BLUE   = LSColor(0, 0, 255)     // 파랑
+private val COLD_PURPLE = LSColor(150, 0, 255)   // 보라
+
 // 위 스와치들의 파생색 — cMain으로 선택된 스와치와 같은 hue에서 명도만 48%로 낮춘
 // 어두운 톤(cDeep)이다. 매번 계산하지 않고 값 그대로 이름 붙여 선언해둔다.
 private val PURPLE_MAGENTA_SHADE = LSColor(101, 0, 122)   // 자주보라 셰이드
@@ -88,6 +100,20 @@ private val BLUE_SEAFOAM_SHADE = LSColor(0, 122, 77)    // 민트청록 셰이�
 private val BLUE_SKYCYAN_SHADE = LSColor(0, 111, 122)   // 하늘청록 셰이드
 private val BLUE_AZURE_SHADE   = LSColor(0, 55, 122)    // 파랑 셰이드
 private val BLUE_PURE_SHADE    = LSColor(0, 0, 122)     // 순수 파랑 셰이드
+
+private val PALETTE_BLACK = LSColor(0, 0, 0)
+private val PALETTE_WHITE = LSColor(255, 255, 255)
+
+// WARM / COLD 스와치의 셰이드(명도 48%)
+private val WARM_PINK_SHADE   = LSColor(122, 0, 60)
+private val WARM_RED_SHADE    = LSColor(122, 0, 0)
+private val WARM_ORANGE_SHADE = LSColor(122, 24, 0)
+private val WARM_YELLOW_SHADE = LSColor(122, 122, 0)
+
+private val COLD_GREEN_SHADE  = LSColor(0, 122, 0)
+private val COLD_TEAL_SHADE   = LSColor(0, 122, 122)
+private val COLD_BLUE_SHADE   = LSColor(0, 0, 122)
+private val COLD_PURPLE_SHADE = LSColor(72, 0, 122)
 
 /**
  * EffectMatchingEngineV1 - 섹션 타입 기반 이펙트 매칭 엔진
@@ -149,6 +175,13 @@ class EffectMatchingEngineV1(
         //   HIPHOP_RNB→BALLAD)의 값을 그대로 가져다 쓴다.
         private data class GenreTheme(val families: List<PaletteFamily>, val rolePermutation: List<Int>)
 
+        /**
+         * 자동 선택이 고르는 기존 5계열. WARM / COLD 는 자동으로 뽑히지 않고, 팔레트 세트에서 사용자가 골라 쓴다.
+         */
+        private val AUTO_FAMILIES = listOf(
+            PaletteFamily.PURPLE, PaletteFamily.RED, PaletteFamily.ORANGE_GOLD, PaletteFamily.TEAL, PaletteFamily.BLUE
+        )
+
         private val GENRE_THEMES: Map<MusicStyleClassifier.MusicStyle, GenreTheme> = mapOf(
             MusicStyleClassifier.MusicStyle.BALLAD to GenreTheme(
                 families = listOf(PaletteFamily.TEAL, PaletteFamily.PURPLE, PaletteFamily.BLUE),
@@ -171,7 +204,7 @@ class EffectMatchingEngineV1(
                 rolePermutation = listOf(0, 1, 2, 3)
             ),
             MusicStyleClassifier.MusicStyle.POP to GenreTheme(
-                families = PaletteFamily.values().toList(),
+                families = AUTO_FAMILIES,
                 rolePermutation = listOf(1, 0, 2, 3)
             )
         )
@@ -190,7 +223,9 @@ class EffectMatchingEngineV1(
      */
     private enum class PaletteFamily(
         val rgb: List<LSColor>,
-        val deep: List<LSColor>
+        val deep: List<LSColor>,
+        /** 이펙트별 색 표(Music 의 PaletteCatalog 방식). 없으면 rgb 4개에서 계산한다 */
+        val explicit: EffectMatchingEngine.ExplicitColors? = null
     ) {
         PURPLE(
             rgb  = listOf(PURPLE_MAGENTA, PURPLE_VIOLET, PURPLE_INDIGO, PURPLE_NAVY),
@@ -213,6 +248,36 @@ class EffectMatchingEngineV1(
         BLUE(
             rgb  = listOf(BLUE_SEAFOAM, BLUE_SKYCYAN, BLUE_AZURE, BLUE_PURE),
             deep = listOf(BLUE_SEAFOAM_SHADE, BLUE_SKYCYAN_SHADE, BLUE_AZURE_SHADE, BLUE_PURE_SHADE)
+        ),
+
+        // Light-Stick-Music 의 WARM / COLD 세트. rgb 는 [단색 전용(accent), 순환색 3개] 순서이고,
+        // 이펙트별 색 표(explicit)는 Music 의 PaletteCatalog.WARM_SET / COLD_SET 과 같다.
+        // 자동 선택에는 쓰이지 않고 팔레트 세트에서 직접 고르면 적용된다.
+        WARM(
+            rgb  = listOf(WARM_PINK, WARM_RED, WARM_ORANGE, WARM_YELLOW),
+            deep = listOf(WARM_PINK_SHADE, WARM_RED_SHADE, WARM_ORANGE_SHADE, WARM_YELLOW_SHADE),
+            explicit = EffectMatchingEngine.ExplicitColors(
+                onPulse            = EffectMatchingEngine.EffectColors(listOf(WARM_RED, WARM_ORANGE, WARM_YELLOW), PALETTE_BLACK),
+                blink              = EffectMatchingEngine.EffectColors(listOf(WARM_RED, WARM_ORANGE, WARM_YELLOW), COLD_BLUE),
+                chorus             = EffectMatchingEngine.EffectColors(listOf(PALETTE_WHITE, WARM_RED, WARM_YELLOW, WARM_ORANGE), PALETTE_BLACK),
+                breathVerse        = EffectMatchingEngine.EffectColors(listOf(WARM_RED, WARM_ORANGE, WARM_YELLOW), PALETTE_BLACK),
+                breathBridgeBallad = EffectMatchingEngine.EffectColors(listOf(WARM_PINK), PALETTE_BLACK),
+                breathDefault      = EffectMatchingEngine.EffectColors(listOf(WARM_PINK), PALETTE_BLACK),
+                freeze             = EffectMatchingEngine.EffectColors(listOf(WARM_PINK), PALETTE_BLACK)
+            )
+        ),
+        COLD(
+            rgb  = listOf(COLD_GREEN, COLD_TEAL, COLD_BLUE, COLD_PURPLE),
+            deep = listOf(COLD_GREEN_SHADE, COLD_TEAL_SHADE, COLD_BLUE_SHADE, COLD_PURPLE_SHADE),
+            explicit = EffectMatchingEngine.ExplicitColors(
+                onPulse            = EffectMatchingEngine.EffectColors(listOf(COLD_TEAL, COLD_BLUE, COLD_PURPLE), PALETTE_BLACK),
+                blink              = EffectMatchingEngine.EffectColors(listOf(COLD_TEAL, COLD_BLUE, COLD_PURPLE), WARM_YELLOW),
+                chorus             = EffectMatchingEngine.EffectColors(listOf(PALETTE_WHITE, COLD_TEAL, COLD_PURPLE, COLD_BLUE), PALETTE_BLACK),
+                breathVerse        = EffectMatchingEngine.EffectColors(listOf(COLD_TEAL, COLD_BLUE, COLD_PURPLE), PALETTE_BLACK),
+                breathBridgeBallad = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK),
+                breathDefault      = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK),
+                freeze             = EffectMatchingEngine.EffectColors(listOf(COLD_GREEN), PALETTE_BLACK)
+            )
         )
     }
 
@@ -233,7 +298,7 @@ class EffectMatchingEngineV1(
         // 장르에 어울리는 색 계열 후보군 중 하나를 seed로 결정론적으로 고른다 — 같은
         // 장르 곡들이 전부 똑같은 색은 아니게 하되, 계열 자체(=실측 RGB)는 그대로 쓴다.
         val theme = GENRE_THEMES[musicStyle]
-        val candidates = theme?.families ?: PaletteFamily.values().toList()
+        val candidates = theme?.families ?: AUTO_FAMILIES
         val family = candidates[Math.floorMod(rawHue, candidates.size)]
         Log.d(TAG, "[Palette] style=$musicStyle family=$family")
         // 장르별 역할 배치(GenreTheme.rolePermutation)에 따라 family.rgb(4개 고정 RGB)를
@@ -247,18 +312,21 @@ class EffectMatchingEngineV1(
         // 자주 눈에 띈다는 피드백으로 더 이상 쓰지 않는다. 대신 family.deep(명도만 48%로
         // 낮춘 톤)은 cDeep으로 그대로 사용.
         val cDeep  = family.deep[rolePerm[0]]
-        return paletteFromColors(cMain, cStep1, cStep2, cStep3, cDeep, family.name)
+        return paletteFromColors(cMain, cStep1, cStep2, cStep3, cDeep, family.name, family.explicit)
     }
 
     /** 사용자 팔레트 세트(대표색 + 단계색 3개)로 팔레트를 만든다. 어두운 톤(cDeep)은 대표색 명도 48%. */
     override fun buildCustomPalette(set: PaletteSet): EffectMatchingEngine.Palette {
         val cMain = set.main.toLs()
+        // 내장 WARM / COLD 세트는 Music 과 같은 이펙트별 색 표로 색을 고른다 (그 외 세트는 4색에서 계산)
+        val tabled = PaletteFamily.values().firstOrNull { it.explicit != null && set.id == "builtin_${it.name.lowercase()}" }
         return paletteFromColors(cMain, set.step1.toLs(), set.step2.toLs(), set.step3.toLs(),
-            scaleColor(cMain, 0.48f), "CUSTOM")
+            scaleColor(cMain, 0.48f), tabled?.name ?: "CUSTOM", tabled?.explicit)
     }
 
     private fun paletteFromColors(
-        cMain: LSColor, cStep1: LSColor, cStep2: LSColor, cStep3: LSColor, cDeep: LSColor, familyName: String
+        cMain: LSColor, cStep1: LSColor, cStep2: LSColor, cStep3: LSColor, cDeep: LSColor, familyName: String,
+        explicit: EffectMatchingEngine.ExplicitColors? = null
     ): EffectMatchingEngine.Palette {
         val black  = LSColor(0, 0, 0)
         val white = LSColor(255, 255, 255)
@@ -308,7 +376,8 @@ class EffectMatchingEngineV1(
             verseBlinkBg = verseBlinkBg,
             verseBlinkFgCycle = verseBlinkFgCycle,
             chorusColors = chorusColors,
-            roleColors = listOf(cMain, cStep1, cStep2, cStep3)
+            roleColors = listOf(cMain, cStep1, cStep2, cStep3),
+            explicit = explicit
         )
     }
 
@@ -481,21 +550,24 @@ class EffectMatchingEngineV1(
                 if (cases.isNotEmpty()) {
                     val matched = cases.firstOrNull { it.matches(barRankPct(barIdx), sectionEnergyPct, isBalladMode, musicStyle) }
                     val pattern = matched?.patternId?.let { id -> patterns.firstOrNull { it.id == id } }
-                    if (pattern != null) {
+                    // 엔진 이펙트(기본 제공)는 단계 목록이 아니라 엔진의 이펙트 그대로 쓴다
+                    val patternEngine = pattern?.engine?.let { runCatching { EffectMatchingEngine.FgEngine.valueOf(it) }.getOrNull() }
+                    if (pattern != null && patternEngine == null) {
                         // 이펙트 라이브러리의 이펙트: 이 박에서 시작해 단계들을 박자 길이에 맞춰 넣는다.
                         // 이미 앞선 이펙트가 진행 중인 박은 건너뛴다.
                         if (t < patternBusyUntil) continue
-                        val frames = patternFrames(pattern, t, section.endMs, section.beatMs, palette)
+                        val frames = patternFrames(pattern, t, section.endMs, section.beatMs, beatsPerBar, palette)
                         lastRepeatKey = null
                         val single = frames.singleOrNull()?.second
-                        val same = pattern.steps.size == 1 && single != null && lastPatternBytes?.contentEquals(single) == true
+                        val oneStep = pattern.expandedSteps(beatsPerBar).size == 1
+                        val same = oneStep && single != null && lastPatternBytes?.contentEquals(single) == true
                         if (!same) frames.forEach { (ft, bytes) -> put(ft, bytes) }
-                        lastPatternBytes = if (pattern.steps.size == 1) single else null
-                        patternBusyUntil = t + PatternResolver.totalDurationMs(pattern, section.beatMs)
+                        lastPatternBytes = if (oneStep) single else null
+                        patternBusyUntil = t + PatternResolver.totalDurationMs(pattern, section.beatMs, beatsPerBar)
                         patternLastFg(pattern, palette)?.let { lastFg = it }
                         continue
                     }
-                    caseEngine = matched?.engine
+                    caseEngine = patternEngine ?: matched?.engine
                 }
                 val beatEngine = caseEngine ?: when {
                     section.type == SectionDetector.SectionType.BRIDGE &&
@@ -520,7 +592,7 @@ class EffectMatchingEngineV1(
                 lastFg = fg
 
                 val beatPeriod = when (effectiveEngine) {
-                    EffectMatchingEngine.FgEngine.BREATH -> msToBreathPeriod(section.beatMs)
+                    EffectMatchingEngine.FgEngine.BREATH -> msToBreathPeriod(section.beatMs, beatsPerBar)
                     else            -> null
                 }
                 val beatRandomDelay = when {
@@ -533,10 +605,10 @@ class EffectMatchingEngineV1(
                     // 비발라드 BRIDGE는 기존처럼 beatPeriod(결정적, 파도 없음)를 유지한다.
                     effectiveEngine == EffectMatchingEngine.FgEngine.BREATH &&
                         section.type == SectionDetector.SectionType.BRIDGE && isBalladMode ->
-                        msToBreathRandomDelay(section.beatMs)
+                        msToBreathRandomDelay(section.beatMs, beatsPerBar)
                     effectiveEngine == EffectMatchingEngine.FgEngine.BREATH &&
                         section.type == SectionDetector.SectionType.BRIDGE -> beatPeriod
-                    effectiveEngine == EffectMatchingEngine.FgEngine.BREATH             -> msToBreathRandomDelay(section.beatMs)
+                    effectiveEngine == EffectMatchingEngine.FgEngine.BREATH             -> msToBreathRandomDelay(section.beatMs, beatsPerBar)
                     else                                           -> null
                 }
                 // 발라드 BRIDGE는 SDK의 randomColor 플래그를 켜서 기기가 직접 색을 무작위로
@@ -604,6 +676,56 @@ class EffectMatchingEngineV1(
         return frameMap.entries.sortedBy { it.key }.map { it.key to it.value }
     }
 
+    /**
+     * 이펙트 라이브러리의 엔진 이펙트: [startMs, endMs) 구간에 자동 매칭과 같은 규칙(색 순환, 주기, 전환 시간, 반복 생략)으로 프레임을 만든다.
+     * 박은 [beatMs] 간격의 일정한 박으로 보고, bar 번호는 시작 위치부터 센다.
+     */
+    override fun effectFrames(
+        palette: EffectMatchingEngine.Palette, engine: EffectMatchingEngine.FgEngine,
+        startMs: Long, endMs: Long, beatMs: Long, beatsPerBar: Int, isBalladMode: Boolean
+    ): List<Pair<Long, ByteArray>> {
+        if (beatMs <= 0L || endMs <= startMs) return emptyList()
+        val sectionType = when (engine) {
+            EffectMatchingEngine.FgEngine.ON_PULSE, EffectMatchingEngine.FgEngine.BLINK -> SectionDetector.SectionType.VERSE
+            EffectMatchingEngine.FgEngine.ON_TRANSIT_ROTATE -> SectionDetector.SectionType.CHORUS
+            EffectMatchingEngine.FgEngine.FREEZE -> SectionDetector.SectionType.BREAK
+            EffectMatchingEngine.FgEngine.BREATH, EffectMatchingEngine.FgEngine.OFF_TRANSIT -> SectionDetector.SectionType.INTRO
+        }
+        val perBar = beatsPerBar.coerceAtLeast(1)
+        val out = ArrayList<Pair<Long, ByteArray>>()
+        var lastKey: List<Int>? = null
+        var beatIndex = 0
+        var t = startMs
+        while (t < endMs) {
+            val barIdx = beatIndex / perBar
+            val (fg, bg) = colorsForEngine(palette, engine, 0, beatIndex, sectionType, barIdx, isBalladMode)
+            val bgNonNull = bg ?: LSColor(0, 0, 0)
+            val period = if (engine == EffectMatchingEngine.FgEngine.BREATH) msToBreathPeriod(beatMs, perBar) else null
+            val randomDelay = if (engine == EffectMatchingEngine.FgEngine.BREATH) msToBreathRandomDelay(beatMs, perBar) else null
+            val rotateTransit = if (engine == EffectMatchingEngine.FgEngine.ON_TRANSIT_ROTATE && isBalladMode) ON_ROTATE_BALLAD_TRANSIT else 0
+            val skipOnPulseOdd = engine == EffectMatchingEngine.FgEngine.ON_PULSE && beatIndex % 2 != 0
+            val skip = when {
+                skipOnPulseOdd -> true
+                engine.keepsRunning -> {   // 기기가 상태를 유지하는 패턴은 같은 속성이면 첫 박에만 보낸다
+                    val key = listOf(engine.ordinal, fg.r, fg.g, fg.b, bgNonNull.r, bgNonNull.g, bgNonNull.b, period ?: 0, randomDelay ?: 0)
+                    val dup = key == lastKey; lastKey = key; dup
+                }
+                else -> { lastKey = null; false }
+            }
+            if (!skip) {
+                out += t to buildPayload(engine, fg, bg, beatMs, period, randomDelay, rotateTransit = rotateTransit)
+            }
+            if (engine == EffectMatchingEngine.FgEngine.ON_PULSE && !skipOnPulseOdd) {
+                val holdMs = (beatMs * ON_PULSE_HOLD_PERCENT / 100L).coerceAtLeast(60L)
+                val offT = minOf(endMs - 1L, t + holdMs)
+                if (offT > t) out += offT to LSEffectPayload.Effects.on(color = LSColor(0, 0, 0), transit = 3).toByteArray()
+            }
+            t += beatMs
+            beatIndex++
+        }
+        return out
+    }
+
     /** 이펙트 라이브러리 이펙트의 색 역할(화이트/검정/대표색/보조색1~3)을 엔진 팔레트의 색으로 푼다 */
     private fun roleColor(ref: String, palette: EffectMatchingEngine.Palette): RgbColor {
         val c = when (ref) {
@@ -620,14 +742,16 @@ class EffectMatchingEngineV1(
 
     /** 이펙트 라이브러리 이펙트를 [startMs] 부터 단계별 프레임으로 펼친다 (섹션 끝을 넘는 단계는 버린다) */
     private fun patternFrames(
-        pattern: EffectPattern, startMs: Long, endLimitMs: Long, beatMs: Long,
+        pattern: EffectPattern, startMs: Long, endLimitMs: Long, beatMs: Long, beatsPerBar: Int,
         palette: EffectMatchingEngine.Palette
     ): List<Pair<Long, ByteArray>> {
         var t = startMs
-        val out = ArrayList<Pair<Long, ByteArray>>(pattern.steps.size)
-        for (step in pattern.steps) {
+        // 색 순환 단계는 색마다 하나씩 풀어서 넣는다 (바 단위 순환은 곡의 박자 수로 계산)
+        val steps = pattern.expandedSteps(beatsPerBar)
+        val out = ArrayList<Pair<Long, ByteArray>>(steps.size)
+        for (step in steps) {
             if (t >= endLimitMs) break
-            out += t to PatternResolver.payloadWith(step) { roleColor(it, palette) }.toByteArray()
+            out += t to PatternResolver.payloadWith(step, beatMs) { roleColor(it, palette) }.toByteArray()
             t += PatternResolver.durationMs(step, beatMs)
         }
         return out
@@ -635,7 +759,7 @@ class EffectMatchingEngineV1(
 
     /** OUTRO 페이드가 이어받을 "마지막으로 떠 있던 색": 이펙트의 단계 중 검정이 아닌 마지막 색 */
     private fun patternLastFg(pattern: EffectPattern, palette: EffectMatchingEngine.Palette): LSColor? =
-        pattern.steps.lastOrNull { it.effectType != com.lightstick.types.EffectType.OFF && it.fg != "BLACK" }
+        pattern.expandedSteps().lastOrNull { it.effectType != com.lightstick.types.EffectType.OFF && it.fg != "BLACK" }
             ?.let { step -> roleColor(step.fg, palette).let { LSColor(it.r, it.g, it.b) } }
 
     private fun scaleColor(c: LSColor, factor: Float): LSColor {
@@ -729,6 +853,8 @@ class EffectMatchingEngineV1(
         beatIndex: Int = 0, sectionType: SectionDetector.SectionType = SectionDetector.SectionType.VERSE,
         barIdx: Int = 0, isBalladMode: Boolean = false
     ): Pair<LSColor, LSColor?> {
+        // 이펙트별 색 표가 있는 팔레트(WARM/COLD)는 Music 과 같은 규칙으로 색을 고른다
+        palette.explicit?.let { return explicitColorsForEngine(it, palette, engine, beatIndex, sectionType, barIdx, isBalladMode) }
         val isPatternA = (sectionIndex % 2 == 0)
         // 예전엔 "CHORUS면 chorusColors, 아니면 colorGroup"을 effectiveColors 하나로
         // 묶어서 ON_PULSE/BREATH/ON_TRANSIT_ROTATE가 전부 같이 참조했는데, 실제로는
@@ -795,6 +921,31 @@ class EffectMatchingEngineV1(
         }
     }
 
+    /** Music 의 FgEngineEffect.pick 과 같다: fgCycle 에서 idx 번째(순환), bg 는 bgCycle 이 있으면 순환, 없으면 고정 */
+    private fun pickExplicit(ec: EffectMatchingEngine.EffectColors, idx: Int): Pair<LSColor, LSColor?> {
+        val fg = ec.fgCycle[Math.floorMod(idx, ec.fgCycle.size)]
+        val bg = ec.bgCycle?.let { it[Math.floorMod(idx, it.size)] } ?: ec.bg
+        return fg to bg
+    }
+
+    /** 이펙트별 색 표대로 (전경색, 배경색)을 고른다. 이펙트가 쓰는 순환 기준(bar/박)은 Music 과 같다 */
+    private fun explicitColorsForEngine(
+        t: EffectMatchingEngine.ExplicitColors, palette: EffectMatchingEngine.Palette,
+        engine: EffectMatchingEngine.FgEngine, beatIndex: Int,
+        sectionType: SectionDetector.SectionType, barIdx: Int, isBalladMode: Boolean
+    ): Pair<LSColor, LSColor?> = when (engine) {
+        EffectMatchingEngine.FgEngine.ON_PULSE -> pickExplicit(t.onPulse, barIdx)
+        EffectMatchingEngine.FgEngine.BLINK -> pickExplicit(t.blink, barIdx)
+        EffectMatchingEngine.FgEngine.ON_TRANSIT_ROTATE -> pickExplicit(t.chorus, beatIndex)
+        EffectMatchingEngine.FgEngine.BREATH -> when {
+            sectionType == SectionDetector.SectionType.BRIDGE && isBalladMode -> pickExplicit(t.breathBridgeBallad, 0)
+            sectionType == SectionDetector.SectionType.VERSE -> pickExplicit(t.breathVerse, barIdx)
+            else -> pickExplicit(t.breathDefault, 0)
+        }
+        EffectMatchingEngine.FgEngine.FREEZE -> pickExplicit(t.freeze, 0)
+        EffectMatchingEngine.FgEngine.OFF_TRANSIT -> palette.black to palette.black
+    }
+
     private fun buildPayload(
         engine: EffectMatchingEngine.FgEngine, fg: LSColor, bg: LSColor?, beatMs: Long,
         period: Int? = null, randomDelay: Int? = null, rotateTransit: Int = 0, randomColor: Int = 0
@@ -821,12 +972,14 @@ class EffectMatchingEngineV1(
 
     private fun buildOffPayload(transit: Int = ON_TRANSIT): ByteArray = LSEffectPayload.Effects.off(transit = transit).toByteArray()
 
-    // period는 10ms 단위고 FG+BG를 합친 한 사이클 전체 길이다(예: period=50 → 250ms FG +
-    // 250ms BG = 500ms). beatMs/10("1비트=1사이클")은 느리고, beatMs/40도 실기 테스트로는
-    // 박자가 안 맞았다 — beatMs/100이 체감상 박자에 얼추 맞는다는 실기 피드백으로 조정.
+    // period 의 1단위는 1프레임(SPF 100 → 100ms)이다. 1프레임 = 100ms 기준으로
+    // - BLINK : beatMs/100 → 한 주기(FG+BG 합친 길이)가 1박. 실기 테스트로 박자에 맞게 조정한 값.
+    // - BREATH: 4단계(FG 전환/FG 유지/BG 전환/BG 유지)가 한 주기에 다 들어가야 하므로 1마디(beatMs × 박자수)로 잡는다.
     private fun msToBlinkPeriod(beatMs: Long)        = (beatMs / 100L).toInt().coerceIn(1, 255)
-    private fun msToBreathPeriod(beatMs: Long)       = (beatMs / 20L).toInt().coerceIn(1, 255)
-    private fun msToBreathRandomDelay(beatMs: Long)  = (msToBreathPeriod(beatMs) / 10).coerceIn(1, 10)
+    private fun msToBreathPeriod(beatMs: Long, beatsPerBar: Int = 4) =
+        (beatMs * beatsPerBar.coerceAtLeast(1) / 100L).toInt().coerceIn(1, 255)
+    private fun msToBreathRandomDelay(beatMs: Long, beatsPerBar: Int = 4) =
+        (msToBreathPeriod(beatMs, beatsPerBar) / 10).coerceIn(1, 10)
 
     private fun percentile(values: List<Float>, p: Float): Float {
         if (values.isEmpty()) return 0f

@@ -1,6 +1,5 @@
 package com.efxcreator.ui
 
-import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -36,6 +35,7 @@ import com.efxcreator.ui.editor.SlimVerticalScrollBar
 import com.efxcreator.ui.sets.EffectPatternsPanel
 import com.efxcreator.ui.sets.EffectSetsPanel
 import com.efxcreator.ui.sets.PaletteSetsPanel
+import com.efxcreator.data.PreferencesManager
 import com.efxcreator.viewmodel.SettingsViewModel
 import com.efxcreator.R
 import com.efxcreator.core.Loc
@@ -110,63 +110,25 @@ fun SettingsScreen(
         }
     }
 
-    // 폴더 선택기를 루트가 아닌 Music 폴더에서 시작시킨다 (루트는 시스템이 막아 "이 폴더를 사용할 수 없음" 이 나옴)
+    // 폴더 선택기를 현재 설정된 위치에서 시작시킨다. 기본값이거나 알 수 없는 경로는 Music 폴더에서 시작한다
+    // (루트는 시스템이 막아 "이 폴더를 사용할 수 없음" 이 나온다)
     fun pickerStartUri(tag: String): Uri {
-        val uri = DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Music")
+        val current = if (tag == "efx") viewModel.efxStoragePath.value else viewModel.musicLoadPath.value
+        val internalRoot = "/storage/emulated/0/"
+        val docId = when {
+            PreferencesManager.isDefaultEfxPath(current) && tag == "efx" -> "primary:Music/Effects"
+            current.startsWith("content://") -> null // 선택기가 돌려준 트리 URI
+            current.startsWith(internalRoot) -> "primary:" + current.removePrefix(internalRoot).trimEnd('/')
+            else -> "primary:Music" // default_music, default_internal 등
+        }
+        val uri = if (docId != null) {
+            DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", docId)
+        } else runCatching {
+            val tree = Uri.parse(current)
+            DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        }.getOrElse { DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Music") }
         android.util.Log.d("FolderPicker", "launch($tag) initial=$uri sdk=${android.os.Build.VERSION.SDK_INT} model=${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
         return uri
-    }
-
-    // ── 폴더 선택기 없이 Effects 폴더 바로 쓰기: "모든 파일 접근"을 허용받은 뒤 폴더를 만들어 적용한다 ──
-    var pendingFolderPath by rememberSaveable { mutableStateOf<String?>(null) }
-    fun hasAllFilesAccess(): Boolean =
-        if (android.os.Build.VERSION.SDK_INT >= 30) android.os.Environment.isExternalStorageManager()
-        else androidx.core.content.ContextCompat.checkSelfPermission(
-            context, Manifest.permission.WRITE_EXTERNAL_STORAGE
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-    fun applyFolder(dir: File) {
-        val ok = viewModel.changeEfxStoragePathToFolder(dir)
-        Toast.makeText(
-            context,
-            if (ok) Loc.str(R.string.settings_screen_1) else Loc.str(R.string.settings_folder_failed),
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-    val allFilesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        val dir = pendingFolderPath?.let { File(it) }
-        pendingFolderPath = null
-        if (dir != null) {
-            if (hasAllFilesAccess()) applyFolder(dir)
-            else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
-        }
-    }
-    val legacyPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        val dir = pendingFolderPath?.let { File(it) }
-        pendingFolderPath = null
-        if (dir != null) {
-            if (granted) applyFolder(dir)
-            else Toast.makeText(context, Loc.str(R.string.settings_folder_perm_denied), Toast.LENGTH_SHORT).show()
-        }
-    }
-    fun requestFolder(dir: File) {
-        if (hasAllFilesAccess()) {
-            applyFolder(dir)
-            return
-        }
-        pendingFolderPath = dir.absolutePath
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            val intent = Intent(
-                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                Uri.parse("package:${context.packageName}")
-            )
-            try {
-                allFilesLauncher.launch(intent)
-            } catch (e: Exception) {
-                allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-            }
-        } else {
-            legacyPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        }
     }
 
     var section by rememberSaveable { mutableStateOf(SettingsSection.from(initialSection)) }
@@ -285,33 +247,6 @@ fun SettingsScreen(
                             Icon(Icons.Default.FolderOpen, contentDescription = Loc.str(R.string.settings_screen_8))
                         }
                     }
-                    // 폴더 선택기가 막힌 기기용: 선택기 없이 Effects 폴더를 바로 만들어 쓴다
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = Loc.str(R.string.settings_folder_quick_title),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(onClick = {
-                            viewModel.resetEfxStoragePath()
-                            Toast.makeText(context, Loc.str(R.string.settings_screen_1), Toast.LENGTH_SHORT).show()
-                        }) { Text(Loc.str(R.string.settings_folder_reset)) }
-                        OutlinedButton(onClick = {
-                            requestFolder(
-                                File(
-                                    android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
-                                    "GlowSync"
-                                )
-                            )
-                        }) { Text(Loc.str(R.string.settings_folder_music)) }
-                        OutlinedButton(onClick = {
-                            requestFolder(File(android.os.Environment.getExternalStorageDirectory(), "Effects"))
-                        }) { Text(Loc.str(R.string.settings_folder_root)) }
-                    }
                 }
             }
 
@@ -365,10 +300,6 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(onClick = {
-                            viewModel.setMusicLoadPath("default_music")
-                            Toast.makeText(context, Loc.str(R.string.settings_screen_3), Toast.LENGTH_SHORT).show()
-                        }) { Text(Loc.str(R.string.settings_music_default)) }
                         OutlinedButton(onClick = {
                             viewModel.setMusicLoadPath(
                                 File(

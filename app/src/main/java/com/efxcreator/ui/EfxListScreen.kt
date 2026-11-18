@@ -4,6 +4,7 @@ import android.content.Intent
 import android.widget.Toast
 import android.app.Activity
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -42,10 +43,12 @@ import com.efxcreator.viewmodel.EfxListViewModel
 import com.efxcreator.viewmodel.SetsViewModel
 import com.efxcreator.viewmodel.ShowViewModel
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.efxcreator.ui.editor.PlayerSeekBar
 import com.efxcreator.R
+import com.efxcreator.data.EfxFolderSetup
 import com.efxcreator.core.Loc
 
 /** 어느 공연에도 속하지 않은 곡을 모아 보여 주는 가상 공연의 id */
@@ -115,6 +118,20 @@ fun EfxListScreen(
     var selectedShowId by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedShowId) { if (selectionMode == ListSelection.SONGS) exitSelection() }
     var showCreateDialog by remember { mutableStateOf(false) }
+    // 곡 추가를 시작하기 전에 EFX 저장 폴더가 지정되어 있는지 확인하는 안내
+    var showFolderGuide by remember { mutableStateOf(false) }
+    val efxFolderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            val ok = EfxFolderSetup.apply(context, uri)
+            Toast.makeText(
+                context,
+                if (ok) Loc.str(R.string.settings_screen_1) else Loc.str(R.string.settings_screen_2),
+                Toast.LENGTH_SHORT
+            ).show()
+            // 폴더를 지정했으면 이어서 곡 추가를 진행한다
+            if (ok) showCreateDialog = true
+        }
+    }
     var showNameDialog by remember { mutableStateOf<Show?>(null) }       // 이름 변경 대상
     var newShowDialog by remember { mutableStateOf(false) }
     var deleteShowTarget by remember { mutableStateOf<Show?>(null) }
@@ -168,6 +185,27 @@ fun EfxListScreen(
             }
             else -> Unit
         }
+    }
+
+    if (showFolderGuide) {
+        AlertDialog(
+            onDismissRequest = { showFolderGuide = false },   // 바깥을 누르거나 뒤로 가면 곡 추가를 취소한다
+            title = { Text(Loc.str(R.string.folder_guide_title)) },
+            text = { Text(Loc.str(R.string.folder_guide_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showFolderGuide = false
+                    efxFolderPicker.launch(EfxFolderSetup.pickerStartUri())
+                }) { Text(Loc.str(R.string.folder_guide_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showFolderGuide = false
+                    folderGuideSkipped = true   // 이번 앱 실행 동안은 다시 묻지 않는다
+                    showCreateDialog = true
+                }) { Text(Loc.str(R.string.folder_guide_later)) }
+            }
+        )
     }
 
     if (showCreateDialog) {
@@ -533,10 +571,21 @@ fun EfxListScreen(
                                 checkedCount = checkedSongIds.size,
                                 onCancel = { exitSelection() },
                                 onDeleteAll = { bulkDelete = BulkDelete(ListSelection.SONGS, songs.map { it.id }) },
-                                onDeleteSelected = { bulkDelete = BulkDelete(ListSelection.SONGS, checkedSongIds.toList()) }
+                                onDeleteSelected = { bulkDelete = BulkDelete(ListSelection.SONGS, checkedSongIds.toList()) },
+                                onShareSelected = {
+                                    // 목록 순서대로 선택한 곡들의 EFX 를 한 번에 공유한다
+                                    val ids = songs.map { it.id }.filter { it in checkedSongIds }
+                                    shareEfxFiles(context, viewModel.prepareExportFiles(ids))
+                                }
                             )
                         } else {
-                            Button(onClick = { showCreateDialog = true }, enabled = selectedShow != null) {
+                            Button(
+                                onClick = {
+                                    if (EfxFolderSetup.isUnset(context) && !folderGuideSkipped) showFolderGuide = true
+                                    else showCreateDialog = true
+                                },
+                                enabled = selectedShow != null
+                            ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text(Loc.str(R.string.efx_list_screen_3))
@@ -558,13 +607,18 @@ fun EfxListScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(songs, key = { it.id }) { project ->
+                                // 이펙트 개수/음악 ID: 캐시가 있으면 바로 쓰고, 없으면 백그라운드에서 읽어 채운다 (메인 스레드에서 파일을 파싱하지 않는다)
+                                val stamp = viewModel.efxStamp(project.id)
+                                val songInfo by produceState(viewModel.cachedSongInfo(project.id), project.id, stamp) {
+                                    value = withContext(Dispatchers.IO) { viewModel.loadSongInfo(project.id) }
+                                }
                                 EfxProjectCard(
                                     modifier = Modifier.animateItem(),
                                     project = project,
                                     preview = preview,
                                     onTogglePlay = { previewScope.launch { preview.toggle(project.id) } },
-                                    entryCount = viewModel.getEntryCount(project.id),
-                                    musicId = viewModel.getMusicId(project.id),
+                                    entryCount = songInfo?.entryCount ?: 0,
+                                    musicId = songInfo?.musicId ?: 0,
                                     onEdit = {
                                         preview.handOffTo(project.id)
                                         onNavigateToEdit(project.id)
@@ -786,7 +840,11 @@ fun EfxProjectCard(
                 ) {
                     Text(
                         text = project.name,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        // 제목이 길어도 카드 높이가 커지지 않도록 1줄로 두고 옆으로 흘러가게 한다
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -952,29 +1010,37 @@ fun EfxProjectCard(
 }
 
 /**
- * EFX 파일 공유
+ * EFX 파일 공유. 한 곡이면 ACTION_SEND, 여러 곡이면 ACTION_SEND_MULTIPLE.
+ * 받는 앱이 알아볼 수 있도록 전용 MIME([EfxShare.MIME_TYPE])을 붙인다.
+ * Quick Share, 메신저, 드라이브 등 시스템 공유 창의 모든 대상으로 보낼 수 있다.
  */
-private fun shareEfxFile(context: android.content.Context, file: File) {
+private fun shareEfxFiles(context: android.content.Context, files: List<File>) {
+    if (files.isEmpty()) return
     try {
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/octet-stream"
-            putExtra(Intent.EXTRA_STREAM, uri)
+        val uris = ArrayList(files.map { FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it) })
+        val base = if (uris.size == 1) {
+            Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, uris[0]) }
+        } else {
+            Intent(Intent.ACTION_SEND_MULTIPLE).apply { putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris) }
+        }
+        val shareIntent = base.apply {
+            type = com.efxcreator.data.EfxShare.MIME_TYPE
+            // 공유 창(선택기)이 받는 앱에 읽기 권한을 넘길 수 있도록 ClipData 에도 담는다
+            clipData = android.content.ClipData.newRawUri(null, uris[0]).also { clip ->
+                uris.drop(1).forEach { clip.addItem(android.content.ClipData.Item(it)) }
+            }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-
-        context.startActivity(
-            Intent.createChooser(shareIntent, Loc.str(R.string.efx_list_screen_38))
-        )
+        context.startActivity(Intent.createChooser(shareIntent, Loc.str(R.string.efx_list_screen_38)))
     } catch (e: Exception) {
         android.util.Log.e("EfxListScreen", "Error sharing file", e)
     }
 }
+
+private fun shareEfxFile(context: android.content.Context, file: File) = shareEfxFiles(context, listOf(file))
+
+/** "폴더 없이 계속"을 고르면 이번 앱 실행 동안 폴더 안내를 다시 띄우지 않는다 (앱을 다시 켜면 초기화) */
+private var folderGuideSkipped = false
 
 /** 선택 삭제 모드가 켜진 목록 */
 private enum class ListSelection { NONE, SHOWS, SONGS }
@@ -989,10 +1055,17 @@ private fun BulkDeleteButtons(
     checkedCount: Int,
     onCancel: () -> Unit,
     onDeleteAll: () -> Unit,
-    onDeleteSelected: () -> Unit
+    onDeleteSelected: () -> Unit,
+    /** 지정하면 "공유 (N)" 버튼을 보여 준다 (곡 선택 모드) */
+    onShareSelected: (() -> Unit)? = null
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         TextButton(onClick = onCancel) { Text(Loc.str(R.string.efx_edit_screen_16)) }
+        if (onShareSelected != null) {
+            OutlinedButton(onClick = onShareSelected, enabled = checkedCount > 0) {
+                Text(Loc.str(R.string.bulk_share_selected, checkedCount))
+            }
+        }
         OutlinedButton(
             onClick = onDeleteAll,
             enabled = allCount > 0,

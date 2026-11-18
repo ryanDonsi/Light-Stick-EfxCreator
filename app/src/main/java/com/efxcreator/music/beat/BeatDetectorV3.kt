@@ -63,6 +63,8 @@ object BeatDetectorV3 {
 
     // Tempogram 파라미터
     private const val TEMPOGRAM_TIME_FRAMES = 200  // 시간 축 프레임 수
+    /** 격자 맞춤에서 "격자에 들어맞는 비트"로 보는 허용 오차(ms) */
+    private const val GRID_INLIER_MS = 60.0
     private const val TEMPOGRAM_MIN_CONFIDENCE = 0.3f  // 신뢰도 최소값
 
     // V4.5: 하모닉 필터링 전(raw) 절반-lag(2배 BPM) 자기상관 비율 기반 옥타브 보정 임계값.
@@ -176,7 +178,11 @@ object BeatDetectorV3 {
         // V3 추가 파라미터
         val useTempogram: Boolean = true,  // Tempogram 사용 여부
         val halfTempoRatio: Float = 0.60f,
-        val doubleTempoRatio: Float = 0.55f
+        val doubleTempoRatio: Float = 0.55f,
+        /** 지정하면 BPM 자동 추정 결과 대신 이 BPM(소수 가능)으로 비트를 추적하고, 규칙적인 곡이면 격자로 맞춘다 (사용자가 BPM 을 직접 고친 경우) */
+        val forcedBpm: Double? = null,
+        /** [forcedBpm] 지정 시 추적 비트를 일정한 격자로 맞출지 (템포가 일정한 곡용) */
+        val gridFit: Boolean = true
     )
 
     /**
@@ -1898,7 +1904,7 @@ object BeatDetectorV3 {
 
         // Method B: 섹션 중앙값 기반 BPM 보정 (V3.7)
         val methodBBpm: Float
-        val finalBeatMs: Long
+        val autoBeatMs: Long
         val octaveCorrectionReason: String
         val methodSelectionReason: String
 
@@ -1925,14 +1931,17 @@ object BeatDetectorV3 {
             // Step 3: Method A (Global AC, bestBpm) vs Method B (Section Median, methodBBpm) 선택
             // 미스매치 곡들의 경우 Global BPM이 정확할 수 있으므로 비교 후 결정
             val selectionResult = selectBetweenMethodsAandB(bestBpm, methodBBpm, methodABeatMs, isCompoundMeterCandidate)
-            finalBeatMs = selectionResult.beatMs
+            autoBeatMs = selectionResult.beatMs
             methodSelectionReason = selectionResult.reason
         } else {
             methodBBpm = 0f
-            finalBeatMs = methodABeatMs
+            autoBeatMs = methodABeatMs
             octaveCorrectionReason = "NO_SECTIONS: no section BPMs collected"
             methodSelectionReason = "NO_SECTIONS: using Global AC directly"
         }
+
+        // 사용자가 BPM 을 지정했으면 자동 추정값 대신 그 값으로 비트를 추적한다
+        val finalBeatMs: Long = params.forcedBpm?.let { Math.round(60000.0 / it) } ?: autoBeatMs
 
         // V3.5 FIX: Generate actual beat positions using dpBeatTracker
         // ════════════════════════════════════════════════════════════════════════════════
@@ -1974,7 +1983,7 @@ object BeatDetectorV3 {
         val durationMs = integratedOdf.size.toLong() * params.hopMs
         val phaseMs = if (finalBeatMs > 0L) estimatePhaseFromOdf(integratedOdf, finalBeatMs, params.hopMs) else 0L
 
-        val beats: List<TimedBeat> = if (finalBeatMs > 0L && integratedOdf.isNotEmpty()) {
+        val trackedBeats: List<TimedBeat> = if (finalBeatMs > 0L && integratedOdf.isNotEmpty()) {
             val dpTimes = dpBeatTracker(integratedOdf, finalBeatMs, params.hopMs, durationMs, anchorMs = phaseMs)
 
             if (dpTimes.isNotEmpty()) {
@@ -2000,6 +2009,14 @@ object BeatDetectorV3 {
         } else {
             emptyList()
         }
+
+        // 사용자가 BPM 을 지정한 경우: 추적기가 곡 중간에 위상을 바꿔 타는 문제를 막기 위해,
+        // 신뢰할 만한 비트로 "시작 시각 + 일정 주기" 격자를 맞춰 곡 전체를 그 격자로 다시 만든다.
+        // 격자에 들어맞는 비트가 전체의 35% 미만이면(템포가 흔들리는 곡) 추적 결과를 그대로 쓴다.
+        val beats: List<TimedBeat> = params.forcedBpm
+            ?.takeIf { params.gridFit }
+            ?.let { fitBeatGrid(trackedBeats, 60000.0 / it, durationMs) }
+            ?: trackedBeats
 
         // 시간 서명 감지
         val timeSignature = if (beats.isNotEmpty() && integratedOdf.isNotEmpty()) {
@@ -2944,6 +2961,80 @@ object BeatDetectorV3 {
         val phaseMs = bestPhase.toLong() * hopMs
 
         return phaseMs
+    }
+
+    /**
+     * [beats] 에서 일정한 주기의 격자(t = a + k*T)를 강건하게 맞춘다.
+     * 격자에서 [GRID_INLIER_MS] 이내인 비트만으로 최소제곱을 반복해 시작 시각 a 와 주기 T 를 구하고(T 는 초기값의 ±1.5% 이내),
+     * 0..[durationMs] 전체를 그 격자로 채운다. 비트가 너무 적거나 인라이어가 35% 미만이면 null(적용 안 함).
+     */
+    private fun fitBeatGrid(beats: List<TimedBeat>, periodMs: Double, durationMs: Long): List<TimedBeat>? {
+        if (beats.size < 16 || periodMs <= 0.0) return null
+        val times = beats.map { it.timeMs.toDouble() }
+        // 비트 시각은 10ms 단위로 반올림돼 있어 "간격의 중앙값"은 실제 주기와 어긋난다(예: 실제 625ms 가 620ms 로 보임).
+        // 그래서 입력 BPM 은 대략의 값으로만 쓰고, 추적된 비트의 32/16/8박 구간 평균 간격의 중앙값으로 주기를 다시 잡는다.
+        // 입력값과 3% 넘게 다르면 입력값을 그대로 쓴다.
+        val seedMs = run {
+            var found = periodMs
+            for (span in intArrayOf(32, 16, 8)) {
+                if (times.size > span + 8) {
+                    val sp = (0 until times.size - span).map { (times[it + span] - times[it]) / span }.sorted()
+                    val m = sp[sp.size / 2]
+                    if (kotlin.math.abs(m - periodMs) / periodMs <= 0.03) { found = m; break }
+                }
+            }
+            found
+        }
+        var period = seedMs
+        // 초기 위상: 비트 시각을 주기로 접은 값(t mod T)의 최빈 위치.
+        // 추적기가 곡 중간에 반 박자 위상을 갈아타면 위상이 두 무리로 갈리는데, 중앙값은 그 사이를 고르므로 최빈값을 쓴다.
+        val binMs = 10.0
+        val nBins = Math.ceil(period / binMs).toInt().coerceAtLeast(4)
+        val hist = IntArray(nBins)
+        val folded = times.map { t -> ((t % period) + period) % period }
+        for (f in folded) hist[((f / period) * nBins).toInt().coerceIn(0, nBins - 1)]++
+        // 이웃 칸을 합산(원형)해 ±1칸 흔들림에 둔감하게 한다
+        val smooth = IntArray(nBins) { i -> hist[(i + nBins - 1) % nBins] + hist[i] + hist[(i + 1) % nBins] }
+        val peak = smooth.indices.maxByOrNull { smooth[it] } ?: 0
+        val peakCenter = (peak + 0.5) / nBins * period
+        // 최빈 위치 ±30ms 안의 위상들의 평균(원형 차이로 계산)으로 시작 위상을 정한다
+        var sumDiff = 0.0; var cnt = 0
+        for (f in folded) {
+            var d = f - peakCenter
+            if (d > period / 2) d -= period else if (d < -period / 2) d += period
+            if (kotlin.math.abs(d) <= 30.0) { sumDiff += d; cnt++ }
+        }
+        var a = peakCenter + (if (cnt > 0) sumDiff / cnt else 0.0)
+        var inliers = 0
+        repeat(6) {
+            val ks = ArrayList<Double>(); val ts = ArrayList<Double>()
+            for (t in times) {
+                val k = Math.round((t - a) / period).toDouble()
+                if (kotlin.math.abs(t - (a + k * period)) <= GRID_INLIER_MS) { ks += k; ts += t }
+            }
+            inliers = ks.size
+            if (inliers < 8) return null
+            // 최소제곱: t = a + k*T
+            val n = inliers.toDouble()
+            val mk = ks.average(); val mt = ts.average()
+            var sxx = 0.0; var sxy = 0.0
+            for (i in ks.indices) { sxx += (ks[i] - mk) * (ks[i] - mk); sxy += (ks[i] - mk) * (ts[i] - mt) }
+            if (sxx <= 1e-9) return null
+            val newT = (sxy / sxx).coerceIn(seedMs * 0.985, seedMs * 1.015)
+            val newA = mt - newT * mk
+            period = newT; a = newA
+        }
+        // 위상이 두 무리(박/엇박)로 갈린 곡도 있으므로, 최빈 무리가 전체의 35% 이상이면 그 위상을 따른다
+        if (inliers < beats.size * 0.35) return null
+        val out = ArrayList<TimedBeat>()
+        var k = Math.ceil(-a / period).toLong()
+        while (true) {
+            val t = Math.round(a + k * period)
+            if (t > durationMs) break
+            if (t >= 0) out += TimedBeat(t, 0.8f)
+            k++
+        }
+        return out.takeIf { it.size >= 16 }
     }
 
     private fun dpBeatTracker(

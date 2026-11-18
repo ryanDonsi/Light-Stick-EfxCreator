@@ -102,7 +102,6 @@ class EfxRepository(private val context: Context) {
 
         return try {
             val json = metadataFile.readText()
-            Log.d(TAG, "Loading metadata: $json")
             val type = object : TypeToken<List<EfxProjectMetadata>>() {}.type
             val projects: List<EfxProjectMetadata> = gson.fromJson(json, type) ?: emptyList()
             Log.d(TAG, "Loaded ${projects.size} projects")
@@ -451,20 +450,30 @@ class EfxRepository(private val context: Context) {
     /**
      * .efx 파일을 외부로 익스포트
      */
-    fun exportEfx(projectId: String, exportName: String): File {
+    fun exportEfx(projectId: String, exportName: String): File =
+        exportEfxBatch(listOf(projectId to exportName)).first()
+
+    /**
+     * 여러 곡을 공유용 파일로 내보낸다. 파일 이름은 안전한 문자만 남기고, 같은 이름이 겹치면 (2), (3) 을 붙인다.
+     * (받는 앱은 파일 이름이 아니라 헤더의 Music ID 로 곡과 연결하므로, 이름이 달라도 동작에는 영향이 없다)
+     */
+    fun exportEfxBatch(items: List<Pair<String, String>>): List<File> {
         val outputDir = File(context.getExternalFilesDir(null), "EfxExports")
         if (!outputDir.exists()) {
             outputDir.mkdirs()
             Log.d(TAG, "Created export directory: ${outputDir.absolutePath}")
         }
-
-        val sourceFile = getEfxFile(projectId)
-        val outputFile = File(outputDir, "$exportName.efx")
-
-        sourceFile.copyTo(outputFile, overwrite = true)
-        Log.d(TAG, "Exported EFX to: ${outputFile.absolutePath}")
-
-        return outputFile
+        val used = HashSet<String>()
+        return items.map { (projectId, name) ->
+            val base = EfxShare.safeFileName(name)
+            var candidate = base
+            var n = 2
+            while (!used.add(candidate.lowercase())) candidate = "$base ($n)".also { n++ }
+            val outputFile = File(outputDir, "$candidate.${EfxShare.EXTENSION}")
+            getEfxFile(projectId).copyTo(outputFile, overwrite = true)
+            Log.d(TAG, "Exported EFX to: ${outputFile.absolutePath}")
+            outputFile
+        }
     }
 
     /**
@@ -475,7 +484,7 @@ class EfxRepository(private val context: Context) {
 
         if (oldPath == newPath) {
             // 같은 위치라도 (예: 권한을 방금 허용함) 사본을 다시 맞춘다
-            EfxFolderMirror(context).syncAll()
+            EfxFolderMirror(context).syncAllAsync()
             return
         }
 
@@ -494,7 +503,7 @@ class EfxRepository(private val context: Context) {
         if (newPath.startsWith("content://")) {
             Log.d(TAG, "New path is URI, skipping file migration")
             // 새 폴더에 공연명/곡명.efx 사본을 만들어 둔다
-            EfxFolderMirror(context).syncAll()
+            EfxFolderMirror(context).syncAllAsync()
             return
         }
 
@@ -516,7 +525,7 @@ class EfxRepository(private val context: Context) {
             }
         }
 
-        EfxFolderMirror(context).syncAll()
+        EfxFolderMirror(context).syncAllAsync()
         Log.d(TAG, "EFX storage path changed successfully")
     }
 
@@ -580,16 +589,14 @@ class EfxRepository(private val context: Context) {
             path == PreferencesManager.EFX_PATH_INTERNAL -> {
                 Loc.str(R.string.efx_repository_3, context.filesDir.absolutePath)
             }
-            path == PreferencesManager.EFX_PATH_DEFAULT || path.isEmpty() -> {
-                val base = Loc.str(R.string.efx_repository_3, friendlyPath(PreferencesManager.defaultEfxDir().absolutePath))
-                if (PreferencesManager.canWriteFolders(context)) base
-                else base + "\n" + Loc.str(R.string.efx_default_need_permission)
-            }
+            path == PreferencesManager.EFX_PATH_DEFAULT || path.isEmpty() -> Loc.str(R.string.efx_default_unset)
             path.startsWith("content://") -> {
-                Loc.str(R.string.efx_repository_4, describeTreeUri(path))
+                if (EfxFolderSetup.hasWriteAccess(context, path)) Loc.str(R.string.efx_repository_4, describeTreeUri(path))
+                else Loc.str(R.string.efx_access_lost, describeTreeUri(path))
             }
             else -> {
-                Loc.str(R.string.efx_repository_4, friendlyPath(path))
+                // 예전 방식의 절대 경로는 이제 권한 없이 쓸 수 없다
+                Loc.str(R.string.efx_access_lost, friendlyPath(path))
             }
         }
     }

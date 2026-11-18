@@ -2,40 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 음악 파일 읽기 권한 (Android 13+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-
-    <!-- 레거시 저장소 권한 (Android 12 이하) -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="29" />
-
-    <!-- 모든 파일 접근 (Android 11+): 폴더 선택기가 막힌 기기에서도 Effects 폴더를 직접 만들어 쓰기 위한 권한.
-         설정의 "Effects" 버튼을 눌렀을 때만 사용자에게 요청한다. (직접 설치 배포용 — 스토어 배포 시 사용 심사가 필요하다) -->
-    <uses-permission
-        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
-
-    <!-- Bluetooth (응원봉 실기기 연동) -->
-    <uses-permission
-        android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
+    <!-- Bluetooth (응원봉 실기기 연동). 음악과 EFX 폴더는 시스템 선택기(SAF)로 접근하므로 저장소 권한은 선언하지 않는다 -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission
-        android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
-    <uses-permission
-        android:name="android.permission.ACCESS_COARSE_LOCATION"
-        android:maxSdkVersion="30" />
 
     <application
         android:name=".EfxCreatorApplication"
@@ -46,6 +17,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EfxCreator"
         tools:targetApi="31">
+
+        <!-- Android 16(targetSdk 36)부터 큰 화면(최소 폭 600dp 이상)에서는 screenOrientation 등 방향/크기 제한이 무시된다.
+             이 앱은 가로 화면 기준으로 설계되어 있어 이전 동작(가로 고정)을 유지한다. API 36 에서만 쓸 수 있는 임시 해제이므로,
+             targetSdk 37 로 올리기 전에 세로 화면 레이아웃을 지원하거나 대안을 마련해야 한다. -->
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+            android:value="true" />
 
         <activity
             android:name=".MainActivity"

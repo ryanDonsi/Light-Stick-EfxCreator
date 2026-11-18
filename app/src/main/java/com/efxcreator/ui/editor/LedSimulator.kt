@@ -2,8 +2,6 @@ package com.efxcreator.ui.editor
 
 import com.lightstick.efx.EfxEntry
 import com.lightstick.types.EffectType
-import kotlin.math.PI
-import kotlin.math.cos
 
 /** Preview 용 LED 색 (각 0..255 실수) */
 data class LedColor(val r: Float, val g: Float, val b: Float) {
@@ -23,7 +21,7 @@ data class LedColor(val r: Float, val g: Float, val b: Float) {
  * - ON/OFF : period 를 전환(transit, 프레임 단위 → [TimelineMath.framesToMs])으로 보고 이전 색에서 보간
  * - BLINK  : period 프레임 주기, 앞 절반은 color, 뒤 절반은 backgroundColor
  * - STROBE : period 프레임 주기, 앞 20% 만 color, 나머지는 backgroundColor
- * - BREATH : period 프레임 주기의 코사인 곡선으로 backgroundColor ↔ color 보간
+ * - BREATH : period 프레임 주기를 4단계(fg transit / fg consist / bg transit / bg consist, 각 25% 가정)로 나눠 연출
  */
 object LedSimulator {
 
@@ -80,9 +78,14 @@ object LedSimulator {
             EffectType.BLINK -> if (t % cycle < cycle / 2) fg else bg
             EffectType.STROBE -> if (t % cycle < (cycle / 5).coerceAtLeast(1L)) fg else bg
             EffectType.BREATH -> {
+                // 4단계를 period 안에 균등 배분: fg transit(bg→fg) / fg consist / bg transit(fg→bg) / bg consist
                 val phase = (t % cycle).toFloat() / cycle
-                val brightness = ((1.0 - cos(2.0 * PI * phase)) / 2.0).toFloat()
-                bg.lerp(fg, brightness)
+                when {
+                    phase < 0.25f -> bg.lerp(fg, phase / 0.25f)
+                    phase < 0.50f -> fg
+                    phase < 0.75f -> fg.lerp(bg, (phase - 0.50f) / 0.25f)
+                    else -> bg
+                }
             }
         }
     }

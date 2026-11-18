@@ -22,10 +22,93 @@ data class PatternStep(
     val bg: String = PatternColors.BLACK,
     val frames: Int = 0,
     val spf: Int = 100,
-    val fade: Int = 100
+    val fade: Int = 100,
+    /**
+     * 색 순환: 순환할 전경색(색 역할) 목록. null 이면 순환을 쓰지 않는다(이전 버전에서 저장한 패턴도 null).
+     * 2개 이상이면 선택한 순서대로 [cycleUnit] 단위마다 색이 바뀌고, 단계의 길이는 `색 개수 × 순환 단위`가 된다 ([expanded] 참고).
+     */
+    val fgCycle: List<String>? = null,
+    /** 한 색을 유지하는 순환 단위 크기 (1~3). 단위는 [cycleByBar] 가 정한다 */
+    val cycleUnit: Int = 1,
+    /** true 면 순환 단위가 바(마디), false 면 비트(박) */
+    val cycleByBar: Boolean = false,
+    /** 주기(BLINK/BREATH/STROBE)를 비트 단위로 저장한다 (비트의 1/10 단위, 10 = 1비트). 0 이면 아래 [frames] 또는 단계 길이로 대신한다 */
+    val periodBeatsTenths: Int = 0,
+    /** 전환 시간(ON/OFF)을 비트 단위로 저장한다 (비트의 1/10 단위). 0 이면 [frames] 를 쓴다 */
+    val transitBeatsTenths: Int = 0,
+    /** 랜덤 색상: 응원봉이 색을 무작위로 고르게 한다 (OFF 에는 없음) */
+    val randomColor: Boolean = false,
+    /** 랜덤 딜레이를 비트 단위로 저장한다 (비트의 1/10 단위, 0 = 없음). 기기마다 시작 시점이 조금씩 어긋나는 효과 */
+    val randomDelayBeatsTenths: Int = 0
 ) {
     val beats: Float get() = beatsTenths / 10f
     val effectType: EffectType get() = runCatching { EffectType.valueOf(type) }.getOrDefault(EffectType.ON)
+
+    /** 주기를 쓰는 이펙트인가 (BLINK/BREATH/STROBE) */
+    val isPeriodType: Boolean get() = type in PERIOD_TYPES
+
+    /** 전환 시간을 쓰는 이펙트인가 (ON/OFF) */
+    val isTransitType: Boolean get() = type == "ON" || type == "OFF"
+
+    /**
+     * 실제 페이로드에 넣을 프레임 수. 주기와 전환 시간은 **비트 단위로 저장**하고, 놓을 때 곡의 박 길이([beatMs])와 SPF 로
+     * 프레임 수를 계산한다 (프레임 = 비트 길이 × 비트 수 ÷ SPF). BPM·SPF 가 달라도 같은 박자감이 유지된다.
+     * 비트 값이 없는 이전 패턴은 저장된 [frames] 를 그대로 쓰고, 주기를 따로 정하지 않은 이전 패턴(frames 0)은 단계 길이를 주기로 쓴다.
+     */
+    fun resolvedFrames(beatMs: Long?): Int {
+        if (beatMs == null) return frames
+        val tenths = when {
+            isPeriodType -> periodBeatsTenths
+            isTransitType -> transitBeatsTenths
+            else -> 0
+        }
+        return when {
+            tenths > 0 -> beatsToFrames(beatMs, tenths)
+            frames > 0 -> frames
+            isPeriodType -> beatsToFrames(beatMs, beatsTenths)
+            else -> 0
+        }
+    }
+
+    /** 페이로드에 넣을 랜덤 딜레이. 비트 값을 곡의 박 길이와 SPF 로 주기·전환 시간과 같은 방식으로 환산한다 (없으면 0) */
+    fun resolvedRandomDelay(beatMs: Long?): Int =
+        if (beatMs != null && randomDelayBeatsTenths > 0) beatsToFrames(beatMs, randomDelayBeatsTenths) else 0
+
+    private fun beatsToFrames(beatMs: Long, tenths: Int): Int =
+        Math.round(beatMs * tenths / 10.0 / spf.coerceAtLeast(1)).toInt().coerceIn(1, 255)
+
+    /**
+     * 편집 화면에서 열 때 비트 단위로 바꿔 보여 준다: 이전에 프레임으로 저장한 값은 120BPM(1비트 500ms) 기준 비트 수로 환산하고,
+     * 주기를 따로 정하지 않았던 단계는 단계 길이를 주기로 채운다.
+     */
+    fun withBeatUnits(): PatternStep = when {
+        isPeriodType && periodBeatsTenths == 0 ->
+            copy(periodBeatsTenths = if (frames > 0) maxOf(1, Math.round(frames * spf / 50.0).toInt()) else beatsTenths.coerceAtLeast(1), frames = 0)
+        isTransitType && transitBeatsTenths == 0 && frames > 0 ->
+            copy(transitBeatsTenths = maxOf(1, Math.round(frames * spf / 50.0).toInt()), frames = 0)
+        else -> this
+    }
+
+    /** 순환에 쓰는 색 목록 (순환을 쓰지 않으면 빈 목록) */
+    val cycleColors: List<String> get() = fgCycle.orEmpty()
+
+    /** 순환색이 2개 이상이라 실제로 색이 순환하는가 */
+    val isCycling: Boolean get() = type != "OFF" && cycleColors.size >= 2
+
+    /** 순환 한 단위의 길이 (박자의 1/10 단위). 바 단위는 [beatsPerBar] 박으로 계산한다 */
+    fun cycleUnitTenths(beatsPerBar: Int): Int =
+        cycleUnit.coerceIn(1, 3) * (if (cycleByBar) beatsPerBar.coerceAtLeast(1) else 1) * 10
+
+    /** 순환하는 단계는 색마다 하나씩 단계로 풀어 쓴다. 순환하지 않으면 자기 자신 하나 */
+    fun expanded(beatsPerBar: Int = DEFAULT_BEATS_PER_BAR): List<PatternStep> =
+        if (!isCycling) listOf(this)
+        else cycleColors.map { c -> copy(fg = c, beatsTenths = cycleUnitTenths(beatsPerBar), fgCycle = null) }
+
+    companion object {
+        /** 곡의 박자 정보가 없을 때 바(마디) 하나를 몇 박으로 볼지 (4/4) */
+        const val DEFAULT_BEATS_PER_BAR = 4
+        private val PERIOD_TYPES = setOf("BLINK", "BREATH", "STROBE")
+    }
 }
 
 /** 이름을 붙인 단계들의 묶음. 예) ON_PULSE = [ON 0.4박, ON 1.6박 (Transit 3)] */
@@ -36,9 +119,21 @@ data class EffectPattern(
     /** 기본 제공 이펙트: 수정/삭제할 수 없고, 복제해서 고쳐 쓸 수 있다 */
     val builtIn: Boolean = false,
     /** 한 줄 설명 (기본 제공 이펙트에 쓴다) */
-    val description: String = ""
+    val description: String = "",
+    /**
+     * 자동 매칭 엔진의 이펙트 이름([com.efxcreator.music.effect.EffectMatchingEngine.FgEngine]). 값이 있으면 이 항목은
+     * 단계 목록이 아니라 **엔진이 만드는 이펙트 그대로**를 곡의 템포와 팔레트에 맞춰 만든다 ([steps] 는 복제해서 고칠 때 쓰는 근사값).
+     * 이전 버전에서 저장한 패턴은 null.
+     */
+    val engine: String? = null,
+    /** 엔진 이펙트를 발라드 모드로 만들지 (색 순환의 전환 시간이 달라진다) */
+    val engineBallad: Boolean = false
 ) {
-    val totalBeatsTenths: Int get() = steps.sumOf { it.beatsTenths }
+    /** 순환하는 단계를 색마다 하나씩 풀어 쓴 단계 목록 (실제로 타임라인/기기에 나가는 단계) */
+    fun expandedSteps(beatsPerBar: Int = PatternStep.DEFAULT_BEATS_PER_BAR): List<PatternStep> =
+        steps.flatMap { it.expanded(beatsPerBar) }
+
+    val totalBeatsTenths: Int get() = expandedSteps().sumOf { it.beatsTenths }
 }
 
 /** 패턴 단계가 고를 수 있는 색 역할 */
@@ -77,19 +172,20 @@ object PatternColors {
 object PatternResolver {
 
     /** 단계 하나의 페이로드. 색은 [palette] 로 풀어 만든다 */
-    fun payload(step: PatternStep, palette: PaletteSet?): LSEffectPayload =
-        payloadWith(step) { ref -> PatternColors.resolve(ref, palette) }
+    fun payload(step: PatternStep, palette: PaletteSet?, beatMs: Long? = null): LSEffectPayload =
+        payloadWith(step, beatMs) { ref -> PatternColors.resolve(ref, palette) }
 
     /** 색 역할(화이트, 보조색1 …)을 [resolve] 로 풀어 단계 하나의 페이로드를 만든다 (자동 생성 엔진도 이 방식으로 쓴다) */
-    fun payloadWith(step: PatternStep, resolve: (String) -> RgbColor): LSEffectPayload {
+    fun payloadWith(step: PatternStep, beatMs: Long? = null, resolve: (String) -> RgbColor): LSEffectPayload {
         val type = step.effectType
         val fg = if (type == EffectType.OFF) RgbColor(0, 0, 0) else resolve(step.fg)
         val twoColor = type == EffectType.BLINK || type == EffectType.BREATH || type == EffectType.STROBE
         val bg = if (twoColor) resolve(step.bg) else RgbColor(0, 0, 0)
         return LSEffectPayload(
             effectType = type, color = fg.toLs(), backgroundColor = bg.toLs(),
-            period = step.frames, spf = step.spf, fade = step.fade,
-            randomColor = 0, randomDelay = 0, duration = 0, effectIndex = 0
+            period = step.resolvedFrames(beatMs), spf = step.spf, fade = step.fade,
+            randomColor = if (step.randomColor && type != EffectType.OFF) 1 else 0,
+            randomDelay = step.resolvedRandomDelay(beatMs), duration = 0, effectIndex = 0
         )
     }
 
@@ -98,14 +194,17 @@ object PatternResolver {
         Math.round(step.beatsTenths / 10.0 * beatMs / 10.0) * 10L
 
     /** 패턴 전체 길이(ms) = 단계 길이의 합 */
-    fun totalDurationMs(pattern: EffectPattern, beatMs: Long): Long =
-        pattern.steps.sumOf { durationMs(it, beatMs) }
+    fun totalDurationMs(pattern: EffectPattern, beatMs: Long, beatsPerBar: Int = PatternStep.DEFAULT_BEATS_PER_BAR): Long =
+        pattern.expandedSteps(beatsPerBar).sumOf { durationMs(it, beatMs) }
 
     /** 시작 시각 [startMs] 부터 단계마다 하나씩 타임라인 엔트리를 만든다 */
-    fun expand(pattern: EffectPattern, startMs: Long, beatMs: Long, palette: PaletteSet?): List<EfxEntry> {
+    fun expand(
+        pattern: EffectPattern, startMs: Long, beatMs: Long, palette: PaletteSet?,
+        beatsPerBar: Int = PatternStep.DEFAULT_BEATS_PER_BAR
+    ): List<EfxEntry> {
         var t = startMs
-        return pattern.steps.map { step ->
-            EfxEntry(t, payload(step, palette)).also { t += durationMs(step, beatMs) }
+        return pattern.expandedSteps(beatsPerBar).map { step ->
+            EfxEntry(t, payload(step, palette, beatMs)).also { t += durationMs(step, beatMs) }
         }
     }
 }
@@ -119,32 +218,32 @@ object BuiltInPatterns {
     val ALL: List<EffectPattern> get() = listOf(
         // 엔진의 ON_PULSE 는 2박마다 한 번 울린다: 대표색을 짧게(엔진은 한 박의 44%, 여기서는 가장 가까운 0.4박) 켰다가, 나머지 1.6박 동안 검정으로 Transit 3 만에 꺼진 채 유지
         EffectPattern(
-            id = "builtin_on_pulse", name = Loc.str(R.string.effect_pattern_7), builtIn = true,
+            id = "builtin_on_pulse", name = Loc.str(R.string.effect_pattern_7), builtIn = true, engine = "ON_PULSE",
             description = Loc.str(R.string.effect_pattern_8),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 4, fg = PatternColors.MAIN, frames = 0),
-                PatternStep(type = "ON", beatsTenths = 16, fg = PatternColors.BLACK, frames = 3)
+                PatternStep(type = "ON", beatsTenths = 16, fg = PatternColors.BLACK, transitBeatsTenths = 6)
             )
         ),
-        // 대표색이 부드럽게 밝아졌다 어두워짐 (Period 25 = 2.5초 한 사이클 @SPF 100)
+        // 대표색이 부드럽게 밝아졌다 어두워짐 (엔진과 같게 주기 = 1바 = 4비트)
         EffectPattern(
-            id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true,
+            id = "builtin_breath", name = Loc.str(R.string.effect_pattern_9), builtIn = true, engine = "BREATH",
             description = Loc.str(R.string.effect_pattern_10),
             steps = listOf(
-                PatternStep(type = "BREATH", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 25)
+                PatternStep(type = "BREATH", beatsTenths = 40, fg = PatternColors.MAIN, bg = PatternColors.SUB1, periodBeatsTenths = 40, randomDelayBeatsTenths = 4)
             )
         ),
         // 대표색 ↔ 보조색1 로 박자에 맞춰 깜빡임 (Period 5 = 0.5초 한 사이클 @SPF 100)
         EffectPattern(
-            id = "builtin_blink", name = Loc.str(R.string.effect_pattern_11), builtIn = true,
+            id = "builtin_blink", name = Loc.str(R.string.effect_pattern_11), builtIn = true, engine = "BLINK",
             description = Loc.str(R.string.effect_pattern_12),
             steps = listOf(
-                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, frames = 5)
+                PatternStep(type = "BLINK", beatsTenths = 10, fg = PatternColors.MAIN, bg = PatternColors.SUB1, periodBeatsTenths = 10)
             )
         ),
         // 박자마다 대표색 → 보조색1 → 2 → 3 으로 즉시 바뀐다 (Transit 0)
         EffectPattern(
-            id = "builtin_on_rotate", name = Loc.str(R.string.effect_pattern_13), builtIn = true,
+            id = "builtin_on_rotate", name = Loc.str(R.string.effect_pattern_13), builtIn = true, engine = "ON_TRANSIT_ROTATE",
             description = Loc.str(R.string.effect_pattern_14),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0),
@@ -155,18 +254,18 @@ object BuiltInPatterns {
         ),
         // 같은 색 순서이지만 Transit 2 로 부드럽게 넘어가는 전환
         EffectPattern(
-            id = "builtin_on_transit_rotate", name = Loc.str(R.string.effect_pattern_15), builtIn = true,
+            id = "builtin_on_transit_rotate", name = Loc.str(R.string.effect_pattern_15), builtIn = true, engine = "ON_TRANSIT_ROTATE", engineBallad = true,
             description = Loc.str(R.string.effect_pattern_16),
             steps = listOf(
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 2),
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, frames = 2),
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB2, frames = 2),
-                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB3, frames = 2)
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, transitBeatsTenths = 4),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB1, transitBeatsTenths = 4),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB2, transitBeatsTenths = 4),
+                PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.SUB3, transitBeatsTenths = 4)
             )
         ),
         // 대표색을 켠 채 그대로 유지
         EffectPattern(
-            id = "builtin_freeze", name = Loc.str(R.string.effect_pattern_17), builtIn = true,
+            id = "builtin_freeze", name = Loc.str(R.string.effect_pattern_17), builtIn = true, engine = "FREEZE",
             description = Loc.str(R.string.effect_pattern_18),
             steps = listOf(
                 PatternStep(type = "ON", beatsTenths = 10, fg = PatternColors.MAIN, frames = 0)
@@ -177,7 +276,7 @@ object BuiltInPatterns {
             id = "builtin_off", name = Loc.str(R.string.effect_pattern_19), builtIn = true,
             description = Loc.str(R.string.effect_pattern_20),
             steps = listOf(
-                PatternStep(type = "OFF", beatsTenths = 10, frames = 2)
+                PatternStep(type = "OFF", beatsTenths = 10, transitBeatsTenths = 4)
             )
         )
     )
