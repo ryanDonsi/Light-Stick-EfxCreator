@@ -19,6 +19,10 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material3.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.efxcreator.data.BleCommandInterval
+import com.efxcreator.data.PreferencesManager
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -655,6 +659,9 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                 }
             }
         }
+
+        // 연결 여부와 무관한 전역 설정이라 항상 보인다
+        BleCommandIntervalCard()
     }
 
     if (confirmDisconnect) {
@@ -685,5 +692,64 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             },
             dismissButton = { TextButton(onClick = { confirmReconnect = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
+    }
+}
+
+
+/**
+ * BLE 명령 최소 간격(ms) 설정. 응원봉으로 보내는 모든 명령이 앞 명령이 끝난 뒤 이 간격이 지나야 다음 명령이 나간다.
+ * 값을 바꾸면 저장하고 바로 SDK 에 적용한다 (연결 중인 기기 포함). 범위 0~1000, 기본 20.
+ */
+@Composable
+private fun BleCommandIntervalCard() {
+    val context = LocalContext.current
+    val min = PreferencesManager.BLE_INTERVAL_MIN_MS
+    val max = PreferencesManager.BLE_INTERVAL_MAX_MS
+    val default = PreferencesManager.BLE_INTERVAL_DEFAULT_MS
+    var text by remember { mutableStateOf(PreferencesManager(context).bleMinCommandIntervalMs.toString()) }
+    val value = text.toLongOrNull()
+    val valid = value != null && value in min..max
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(Loc.str(R.string.ble_interval_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                Loc.str(R.string.ble_interval_desc, default, min, max),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { v ->
+                        text = v.filter { it.isDigit() }.take(4)
+                        val n = text.toLongOrNull()
+                        // 유효한 값이면 바로 저장하고 적용한다
+                        if (n != null && n in min..max) BleCommandInterval.set(context, n)
+                    },
+                    singleLine = true,
+                    isError = !valid,
+                    label = { Text(Loc.str(R.string.ble_interval_label)) },
+                    supportingText = { if (!valid) Text(Loc.str(R.string.ble_interval_range, min, max)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(180.dp)
+                )
+                TextButton(onClick = {
+                    text = default.toString()
+                    BleCommandInterval.set(context, default)
+                }) { Text(Loc.str(R.string.ble_interval_reset, default)) }
+            }
+            if (!BleCommandInterval.isSupported) {
+                Text(
+                    Loc.str(R.string.ble_interval_unsupported),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
     }
 }

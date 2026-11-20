@@ -676,4 +676,10 @@
     <string name="efx_beat_method_forced_desc">BPMは自分で入力し、ビートは音を追って探します\n自動推定がBPMを半分や2倍に誤った場合に、正しい値を入れて探し直します。テンポが変わる曲にも追従します</string>
     <string name="efx_beat_method_grid">テンポ固定</string>
     <string name="efx_beat_method_grid_desc">BPMは入力値の近くでアプリが正確に合わせ、ビートは一定の間隔に固定します\nテンポが一定の曲向けです。曲の途中で半拍ずれる場合に有効で、テンポが変わる曲には向きません</string>
+    <string name="ble_interval_title">BLEコマンド間隔</string>
+    <string name="ble_interval_desc">前のコマンドが終わってからこの時間が経過すると次のコマンドを送信します。既定値 %1$dms、範囲 %2$d~%3$dms。大きくすると連続送信が遅くなることがあります。</string>
+    <string name="ble_interval_label">間隔 (ms)</string>
+    <string name="ble_interval_range">%1$d~%2$d の範囲で入力してください</string>
+    <string name="ble_interval_reset">既定値 (%1$dms)</string>
+    <string name="ble_interval_unsupported">現在のSDKバージョンではこの設定は反映されません。SDKを更新すると反映されます。</string>
 </resources>

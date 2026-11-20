@@ -21,6 +21,11 @@ class PreferencesManager(context: Context) {
         // 음악 불러오기 경로
         private const val KEY_MUSIC_LOAD_PATH = "music_load_path"
 
+        /** BLE 명령 최소 간격: SDK 기본값 20ms, 허용 범위 0~1000ms */
+        const val BLE_INTERVAL_DEFAULT_MS = 20L
+        const val BLE_INTERVAL_MIN_MS = 0L
+        const val BLE_INTERVAL_MAX_MS = 1000L
+
         // 기본값 (최초 실행 시)
         private const val DEFAULT_EFX_PATH = EFX_PATH_DEFAULT
         private const val DEFAULT_MUSIC_PATH = "default_music"
@@ -35,6 +40,13 @@ class PreferencesManager(context: Context) {
     var musicLoadPath: String
         get() = prefs.getString(KEY_MUSIC_LOAD_PATH, DEFAULT_MUSIC_PATH) ?: DEFAULT_MUSIC_PATH
         set(value) = prefs.edit().putString(KEY_MUSIC_LOAD_PATH, value).apply()
+
+    // BLE 명령 최소 간격(ms). SDK 는 값을 저장하지 않으므로 앱이 저장해 두었다가 시작할 때 다시 적용한다
+    var bleMinCommandIntervalMs: Long
+        get() = prefs.getLong("ble_min_command_interval_ms", BLE_INTERVAL_DEFAULT_MS)
+            .coerceIn(BLE_INTERVAL_MIN_MS, BLE_INTERVAL_MAX_MS)
+        set(value) = prefs.edit()
+            .putLong("ble_min_command_interval_ms", value.coerceIn(BLE_INTERVAL_MIN_MS, BLE_INTERVAL_MAX_MS)).apply()
 
     // 이번 행사의 전체 그룹 개수 (그룹 배정 방송에 사용, 1~20)
     var groupCount: Int

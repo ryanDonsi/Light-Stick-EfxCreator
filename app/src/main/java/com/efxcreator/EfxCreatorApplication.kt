@@ -49,6 +49,8 @@ class EfxCreatorApplication : Application() {
 
         // Android 12+ 에서 BLUETOOTH_CONNECT 권한 허용 전에는 연결 복원이 거부될 수 있다.
         // 스캔/연결은 에디터에서 권한을 요청한 뒤 수행한다.
+        // 저장된 BLE 명령 간격을 연결 전에 적용한다 (SDK 는 값을 저장하지 않는다)
+        com.efxcreator.data.BleCommandInterval.applyStored(this)
         restoreSystemConnections(this)
     }
 }
