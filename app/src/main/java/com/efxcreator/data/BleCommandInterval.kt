@@ -9,6 +9,8 @@ import android.util.Log
  * 이 함수는 새 SDK 에서 추가되므로 아직 없는 SDK(aar)로도 앱이 빌드되도록 리플렉션으로 호출한다.
  * SDK 가 업데이트되어 안정되면 `LSBluetooth.setMinCommandInterval(ms)` 직접 호출로 바꾼다.
  * SDK 는 값을 저장하지 않으므로 앱을 켤 때마다 [applyStored] 로 다시 적용해야 한다.
+ *
+ * 개발/진단용이라 debug 빌드에서만 바꾸고 적용한다. release 에서는 화면이 없고 저장된 값도 무시해 SDK 기본값(20ms)을 쓴다.
  */
 object BleCommandInterval {
 
@@ -36,6 +38,7 @@ object BleCommandInterval {
 
     /** 사용자가 값을 바꿨을 때: 저장하고 연결 중인 기기를 포함해 바로 적용한다 */
     fun set(context: Context, ms: Long) {
+        if (!com.efxcreator.BuildConfig.DEBUG) return
         val value = ms.coerceIn(PreferencesManager.BLE_INTERVAL_MIN_MS, PreferencesManager.BLE_INTERVAL_MAX_MS)
         PreferencesManager(context).bleMinCommandIntervalMs = value
         applyToSdk(value)
@@ -43,6 +46,7 @@ object BleCommandInterval {
 
     /** 앱 시작 때: 저장해 둔 값을 SDK 에 다시 적용한다 (연결 전에 불러야 첫 명령부터 적용된다) */
     fun applyStored(context: Context) {
+        if (!com.efxcreator.BuildConfig.DEBUG) return
         applyToSdk(PreferencesManager(context).bleMinCommandIntervalMs)
     }
 

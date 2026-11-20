@@ -660,8 +660,8 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // 연결 여부와 무관한 전역 설정이라 항상 보인다
-        BleCommandIntervalCard()
+        // 연결 여부와 무관한 전역 설정이지만 개발/진단용이라 debug 빌드에서만 보인다
+        if (com.efxcreator.BuildConfig.DEBUG) BleCommandIntervalCard()
     }
 
     if (confirmDisconnect) {
