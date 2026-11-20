@@ -165,7 +165,6 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                     Log.d(TAG, "adopted system-connected device: ${found.mac}")
                     _connected.value = found
                     startMonitoring(found)
-                    _message.value = Loc.str(R.string.ble_view_model_4, found.name ?: found.mac)
                     return@launch
                 }
             }
