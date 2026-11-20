@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.efxcreator.EfxCreatorApplication
 import com.efxcreator.R
 import com.efxcreator.core.Loc
 
@@ -140,6 +141,35 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
         tryAutoConnect()
+    }
+
+    // ── 다른 앱이 이미 연결한 기기 이어받기 ─────────────────────────────
+
+    private var adoptJob: Job? = null
+
+    /**
+     * 앱이 화면에 돌아올 때 호출한다: 연결된 기기가 없는데 다른 앱(Light-Stick-Music 등)이 연결해 둔 응원봉이 있으면 이어받는다.
+     * SDK 의 시스템 연결 복원을 다시 돌리고, 연결이 끝날 때까지 잠시(최대 약 6초) 확인한다.
+     */
+    fun refreshSystemConnection() {
+        if (_connected.value != null || adoptJob?.isActive == true || !hasPermissions()) return
+        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        if (btManager?.adapter?.isEnabled != true) return
+        EfxCreatorApplication.restoreSystemConnections(context)
+        adoptJob = viewModelScope.launch {
+            repeat(12) {
+                delay(500L)
+                if (_connected.value != null) return@launch
+                val found = runCatching { LSBluetooth.connectedDevices().firstOrNull() }.getOrNull()
+                if (found != null) {
+                    Log.d(TAG, "adopted system-connected device: ${found.mac}")
+                    _connected.value = found
+                    startMonitoring(found)
+                    _message.value = Loc.str(R.string.ble_view_model_4, found.name ?: found.mac)
+                    return@launch
+                }
+            }
+        }
     }
 
     // ── 자동 연결 ────────────────────────────────────────────────

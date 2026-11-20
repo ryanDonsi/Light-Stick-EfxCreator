@@ -32,6 +32,12 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(LocaleHelper.wrap(newBase))
     }
 
+    override fun onStart() {
+        super.onStart()
+        // 앱이 켜진 뒤에 다른 앱이 연결한 응원봉이 있으면 이어받는다
+        bleVm.refreshSystemConnection()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (bleVm.autoConnectDevices.value.isNotEmpty() && !bleVm.hasPermissions()) {
