@@ -302,6 +302,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     fun disconnect() {
         val device = _connected.value ?: return
         if (hasPermissions()) runCatching { device.stopTimeline(); device.disconnect() }
+        // 사용자가 직접 해제한 것이므로 같은 기기를 쥐고 있는 다른 앱(Music)에도 알린다
+        com.efxcreator.data.DeviceDisconnectSync.notifyDisconnected(context, device.mac)
         clearConnectionState()
     }
 

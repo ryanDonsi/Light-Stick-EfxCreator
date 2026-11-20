@@ -51,6 +51,8 @@ class EfxCreatorApplication : Application() {
         // 스캔/연결은 에디터에서 권한을 요청한 뒤 수행한다.
         // 저장된 BLE 명령 간격을 연결 전에 적용한다 (SDK 는 값을 저장하지 않는다)
         com.efxcreator.data.BleCommandInterval.applyStored(this)
+        // 상대 앱(Music)이 사용자가 직접 해제했을 때 보내는 알림을 받는다
+        com.efxcreator.data.DeviceDisconnectSync.register(this)
         restoreSystemConnections(this)
     }
 }

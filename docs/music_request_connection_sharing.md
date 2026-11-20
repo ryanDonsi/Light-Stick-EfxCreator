@@ -103,7 +103,7 @@ EfxCreator에서도 "연결되었습니다" 토스트를 뺐습니다. 이어받
 ## 5. 주의 사항
 
 - **동시 제어**: 두 앱이 같은 응원봉을 동시에 쥐고 이펙트를 보내면 명령이 섞입니다. 이번 작업 범위는 "연결 상태 공유"까지이고, "한쪽만 제어" 같은 정책은 별도로 정합니다.
-- **연결 해제**: 한 앱이 연결을 끊어도 다른 앱이 연결을 쥐고 있으면 안드로이드가 물리적 연결을 유지할 수 있습니다. 해제 동작을 테스트할 때 응원봉이 실제로 끊기는지 확인하세요.
+- **연결 해제**: 한 앱이 연결을 끊어도 다른 앱이 연결을 쥐고 있으면 안드로이드가 물리적 연결을 유지합니다. 그래서 아래 **8장(해제 연동)**을 같이 구현합니다.
 - **중계기 모드 기기**(`readDeviceMode → RELAY`)에서 확인했습니다. FF09(Broadcasting)는 BLE 모드 기기 전용입니다.
 - 이어받기 때 `BluetoothGatt.refresh()` 리플렉션이 한 번 실행됩니다(SDK 내부 동작, 로그에 `hiddenapi ... allowed`로 보임). 문제는 없습니다.
 
@@ -122,3 +122,79 @@ EfxCreator에서도 "연결되었습니다" 토스트를 뺐습니다. 이어받
 | `EfxCreatorApplication.restoreSystemConnections` | `LSBluetooth.initialize`를 다시 불러 복원 |
 | `BleViewModel.refreshSystemConnection` | 연결된 기기가 없고 권한이 있으면 복원 후 0.5초 간격으로 최대 6초 확인, 이어받으면 모니터링 시작 |
 | `MainActivity.onStart` | 앱이 화면으로 돌아올 때 `refreshSystemConnection()` 호출 |
+
+
+---
+
+## 8. 연결 해제 연동 (추가 요청)
+
+안드로이드는 한 앱이 연결을 끊어도 다른 앱이 연결을 쥐고 있으면 물리 연결을 유지하고, 상대 앱에는 알려 주지 않습니다. 그래서 **사용자가 직접 해제했을 때 상대 앱에 알리고, 받은 앱도 같은 기기의 연결을 끊는** 방식으로 맞춥니다. EfxCreator는 구현을 마쳤습니다(`DeviceDisconnectSync`).
+
+### 8-1. 규칙 (양쪽 앱이 같아야 함)
+
+| 항목 | 값 |
+|---|---|
+| 방식 | 명시적 브로드캐스트 (`setPackage`로 대상 앱 지정) |
+| action | `com.lightstick.action.DISCONNECT_DEVICE` |
+| extra | `mac` (String, 해제할 응원봉 MAC) |
+| EfxCreator 패키지 | `com.efxcreator` |
+| Music 패키지 | `com.lightstick.music` |
+| 보내는 때 | **사용자가 직접 해제했을 때만** |
+| 받았을 때 | 그 MAC의 자기 연결만 끊는다. **다시 알리지 않는다**(반복 방지) |
+
+### 8-2. Music 구현
+
+**보내기**: 사용자 해제 경로(`DisconnectDeviceUseCase`, `device.disconnect()` 호출 부분)에서 해제 후 한 번 보냅니다.
+
+```kotlin
+context.sendBroadcast(
+    Intent("com.lightstick.action.DISCONNECT_DEVICE")
+        .setPackage("com.efxcreator")
+        .putExtra("mac", device.mac)
+)
+```
+
+**받기**: 앱이 실행 중일 때만 필요하므로 매니페스트가 아니라 `LightStickMusicApp.onCreate`에서 동적 등록합니다(앱을 깨우지 않음). Android 13+에서는 `RECEIVER_EXPORTED`가 필요합니다.
+
+```kotlin
+ContextCompat.registerReceiver(
+    this,
+    object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            val mac = intent.getStringExtra("mac") ?: return
+            // DisconnectDeviceUseCase 를 거치지 않고(다시 알리지 않도록) SDK 로 직접 끊는다
+            LSBluetooth.connectedDevices().firstOrNull { it.mac == mac }
+                ?.let { runCatching { it.stopTimeline(); it.disconnect() } }
+        }
+    },
+    IntentFilter("com.lightstick.action.DISCONNECT_DEVICE"),
+    ContextCompat.RECEIVER_EXPORTED
+)
+```
+
+- 화면 상태는 이미 구독 중인 `observeDeviceStateEvents`가 연결 해제 이벤트로 갱신합니다.
+- 서명 없이 누구나 보낼 수 있는 동작이지만 하는 일이 "연결 해제"뿐이라 위험은 낮습니다. 필요하면 서명 권한으로 막을 수 있으나, 두 앱이 같은 서명키를 쓰는지 확인이 필요합니다.
+
+### 8-3. 백그라운드 자동 접속과 알림 기능은 debug 빌드에서만 (제안)
+
+해제 연동을 해도 **백그라운드 자동 재연결이 곧바로 다시 붙이면** 해제가 안 되는 것처럼 보입니다. Music의 자동 재연결은 사용자가 일부러 끊었는지 구분하지 못합니다. 이런 백그라운드 기능을 **debug 빌드에서만** 제공하면 이 문제가 사라지고, Play 심사의 민감 권한 부담도 줄어듭니다.
+
+| 대상 | 위치 | 제안 |
+|---|---|---|
+| 알림 접근 서비스 (통화/문자 감지) | `EventNotificationListenerService`, 매니페스트의 `BIND_NOTIFICATION_LISTENER_SERVICE` 서비스 | debug 매니페스트(`src/debug/AndroidManifest.xml`)로 옮김. release에는 선언 없음 |
+| 주기적 자동 재연결 | `EventNotificationListenerService.periodicReconnectLoop` / `tryAutoReconnect` | 위 서비스와 함께 debug 전용 |
+| 기기 상태 알림 | `DeviceStatusNotificationManager.start` (`MainActivity.onCreate`) | `BuildConfig.DEBUG`일 때만 호출 |
+| 알림 접근 권한 안내/요청 | `PermissionManager`의 알림 접근 확인 | release에서는 요청 화면 숨김 |
+| 음악 재생 포그라운드 서비스 | `MusicEffectService` (`mediaPlayback\|connectedDevice`) | **유지** (음악 재생에 필요) |
+
+- 매니페스트에서 서비스 선언이 빠지면 release에서 알림 접근 설정 화면에도 앱이 나타나지 않습니다.
+- 서비스 클래스를 참조하는 코드(`PermissionManager` 등)는 `BuildConfig.DEBUG` 조건으로 감싸거나 debug 소스셋으로 옮깁니다.
+- 통화/문자 이벤트로 응원봉을 켜는 기능이 제품 기능이라면 이 제안은 제품 결정이 필요합니다. 그 기능을 release에서 빼는 것이 맞는지 먼저 확인하세요.
+
+### 8-4. 확인 방법
+
+1. EfxCreator에서 연결 해제 → Music도 연결 해제 상태가 되고, 응원봉이 실제로 끊깁니다(광고 재개).
+2. Music에서 연결 해제 → EfxCreator도 해제 상태로 정리됩니다(최대 5초, 연결 감시 주기).
+3. 한쪽이 앱 안에서 연결이 끊긴 경우(범위 이탈, 전원 끔)는 브로드캐스트를 보내지 않습니다(사용자 해제가 아님).
+4. 양쪽 해제 후에도 Music이 몇 초 뒤 다시 연결하지 않아야 합니다(debug 빌드에서는 자동 재연결이 살아 있으므로 release 빌드로 확인).
+5. 상대 앱이 실행 중이 아닐 때 해제해도 오류가 없어야 합니다.
