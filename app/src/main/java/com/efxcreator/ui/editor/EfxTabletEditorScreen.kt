@@ -201,7 +201,7 @@ fun EfxTabletEditorScreen(
     val entries: List<EfxEntry> = efx?.body?.entries.orEmpty()
     // 실기기로 보내는 프레임 (Broadcasting Mode 는 SDK 2.1.0 부터 기기 설정이라 페이로드에는 반영하지 않는다)
     val frames = remember(entries) {
-        entries.map { it.timestampMs to it.payload.toByteArray() }
+        com.efxcreator.model.EfxDurations.timelineFrames(entries)
     }
 
     // ── 재생 / 타임라인 상태 ──────────────────────────────────
