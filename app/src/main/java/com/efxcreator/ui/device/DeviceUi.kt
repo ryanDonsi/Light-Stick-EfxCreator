@@ -698,7 +698,7 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
 
 /**
  * BLE 명령 최소 간격(ms) 설정. 응원봉으로 보내는 모든 명령이 앞 명령이 끝난 뒤 이 간격이 지나야 다음 명령이 나간다.
- * 값을 바꾸면 저장하고 바로 SDK 에 적용한다 (연결 중인 기기 포함). 범위 0~1000, 기본 20.
+ * 값을 바꾸면 저장하고 바로 SDK 에 적용한다 (연결 중인 기기 포함). 범위 0~1000, 기본 50.
  */
 @Composable
 private fun BleCommandIntervalCard() {

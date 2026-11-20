@@ -21,8 +21,8 @@ class PreferencesManager(context: Context) {
         // 음악 불러오기 경로
         private const val KEY_MUSIC_LOAD_PATH = "music_load_path"
 
-        /** BLE 명령 최소 간격: SDK 기본값 20ms, 허용 범위 0~1000ms */
-        const val BLE_INTERVAL_DEFAULT_MS = 20L
+        /** BLE 명령 최소 간격: SDK 기본값 50ms, 허용 범위 0~1000ms */
+        const val BLE_INTERVAL_DEFAULT_MS = 50L
         const val BLE_INTERVAL_MIN_MS = 0L
         const val BLE_INTERVAL_MAX_MS = 1000L
 
