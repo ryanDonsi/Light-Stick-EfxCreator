@@ -136,7 +136,7 @@ EfxCreator에서도 "연결되었습니다" 토스트를 뺐습니다. 이어받
 |---|---|
 | 방식 | 명시적 브로드캐스트 (`setPackage`로 대상 앱 지정) |
 | action | `com.lightstick.action.DISCONNECT_DEVICE` |
-| extra | `mac` (String, 해제할 응원봉 MAC) |
+| extra | `mac` (String, 해제할 응원봉 MAC), `sentAt` (Long, `System.currentTimeMillis()`, 보낸 시각) |
 | EfxCreator 패키지 | `com.efxcreator` |
 | Music 패키지 | `com.lightstick.music` |
 | 보내는 때 | **사용자가 직접 해제했을 때만** |
@@ -151,6 +151,7 @@ context.sendBroadcast(
     Intent("com.lightstick.action.DISCONNECT_DEVICE")
         .setPackage("com.efxcreator")
         .putExtra("mac", device.mac)
+        .putExtra("sentAt", System.currentTimeMillis())
 )
 ```
 
@@ -162,6 +163,10 @@ ContextCompat.registerReceiver(
     object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             val mac = intent.getStringExtra("mac") ?: return
+            // 앱이 백그라운드(캐시) 상태면 알림이 늦게 도착한다. 10초보다 오래된 알림은 무시한다(그 사이 다시 연결했을 수 있음)
+            val ageMs = System.currentTimeMillis() - intent.getLongExtra("sentAt", 0L)
+            Log.d("DisconnectSync", "received disconnect notice mac=$mac ageMs=$ageMs")
+            if (ageMs > 10_000L) return
             // DisconnectDeviceUseCase 를 거치지 않고(다시 알리지 않도록) SDK 로 직접 끊는다
             LSBluetooth.connectedDevices().firstOrNull { it.mac == mac }
                 ?.let { runCatching { it.stopTimeline(); it.disconnect() } }
@@ -198,3 +203,10 @@ ContextCompat.registerReceiver(
 3. 한쪽이 앱 안에서 연결이 끊긴 경우(범위 이탈, 전원 끔)는 브로드캐스트를 보내지 않습니다(사용자 해제가 아님).
 4. 양쪽 해제 후에도 Music이 몇 초 뒤 다시 연결하지 않아야 합니다(debug 빌드에서는 자동 재연결이 살아 있으므로 release 빌드로 확인).
 5. 상대 앱이 실행 중이 아닐 때 해제해도 오류가 없어야 합니다.
+
+### 8-5. 상대 앱이 백그라운드일 때의 한계
+
+안드로이드는 **백그라운드(캐시) 상태의 앱에는 브로드캐스트 전달을 미룹니다.** 상대 앱이 화면 밖에 한참 있었다면 알림이 앱이 다시 화면에 올 때 한꺼번에 도착합니다(실제 로그에서 약 27분 뒤에 도착). 그래서:
+- 상대 앱이 그 시점까지 **연결을 계속 쥐고 있어서 응원봉이 실제로 끊어지지 않을 수 있습니다.**
+- 늦게 도착한 알림이 **그 사이 새로 맺은 연결**을 끊지 않도록 `sentAt`으로 10초 넘은 알림은 무시합니다.
+- 양쪽이 화면에 보이는(포그라운드 또는 최근 사용) 상태에서는 즉시 동작합니다.

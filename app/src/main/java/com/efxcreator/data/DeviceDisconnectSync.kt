@@ -25,6 +25,9 @@ object DeviceDisconnectSync {
     private const val TAG = "DeviceDisconnectSync"
     const val ACTION_DISCONNECT_DEVICE = "com.lightstick.action.DISCONNECT_DEVICE"
     const val EXTRA_MAC = "mac"
+    /** 보낸 시각(System.currentTimeMillis, Long). 앱이 백그라운드에 있으면 알림이 늦게 도착할 수 있어서 오래된 알림을 걸러낸다 */
+    const val EXTRA_SENT_AT = "sentAt"
+    private const val STALE_AFTER_MS = 10_000L
 
     /** 연동 대상 앱 */
     private const val PEER_PACKAGE = "com.lightstick.music"
@@ -34,6 +37,7 @@ object DeviceDisconnectSync {
         runCatching {
             context.sendBroadcast(
                 Intent(ACTION_DISCONNECT_DEVICE).setPackage(PEER_PACKAGE).putExtra(EXTRA_MAC, mac)
+                    .putExtra(EXTRA_SENT_AT, System.currentTimeMillis())
             )
         }.onSuccess { Log.d(TAG, "sent disconnect notice to $PEER_PACKAGE: mac=$mac (상대 앱이 받는지는 상대 쪽 로그로 확인)") }
             .onFailure { Log.w(TAG, "notify failed: ${it.message}") }
@@ -46,8 +50,16 @@ object DeviceDisconnectSync {
             override fun onReceive(ctx: Context, intent: Intent) {
                 if (intent.action != ACTION_DISCONNECT_DEVICE) return
                 val mac = intent.getStringExtra(EXTRA_MAC)
-                Log.d(TAG, "received disconnect notice: mac=$mac")
+                // 앱이 백그라운드(캐시) 상태이면 알림이 늦게 도착한다: 보낸 시각이 있으면 얼마나 늦었는지 남기고, 너무 오래된 것은 무시한다
+                val sentAt = intent.getLongExtra(EXTRA_SENT_AT, 0L)
+                val ageMs = if (sentAt > 0L) System.currentTimeMillis() - sentAt else -1L
+                Log.d(TAG, "received disconnect notice: mac=$mac ageMs=$ageMs")
                 if (mac == null) return
+                if (ageMs > STALE_AFTER_MS) {
+                    // 그 사이 다시 연결했을 수 있어서, 오래된 알림으로 새 연결을 끊지 않는다
+                    Log.d(TAG, "ignored: stale notice (${ageMs}ms old)")
+                    return
+                }
                 if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.BLUETOOTH_CONNECT)
                     != PackageManager.PERMISSION_GRANTED) {
                     Log.d(TAG, "ignored: BLUETOOTH_CONNECT not granted")
