@@ -35,7 +35,8 @@ object DeviceDisconnectSync {
             context.sendBroadcast(
                 Intent(ACTION_DISCONNECT_DEVICE).setPackage(PEER_PACKAGE).putExtra(EXTRA_MAC, mac)
             )
-        }.onFailure { Log.w(TAG, "notify failed: ${it.message}") }
+        }.onSuccess { Log.d(TAG, "sent disconnect notice to $PEER_PACKAGE: mac=$mac (상대 앱이 받는지는 상대 쪽 로그로 확인)") }
+            .onFailure { Log.w(TAG, "notify failed: ${it.message}") }
     }
 
     /** 상대 앱이 보낸 해제 알림을 받는다 (앱 시작 때 한 번 등록) */
@@ -44,13 +45,21 @@ object DeviceDisconnectSync {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 if (intent.action != ACTION_DISCONNECT_DEVICE) return
-                val mac = intent.getStringExtra(EXTRA_MAC) ?: return
+                val mac = intent.getStringExtra(EXTRA_MAC)
+                Log.d(TAG, "received disconnect notice: mac=$mac")
+                if (mac == null) return
                 if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.BLUETOOTH_CONNECT)
-                    != PackageManager.PERMISSION_GRANTED) return
+                    != PackageManager.PERMISSION_GRANTED) {
+                    Log.d(TAG, "ignored: BLUETOOTH_CONNECT not granted")
+                    return
+                }
                 // 사용자가 직접 해제한 경우와 달리 상대 앱에 다시 알리지 않는다 (BleViewModel.disconnect 를 거치지 않는다)
                 val device = runCatching { LSBluetooth.connectedDevices().firstOrNull { it.mac == mac } }.getOrNull()
-                    ?: return
-                Log.d(TAG, "disconnect requested by peer: $mac")
+                if (device == null) {
+                    Log.d(TAG, "ignored: no connected device with mac=$mac in this app")
+                    return
+                }
+                Log.d(TAG, "disconnecting $mac by peer request")
                 runCatching { device.stopTimeline(); device.disconnect() }
                 // 화면 상태는 BleViewModel 의 연결 감시(5초 주기)가 끊긴 것을 알아채고 정리한다
             }
@@ -58,5 +67,6 @@ object DeviceDisconnectSync {
         ContextCompat.registerReceiver(
             app, receiver, IntentFilter(ACTION_DISCONNECT_DEVICE), ContextCompat.RECEIVER_EXPORTED
         )
+        Log.d(TAG, "receiver registered (action=$ACTION_DISCONNECT_DEVICE)")
     }
 }
