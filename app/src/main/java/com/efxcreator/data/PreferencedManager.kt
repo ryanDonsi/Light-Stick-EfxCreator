@@ -2,6 +2,7 @@ package com.efxcreator.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.lightstick.LSBluetooth
 
 class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences =
@@ -62,6 +63,22 @@ class PreferencesManager(context: Context) {
             if (enabled && name != null) putString("auto_connect_name_$mac", name) else remove("auto_connect_name_$mac")
         }.apply()
     }
+
+    // ── 디버그 빌드 전용: BLE 전송 튜닝 (설정 > BLE 전송 설정). SDK 는 값을 저장하지 않으므로 앱 시작 때 다시 적용한다
+    /** GATT 명령 최소 전송 간격(ms) */
+    var bleCommandIntervalMs: Long
+        get() = prefs.getLong("ble_cmd_interval_ms", LSBluetooth.DEFAULT_COMMAND_INTERVAL_MS)
+        set(value) = prefs.edit().putLong("ble_cmd_interval_ms", value).apply()
+
+    /** 기기별 GATT 명령 대기 큐 최대 개수 */
+    var bleCommandQueueSize: Int
+        get() = prefs.getInt("ble_cmd_queue_size", LSBluetooth.DEFAULT_COMMAND_QUEUE_SIZE)
+        set(value) = prefs.edit().putInt("ble_cmd_queue_size", value).apply()
+
+    /** SDK 진단 로그(태그 'Lightstick') 사용 여부. 기본 ON (디버그 빌드에서만 의미 있음) */
+    var bleDebugLogEnabled: Boolean
+        get() = prefs.getBoolean("ble_debug_log", true)
+        set(value) = prefs.edit().putBoolean("ble_debug_log", value).apply()
 
     // 마지막으로 선택한 이펙트/팔레트 세트 id (빈 문자열 = 자동)
     var lastEffectSetId: String

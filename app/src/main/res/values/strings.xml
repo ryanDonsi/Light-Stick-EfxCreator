@@ -1,6 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="app_name">GLOWSYNC Editor</string>
 
+    <!-- Debug-only (설정 > BLE 전송 설정, 디버그 빌드에서만 노출) -->
+    <string name="settings_ble_debug_title">BLE 전송 설정</string>
+    <string name="settings_ble_debug_subtitle">전송 간격 · 큐 크기 (디버그)</string>
+
     <!-- Common -->
     <string name="ok">확인</string>
     <string name="cancel">취소</string>
