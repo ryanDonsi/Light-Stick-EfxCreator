@@ -96,6 +96,13 @@ class TimelineState {
 
     fun msAtX(x: Float): Float = viewStartMs + x / pxPerMs
 
+    /** 현재 위치 드래그용: 화면 안 + 0 ~ 곡 길이로 제한해 플레이헤드가 화면 밖으로 사라지지 않게 한다 */
+    fun seekMsAtX(x: Float, durationMs: Long): Long {
+        val lo = viewStartMs.coerceAtLeast(0f)
+        val hi = minOf(viewStartMs + viewMs, durationMs.toFloat()).coerceAtLeast(lo)
+        return msAtX(x).coerceIn(lo, hi).toLong()
+    }
+
     fun zoom(factor: Float, anchorX: Float = viewWidthPx / 2f) {
         val anchorMs = msAtX(anchorX)
         pxPerMs = (pxPerMs * factor).coerceIn(minPxPerMs, MAX_PX_PER_MS)
@@ -590,7 +597,7 @@ fun TimelineView(
                             }
                         } else {
                             drag.mode = DragMode.SEEK
-                            lastSeekMs[0] = state.msAtX(o.x).toLong().coerceAtLeast(0L)
+                            lastSeekMs[0] = state.seekMsAtX(o.x, currentDuration)
                             onSeekState(lastSeekMs[0])
                         }
                     },
@@ -598,7 +605,7 @@ fun TimelineView(
                         change.consume()
                         when (drag.mode) {
                             DragMode.SEEK -> {
-                                lastSeekMs[0] = state.msAtX(change.position.x).toLong().coerceAtLeast(0L)
+                                lastSeekMs[0] = state.seekMsAtX(change.position.x, currentDuration)
                                 onSeekState(lastSeekMs[0])
                             }
                             DragMode.PAN -> state.panByMs(-amount.x / state.pxPerMs, currentDuration)
