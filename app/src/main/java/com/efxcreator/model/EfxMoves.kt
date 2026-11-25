@@ -5,9 +5,9 @@ import com.lightstick.efx.EfxEntry
 /**
  * 타임라인에서 이펙트를 옮길 때의 계산. 드래그 중 미리보기와 손을 뗐을 때의 확정이 **같은 계산**을 쓴다.
  *
- * "삽입" 방식: 이펙트를 빼도 빠진 자리는 비워 두고(뒤 이펙트를 당겨오지 않음), 놓은 경계에 끼워 넣는다.
- * - 끼워 넣을 자리와 겹치는 뒤쪽 이펙트만 겹치는 만큼 뒤로 밀린다. 원래 자리 근처에 놓으면 아무것도 바뀌지 않는다.
- * - 다른 이펙트의 한가운데에 놓으면 쪼개지 않고 가까운 경계(그 이펙트의 시작 또는 끝)에 붙는다.
+ * "순서 바꾸기" 방식: 이펙트를 빼내 빠진 자리를 뒤쪽이 당겨져 메우고, 놓은 경계에 끼워 넣으며 뒤쪽을 그만큼 다시 민다.
+ * - 1/2/3/4 에서 3 을 맨 앞으로 옮기면 3/1/2/4 로 빈틈 없이 이어진다.
+ * - 다른 이펙트의 한가운데에 놓으면(원래 시간축 기준) 쪼개지 않고 가까운 경계(시작 또는 끝)에 붙는다.
  *   이펙트가 없는 빈 구간에 놓으면 놓은 시각 그대로 들어간다.
  * - 옮긴 이펙트는 자기 duration(길이)을 유지하고, 여러 개를 옮기면 서로의 간격도 유지한다.
  */
@@ -46,28 +46,31 @@ object EfxMoves {
         val movedIdx = list.indices.filter { it in move }
         val rest = restIdx.map { list[it] }
 
-        // 1) 빠진 자리는 그대로 비워 둔다 (뒤의 이펙트를 당겨오지 않는다)
-        val closed = rest
+        // 1) 빠진 자리 메우기: 묶음 뒤의 이펙트는 width 만큼 앞으로 당겨진다 (순서 바꾸기)
+        val closed = rest.map { e ->
+            if (e.timestampMs >= oldFirst + width) e.copy(timestampMs = e.timestampMs - width) else e
+        }
 
-        // 2) 놓은 지점
+        // 2) 놓은 지점 (원래 시간축 기준)
         val p = oldFirst + delta
 
-        // 3) 끼워 넣을 경계: 다른 이펙트가 재생 중인 한가운데면 가까운 경계(시작 또는 끝)로 붙인다
+        // 3) 끼워 넣을 경계: 원래 시간축에서 다른 이펙트가 재생 중인 한가운데면 가까운 경계(시작 또는 끝)로 붙인다.
+        //    경계는 메운 시간축(closed)의 같은 이펙트 기준으로 환산한다 (메운 뒤에 판정하면 뒤쪽 이펙트 끝이 앞당겨져
+        //    '빈 구간'으로 잘못 판정되어 1/2/3/4 → 3/1/2/4 처럼 이어 붙지 않는다).
         var b = p
-        val k = closed.indexOfLast { it.timestampMs < p }
+        val k = rest.indexOfLast { it.timestampMs < p }
         if (k >= 0) {
-            val a = closed[k]
-            val playEnd = EfxDurations.playEndMs(closed, k) ?: (a.timestampMs + EfxDurations.lengthMs(closed, k, songEnd))
+            val a = rest[k]
+            val playEnd = EfxDurations.playEndMs(rest, k) ?: (a.timestampMs + EfxDurations.lengthMs(rest, k, songEnd))
             if (p < playEnd) {
-                val slotEnd = closed.getOrNull(k + 1)?.timestampMs ?: playEnd
-                b = if (p - a.timestampMs <= slotEnd - p) a.timestampMs else slotEnd
+                val slotEnd = rest.getOrNull(k + 1)?.timestampMs ?: playEnd
+                b = if (p - a.timestampMs <= slotEnd - p) closed[k].timestampMs
+                else closed.getOrNull(k + 1)?.timestampMs ?: (closed[k].timestampMs + (playEnd - a.timestampMs))
             }
         }
 
-        // 4) 옮긴 이펙트가 [b, b+width) 를 차지한다. 겹치는 뒤쪽 이펙트만, 겹치는 만큼 한꺼번에 뒤로 민다 (서로의 간격은 유지)
-        val firstAfter = closed.filter { it.timestampMs >= b }.minOfOrNull { it.timestampMs }
-        val shift = if (firstAfter == null) 0L else maxOf(0L, b + width - firstAfter)
-        val pushed = if (shift == 0L) closed else closed.map { e -> if (e.timestampMs >= b) e.copy(timestampMs = e.timestampMs + shift) else e }
+        // 4) 경계 이후의 이펙트는 width 만큼 뒤로 밀리고, 옮긴 이펙트가 그 자리에 들어간다
+        val pushed = closed.map { e -> if (e.timestampMs >= b) e.copy(timestampMs = e.timestampMs + width) else e }
         val moved = movedOld.map { it.copy(timestampMs = b + (it.timestampMs - oldFirst)) }
         return Result(pushed + moved, moved.map { it.timestampMs }.toSet(), restIdx + movedIdx)
     }
