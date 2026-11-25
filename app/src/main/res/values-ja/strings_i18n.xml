@@ -677,12 +677,12 @@
     <string name="efx_beat_method_grid">テンポ固定</string>
     <string name="efx_beat_method_grid_desc">BPMは入力値の近くでアプリが正確に合わせ、ビートは一定の間隔に固定します\nテンポが一定の曲向けです。曲の途中で半拍ずれる場合に有効で、テンポが変わる曲には向きません</string>
     <string name="ble_interval_title">BLE送信設定</string>
-    <string name="ble_interval_desc">応援棒へのコマンドは機器ごとのキューに溜まり、順番に送信されます。以下の値は接続中のすべての機器に共通で、すぐに適用・保存されます。間隔は前のコマンド終了から次のコマンドまでの最小時間、キューサイズは機器あたりの待機コマンドの最大数です(あふれると最も古いコマンドが破棄されます)。</string>
-    <string name="ble_interval_label">間隔 (ms)</string>
+    <string name="ble_interval_desc">応援棒へのコマンドは機器ごとのキューに溜まり、順番に送信されます。以下の値は接続中のすべての機器に共通で、すぐに適用・保存されます。最小送信間隔は前のコマンド終了から次のコマンドまでの最短時間、キューサイズは機器あたりの待機コマンドの最大数です(あふれると最も古いコマンドが破棄されます)。</string>
+    <string name="ble_interval_label">最小送信間隔 (ms)</string>
     <string name="ble_interval_range">%1$d~%2$d の範囲で入力してください</string>
     <string name="ble_interval_reset">既定値に戻す (%1$dms / キュー %2$d)</string>
     <string name="ble_queue_label">キューサイズ (待機コマンド数)</string>
-    <string name="ble_delay_estimate">推定最大遅延 ≈ キュー × 間隔 = %1$dms</string>
+    <string name="ble_delay_estimate">推定最大遅延 ≈ キュー × 最小送信間隔 = %1$dms</string>
     <string name="ble_stats_title">接続中の機器のキュー状態</string>
     <string name="ble_stats_line">待機 %1$d · ピーク %2$d · 実行 %3$d · 置換 %4$d</string>
     <string name="ble_stats_dropped">ドロップ(欠落) %1$d</string>

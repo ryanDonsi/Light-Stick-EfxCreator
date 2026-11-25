@@ -677,12 +677,12 @@
     <string name="efx_beat_method_grid">Fixed tempo</string>
     <string name="efx_beat_method_grid_desc">The app fine-tunes the BPM near your input; beats are locked to even spacing\nFor steady-tempo songs. Helps when beats slip by half a beat mid-song; not suited to songs whose tempo changes</string>
     <string name="ble_interval_title">BLE transmission settings</string>
-    <string name="ble_interval_desc">Commands to the light stick are queued per device and sent in order. The values below are shared by all connected devices and are applied and saved immediately. Interval is the minimum time from the end of one command to the next; queue size is the maximum number of pending commands per device (when it overflows, the oldest command is dropped).</string>
-    <string name="ble_interval_label">Interval (ms)</string>
+    <string name="ble_interval_desc">Commands to the light stick are queued per device and sent in order. The values below are shared by all connected devices and are applied and saved immediately. The minimum send interval is the shortest time from the end of one command to the next; queue size is the maximum number of pending commands per device (when it overflows, the oldest command is dropped).</string>
+    <string name="ble_interval_label">Minimum send interval (ms)</string>
     <string name="ble_interval_range">Enter a value between %1$d and %2$d</string>
     <string name="ble_interval_reset">Reset to default (%1$d ms / queue %2$d)</string>
     <string name="ble_queue_label">Queue size (pending commands)</string>
-    <string name="ble_delay_estimate">Estimated max delay ≈ queue × interval = %1$d ms</string>
+    <string name="ble_delay_estimate">Estimated max delay ≈ queue × minimum interval = %1$d ms</string>
     <string name="ble_stats_title">Queue status of the connected device</string>
     <string name="ble_stats_line">Pending %1$d · Peak %2$d · Executed %3$d · Replaced %4$d</string>
     <string name="ble_stats_dropped">Dropped (lost) %1$d</string>
