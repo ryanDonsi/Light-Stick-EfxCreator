@@ -309,15 +309,17 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         val device = _connected.value ?: return
         // 공연 모드를 켠 상태면 해제를 먼저 보낸다. 연결이 끊긴 뒤에는 FF0A 를 쓸 수 없고 공연 모드는 재부팅까지 남는다.
         val exitSent = sendShowExitIfNeeded(device)
-        val gattDisconnect = { if (hasPermissions()) runCatching { device.stopTimeline(); device.disconnect() } }
+        // 끊은 뒤에 알린다: 사용자가 직접 해제한 것이므로 같은 기기를 쥐고 있는 다른 앱(Music)에도 알린다
+        val gattDisconnect = {
+            if (hasPermissions()) runCatching { device.stopTimeline(); device.disconnect() }
+            com.efxcreator.data.DeviceDisconnectSync.notifyDisconnected(context, device.mac)
+        }
         if (exitSent) {
-            // 전송이 나갈 시간을 준 뒤 끊는다 (화면 상태는 바로 해제 상태로 바꾼다)
+            // SHOW_EXIT 가 나갈 시간을 준 뒤 끊고 알린다 (화면 상태는 바로 해제 상태로 바꾼다)
             viewModelScope.launch { delay(SHOW_EXIT_DISCONNECT_DELAY_MS); gattDisconnect() }
         } else {
             gattDisconnect()
         }
-        // 사용자가 직접 해제한 것이므로 같은 기기를 쥐고 있는 다른 앱(Music)에도 알린다
-        com.efxcreator.data.DeviceDisconnectSync.notifyDisconnected(context, device.mac)
         clearConnectionState()
     }
 
