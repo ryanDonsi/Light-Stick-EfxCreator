@@ -5,12 +5,11 @@ import com.lightstick.efx.EfxEntry
 /**
  * 타임라인에서 이펙트를 옮길 때의 계산. 드래그 중 미리보기와 손을 뗐을 때의 확정이 **같은 계산**을 쓴다.
  *
- * "순서 바꾸기" 방식: 이펙트를 빼내 빠진 자리를 뒤쪽이 당겨져 메우고, 놓은 경계에 끼워 넣으며 뒤쪽을 그만큼 다시 민다.
- * - 앞으로 옮기든 뒤로 옮기든 빠진 자리는 뒤의 이펙트가 앞으로 당겨져 메워진다 (앞 이펙트의 길이는 변하지 않는다).
+ * "삽입" 방식: 이펙트를 빼도 빠진 자리는 비워 두고(뒤 이펙트를 당겨오지 않음), 놓은 경계에 끼워 넣는다.
+ * - 끼워 넣을 자리와 겹치는 뒤쪽 이펙트만 겹치는 만큼 뒤로 밀린다. 원래 자리 근처에 놓으면 아무것도 바뀌지 않는다.
  * - 다른 이펙트의 한가운데에 놓으면 쪼개지 않고 가까운 경계(그 이펙트의 시작 또는 끝)에 붙는다.
  *   이펙트가 없는 빈 구간에 놓으면 놓은 시각 그대로 들어간다.
  * - 옮긴 이펙트는 자기 duration(길이)을 유지하고, 여러 개를 옮기면 서로의 간격도 유지한다.
- * - 전체 길이는 변하지 않으며, 옮겼다가 되돌리면 원래대로 돌아온다. 원래 자리 근처에 놓으면 아무것도 바뀌지 않는다.
  */
 object EfxMoves {
 
@@ -47,13 +46,10 @@ object EfxMoves {
         val movedIdx = list.indices.filter { it in move }
         val rest = restIdx.map { list[it] }
 
-        // 1) 빠진 자리 메우기: 묶음 뒤의 이펙트는 width 만큼 앞으로 당겨진다
-        val closed = rest.map { e ->
-            if (e.timestampMs >= oldFirst + width) e.copy(timestampMs = e.timestampMs - width) else e
-        }
+        // 1) 빠진 자리는 그대로 비워 둔다 (뒤의 이펙트를 당겨오지 않는다)
+        val closed = rest
 
-        // 2) 놓은 지점. 옮긴 이펙트는 끼워 넣은 뒤에도 놓은 위치에서 시작하므로 메운 시간축에서도 같은 값을 그대로 쓴다
-        //    (뒤쪽 이펙트는 끼워 넣은 뒤 width 만큼 다시 밀려 원래 자리로 돌아간다)
+        // 2) 놓은 지점
         val p = oldFirst + delta
 
         // 3) 끼워 넣을 경계: 다른 이펙트가 재생 중인 한가운데면 가까운 경계(시작 또는 끝)로 붙인다
@@ -68,8 +64,10 @@ object EfxMoves {
             }
         }
 
-        // 4) 경계 이후의 이펙트는 width 만큼 뒤로 밀리고, 옮긴 이펙트가 그 자리에 들어간다
-        val pushed = closed.map { e -> if (e.timestampMs >= b) e.copy(timestampMs = e.timestampMs + width) else e }
+        // 4) 옮긴 이펙트가 [b, b+width) 를 차지한다. 겹치는 뒤쪽 이펙트만, 겹치는 만큼 한꺼번에 뒤로 민다 (서로의 간격은 유지)
+        val firstAfter = closed.filter { it.timestampMs >= b }.minOfOrNull { it.timestampMs }
+        val shift = if (firstAfter == null) 0L else maxOf(0L, b + width - firstAfter)
+        val pushed = if (shift == 0L) closed else closed.map { e -> if (e.timestampMs >= b) e.copy(timestampMs = e.timestampMs + shift) else e }
         val moved = movedOld.map { it.copy(timestampMs = b + (it.timestampMs - oldFirst)) }
         return Result(pushed + moved, moved.map { it.timestampMs }.toSet(), restIdx + movedIdx)
     }
