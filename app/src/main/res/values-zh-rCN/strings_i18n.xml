@@ -687,4 +687,13 @@
     <string name="ble_stats_line">待发 %1$d · 峰值 %2$d · 已执行 %3$d · 已替换 %4$d</string>
     <string name="ble_stats_dropped">丢弃(丢失) %1$d</string>
     <string name="ble_stats_reset">重置统计</string>
+    <string name="label_show_mode">演出模式</string>
+    <string name="show_mode_desc">限制信号范围内所有应援棒的按键输入 (电源键除外)</string>
+    <string name="label_system_off">SYSTEM OFF</string>
+    <string name="system_off_desc">关闭信号范围内所有应援棒的电源 (无法通过应用重新开启)</string>
+    <string name="control_unsupported_title">不支持的功能</string>
+    <string name="control_unsupported_text">已连接的设备不支持演出控制。\n请将固件更新到 2.200 或更高版本后使用。</string>
+    <string name="system_off_confirm_title">关机</string>
+    <string name="system_off_confirm_text">信号范围内所有应援棒的电源都会关闭。\n已关闭的应援棒无法通过应用重新开启,必须按应援棒上的按键手动开启。\n\n确定要关机吗?</string>
+    <string name="system_off_confirm_ok">关机</string>
 </resources>

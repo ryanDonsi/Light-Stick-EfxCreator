@@ -687,4 +687,13 @@
     <string name="ble_stats_line">대기 %1$d · 피크 %2$d · 실행 %3$d · 치환 %4$d</string>
     <string name="ble_stats_dropped">드롭(유실) %1$d</string>
     <string name="ble_stats_reset">통계 초기화</string>
+    <string name="label_show_mode">공연 모드</string>
+    <string name="show_mode_desc">신호가 닿는 모든 응원봉의 버튼 입력을 제한 (전원 버튼 제외)</string>
+    <string name="label_system_off">SYSTEM OFF</string>
+    <string name="system_off_desc">신호가 닿는 모든 응원봉의 전원을 끔 (앱에서 다시 켤 수 없음)</string>
+    <string name="control_unsupported_title">지원하지 않는 기능</string>
+    <string name="control_unsupported_text">연결된 기기가 공연 제어를 지원하지 않습니다.\n펌웨어를 2.200 이상으로 업데이트한 뒤 사용해 주세요.</string>
+    <string name="system_off_confirm_title">전원 끄기</string>
+    <string name="system_off_confirm_text">신호가 닿는 모든 응원봉의 전원이 꺼집니다.\n꺼진 응원봉은 앱에서 다시 켤 수 없고, 응원봉의 버튼으로 직접 켜야 합니다.\n\n전원을 끌까요?</string>
+    <string name="system_off_confirm_ok">전원 끄기</string>
 </resources>

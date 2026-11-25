@@ -98,6 +98,10 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
     /** 자동 연결로 등록된 기기 (mac, 이름) */
     val autoConnectDevices: StateFlow<List<Pair<String, String?>>> = _autoConnectDevices.asStateFlow()
 
+    /** 이 기기로 앱이 공연 모드(SHOW_ENTER)를 켠 상태인가. 응원봉은 재부팅하면 해제되므로 앱이 보낸 것만 표시한다 */
+    private val _showMode = MutableStateFlow(false)
+    val showMode: StateFlow<Boolean> = _showMode.asStateFlow()
+
     private val _otaProgress = MutableStateFlow<Int?>(null)
     /** OTA 진행률(0~100). 진행 중이 아니면 null */
     val otaProgress: StateFlow<Int?> = _otaProgress.asStateFlow()
@@ -121,6 +125,8 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         /** SDK 가 프레임 위치를 다시 계산하는 기준(앞으로 10초 초과)을 넘기는 값 */
         private const val FORCE_RESYNC_OFFSET_MS = 11_000L
         private const val AUTO_CONNECT_TIMEOUT_MS = 15_000L
+        /** 연결을 끊기 전에 SHOW_EXIT 가 나갈 시간 */
+        private const val SHOW_EXIT_DISCONNECT_DELAY_MS = 300L
 
         /** 현재 OS 버전에서 요청해야 하는 BLE 런타임 권한 */
         fun requiredPermissions(): Array<String> =
@@ -301,14 +307,68 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
     fun disconnect() {
         val device = _connected.value ?: return
-        if (hasPermissions()) runCatching { device.stopTimeline(); device.disconnect() }
+        // 공연 모드를 켠 상태면 해제를 먼저 보낸다. 연결이 끊긴 뒤에는 FF0A 를 쓸 수 없고 공연 모드는 재부팅까지 남는다.
+        val exitSent = sendShowExitIfNeeded(device)
+        val gattDisconnect = { if (hasPermissions()) runCatching { device.stopTimeline(); device.disconnect() } }
+        if (exitSent) {
+            // 전송이 나갈 시간을 준 뒤 끊는다 (화면 상태는 바로 해제 상태로 바꾼다)
+            viewModelScope.launch { delay(SHOW_EXIT_DISCONNECT_DELAY_MS); gattDisconnect() }
+        } else {
+            gattDisconnect()
+        }
         // 사용자가 직접 해제한 것이므로 같은 기기를 쥐고 있는 다른 앱(Music)에도 알린다
         com.efxcreator.data.DeviceDisconnectSync.notifyDisconnected(context, device.mac)
         clearConnectionState()
     }
 
+    // ── 공연 제어 (FF0A, 펌웨어 2.200+) ──────────────────────────
+
+    /** 연결된 기기가 FF0A(Control)를 지원하는가. 서비스 디스커버리 완료 여부에 따라 달라질 수 있어 조작 시점에 확인한다 */
+    fun isControlSupported(): Boolean =
+        runCatching { _connected.value?.supportsControl() == true }.getOrDefault(false)
+
+    /**
+     * 공연 모드 토글(SHOW_ENTER / SHOW_EXIT). 공연 모드 중에는 응원봉이 전원 버튼 외의 버튼 입력을 무시한다.
+     * 신호가 닿는 모든 응원봉이 대상(groupMask=0)이고, 명령은 멱등이라 상태가 어긋나 있어도 다시 보내면 맞춰진다.
+     * @return 전송을 제출했으면 true (이때만 표시 상태를 바꾼다)
+     */
+    fun toggleShowMode(enabled: Boolean): Boolean {
+        val device = connectedOrNull() ?: return false
+        if (_otaProgress.value != null) { Log.w(TAG, "toggleShowMode 무시: OTA 진행 중"); return false }
+        if (!isControlSupported()) { Log.w(TAG, "toggleShowMode 무시: FF0A 미지원(펌웨어 < 2.200)"); return false }
+        val ok = runCatching { if (enabled) device.showEnter() else device.showExit() }.getOrDefault(false)
+        Log.i(TAG, "${if (enabled) "SHOW_ENTER" else "SHOW_EXIT"} ${device.mac} → $ok")
+        if (ok) _showMode.value = enabled
+        return ok
+    }
+
+    /** 앱이 공연 모드를 켠 기기면 연결을 끊기 전에 SHOW_EXIT 를 보낸다. 전송을 제출했으면 true */
+    private fun sendShowExitIfNeeded(device: Device): Boolean {
+        if (!_showMode.value) return false
+        _showMode.value = false
+        return runCatching { hasPermissions() && device.supportsControl() && device.showExit() }
+            .onFailure { Log.e(TAG, "연결 해제 전 SHOW_EXIT 실패: ${it.message}") }
+            .getOrDefault(false)
+            .also { Log.i(TAG, "연결 해제 전 SHOW_EXIT ${device.mac} → $it") }
+    }
+
+    /**
+     * SYSTEM_OFF — 복구 불가(꺼진 응원봉은 버튼으로만 켤 수 있다). 호출 전에 UI 에서 사용자 확인을 반드시 거쳐야 한다
+     * (SDK 는 확인 절차를 제공하지 않는다). groupMask=0 → 신호가 닿는 모든 응원봉이 대상이다.
+     * 중계기 자신은 대상이 아니며, BLE 모드 Master 는 꺼지면서 연결이 끊어진다.
+     */
+    fun systemOff(): Boolean {
+        val device = connectedOrNull() ?: return false
+        if (_otaProgress.value != null) { Log.w(TAG, "systemOff 무시: OTA 진행 중"); return false }
+        if (!isControlSupported()) { Log.w(TAG, "systemOff 무시: FF0A 미지원(펌웨어 < 2.200)"); return false }
+        val ok = runCatching { device.systemOff() }.getOrDefault(false)
+        Log.i(TAG, "systemOff 전송 ${device.mac} → $ok")
+        return ok
+    }
+
     private fun clearConnectionState() {
         monitorJob?.cancel()
+        _showMode.value = false
         _connected.value = null
         _info.value = null
         _battery.value = null
@@ -662,35 +722,49 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "seek resend: pos=${positionMs}ms type=${payload.effectType} sent=$sent resumed=$resumed")
     }
 
-    /** 일시정지: 타임라인을 멈추고, 마지막 이펙트가 기기에서 계속 반복되지 않도록 OFF 를 보낸다 (Light-Stick-Music 과 동일) */
+    /**
+     * 일시정지: 타임라인 전송을 멈춘다 (Light-Stick-Music 과 동일).
+     * SDK 2.200.0 의 pauseTimeline() 은 Control PAUSE 를 방송해 신호가 닿는 모든 응원봉이 지금 색에서 얼어붙는다.
+     * OFF 를 보내지 않는다 — 일시정지 직후의 새 이펙트(OFF 포함)는 응원봉의 일시정지를 풀고 소등시킨다.
+     */
     fun pauseTimeline() {
         val device = connectedOrNull() ?: return
         timelinePaused = true
         val paused = device.pauseTimeline()
-        val off = LSEffectPayload.Effects.off()
-        val sent = device.sendEffect(off)
         Log.d(
-            TAG, "pauseTimeline: pause=$paused offSent=$sent loaded=${device.isTimelineLoaded()} " +
-                "playing=${device.isTimelinePlaying()} payload=${off.toByteArray().hex()}"
+            TAG, "pauseTimeline: pause=$paused loaded=${device.isTimelineLoaded()} " +
+                "playing=${device.isTimelinePlaying()}"
         )
     }
 
     /**
      * 재개 (Light-Stick-Music 의 resyncEffectsOnResume 과 같은 순서):
-     * 기기에 타임라인이 없으면 다시 올리고 → resumeTimeline → 현재 재생 위치로 갱신(Seek, 즉시 위치 업데이트).
+     * 기기에 타임라인이 없으면 다시 올리고 → 현재 위치의 이펙트를 다시 보내고 → resumeTimeline → 현재 재생 위치로 갱신(Seek, 즉시 위치 업데이트).
      */
     fun resumeTimeline(positionMs: Long) {
         val device = connectedOrNull() ?: return
         val needsReload = runCatching { !device.isTimelineLoaded() }.getOrDefault(true)
         if (needsReload) loadedFrames?.let { device.playTimeline(it) }
+        // 일시정지 중에 위치가 바뀌었을 수 있고, 얼어 있는 효과는 옛 위치의 것이다. 재개 직전에 현재 위치의 이펙트를
+        // 보내 응원봉이 올바른 효과를 보이게 한다 (Music 의 resendActiveEffectBeforeResume 와 같다).
+        // 반드시 resumeTimeline() 보다 먼저 — sendEffect() 가 SDK 의 타임라인 전송을 멈추고 resumeTimeline() 이 푼다.
+        val resent = resendActiveEffectBeforeResume(device, positionMs)
         val resumed = device.resumeTimeline()
         timelinePaused = false
         device.updatePlaybackPosition(positionMs) // Seek
         device.updatePlaybackPosition(positionMs) // 즉시 위치 업데이트
         Log.d(
-            TAG, "resumeTimeline: pos=${positionMs}ms reload=$needsReload resumed=$resumed " +
+            TAG, "resumeTimeline: pos=${positionMs}ms reload=$needsReload resent=$resent resumed=$resumed " +
                 "loaded=${device.isTimelineLoaded()} playing=${device.isTimelinePlaying()}"
         )
+    }
+
+    /** 재개 직전에 [positionMs] 위치의 이펙트를 duration=0 으로 다시 보낸다. 그 위치에 해당하는 이펙트가 없으면 보내지 않는다 */
+    private fun resendActiveEffectBeforeResume(device: Device, positionMs: Long): Boolean {
+        val frame = loadedFrames?.lastOrNull { it.first <= positionMs }?.second ?: return false
+        val payload = runCatching { LSEffectPayload.fromByteArray(frame) }.getOrNull() ?: return false
+        // SDK 타임라인 프레임과 같은 규칙: 프레임 사이에 LED 가 꺼지지 않도록 duration=0
+        return device.sendEffect(payload.copy(duration = 0))
     }
 
     private fun ByteArray.hex(): String = joinToString(" ") { "%02X".format(it) }

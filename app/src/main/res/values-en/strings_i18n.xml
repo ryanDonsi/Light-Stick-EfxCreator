@@ -687,4 +687,13 @@
     <string name="ble_stats_line">Pending %1$d · Peak %2$d · Executed %3$d · Replaced %4$d</string>
     <string name="ble_stats_dropped">Dropped (lost) %1$d</string>
     <string name="ble_stats_reset">Reset statistics</string>
+    <string name="label_show_mode">Show mode</string>
+    <string name="show_mode_desc">Locks the buttons of every light stick in range (except the power button)</string>
+    <string name="label_system_off">SYSTEM OFF</string>
+    <string name="system_off_desc">Powers off every light stick in range (cannot be turned back on from the app)</string>
+    <string name="control_unsupported_title">Unsupported feature</string>
+    <string name="control_unsupported_text">The connected device does not support show control.\nPlease update the firmware to 2.200 or later.</string>
+    <string name="system_off_confirm_title">Power off</string>
+    <string name="system_off_confirm_text">Every light stick in range will be powered off.\nA powered-off light stick cannot be turned on from the app; it has to be turned on with its button.\n\nPower off?</string>
+    <string name="system_off_confirm_ok">Power off</string>
 </resources>

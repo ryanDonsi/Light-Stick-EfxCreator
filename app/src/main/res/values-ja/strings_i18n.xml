@@ -687,4 +687,13 @@
     <string name="ble_stats_line">待機 %1$d · ピーク %2$d · 実行 %3$d · 置換 %4$d</string>
     <string name="ble_stats_dropped">ドロップ(欠落) %1$d</string>
     <string name="ble_stats_reset">統計をリセット</string>
+    <string name="label_show_mode">公演モード</string>
+    <string name="show_mode_desc">信号が届くすべての応援棒のボタン入力を制限 (電源ボタンを除く)</string>
+    <string name="label_system_off">SYSTEM OFF</string>
+    <string name="system_off_desc">信号が届くすべての応援棒の電源を切る (アプリから再度オンにできません)</string>
+    <string name="control_unsupported_title">サポートされていない機能</string>
+    <string name="control_unsupported_text">接続中の機器は公演制御に対応していません。\nファームウェアを2.200以上に更新してからご利用ください。</string>
+    <string name="system_off_confirm_title">電源オフ</string>
+    <string name="system_off_confirm_text">信号が届くすべての応援棒の電源が切れます。\n電源が切れた応援棒はアプリから再度オンにできず、応援棒のボタンで直接オンにする必要があります。\n\n電源を切りますか?</string>
+    <string name="system_off_confirm_ok">電源オフ</string>
 </resources>

@@ -340,10 +340,13 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     val otaProgress by bleVm.otaProgress.collectAsState()
     val otaCheck by bleVm.otaCheck.collectAsState()
     val autoConnectDevices by bleVm.autoConnectDevices.collectAsState()
+    val showMode by bleVm.showMode.collectAsState()
 
     var showInfo by remember { mutableStateOf(false) }
     var showFind by remember { mutableStateOf(false) }
     var showGroup by remember { mutableStateOf(false) }
+    var showSystemOff by remember { mutableStateOf(false) }
+    var showControlUnsupported by remember { mutableStateOf(false) }
 
     val firmwarePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) bleVm.checkFirmware(uri)
@@ -402,6 +405,31 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             enabled = groupAllowed,
             onClick = { showGroup = true }
         )
+        // 공연 제어(FF0A, 펌웨어 2.200+): 항상 보이지만 미지원 기기는 경고 후 막는다
+        HorizontalDivider()
+        ListItem(
+            headlineContent = { Text(Loc.str(R.string.label_show_mode), style = MaterialTheme.typography.titleSmall) },
+            supportingContent = { Text(Loc.str(R.string.show_mode_desc), style = MaterialTheme.typography.bodySmall) },
+            trailingContent = {
+                Switch(
+                    checked = showMode,
+                    enabled = !otaRunning,
+                    onCheckedChange = { enabled ->
+                        if (bleVm.isControlSupported()) bleVm.toggleShowMode(enabled)
+                        else showControlUnsupported = true
+                    }
+                )
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        HorizontalDivider()
+        // 복구 불가 동작이라 확인 다이얼로그를 거친다. 미지원 기기는 그 전에 경고 후 막는다
+        MenuRow(
+            label = Loc.str(R.string.label_system_off),
+            description = Loc.str(R.string.system_off_desc),
+            enabled = !otaRunning,
+            onClick = { if (bleVm.isControlSupported()) showSystemOff = true else showControlUnsupported = true }
+        )
         HorizontalDivider()
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -444,6 +472,27 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             text = { Text(Loc.str(R.string.device_ui_22)) },
             confirmButton = { TextButton(onClick = { showFind = false; bleVm.sendFind() }) { Text(Loc.str(R.string.efx_edit_screen_19)) } },
             dismissButton = { TextButton(onClick = { showFind = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
+        )
+    }
+    if (showControlUnsupported) {
+        AlertDialog(
+            onDismissRequest = { showControlUnsupported = false },
+            title = { Text(Loc.str(R.string.control_unsupported_title)) },
+            text = { Text(Loc.str(R.string.control_unsupported_text)) },
+            confirmButton = { TextButton(onClick = { showControlUnsupported = false }) { Text(Loc.str(R.string.efx_edit_screen_19)) } }
+        )
+    }
+    if (showSystemOff) {
+        AlertDialog(
+            onDismissRequest = { showSystemOff = false },
+            title = { Text(Loc.str(R.string.system_off_confirm_title)) },
+            text = { Text(Loc.str(R.string.system_off_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = { showSystemOff = false; bleVm.systemOff() }) {
+                    Text(Loc.str(R.string.system_off_confirm_ok), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showSystemOff = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
     if (showGroup) {
