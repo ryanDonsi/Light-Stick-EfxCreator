@@ -676,4 +676,24 @@
     <string name="efx_beat_method_forced_desc">BPM은 직접 입력하고, 비트는 소리를 따라 찾습니다\n자동 추정이 BPM을 반이나 두 배로 잘못 잡았을 때 맞는 값을 넣어 다시 찾습니다. 템포가 변하는 곡도 따라갑니다</string>
     <string name="efx_beat_method_grid">템포 고정</string>
     <string name="efx_beat_method_grid_desc">BPM은 입력값 근처에서 앱이 정확히 맞추고, 비트는 일정한 간격으로 고정합니다\n템포가 일정한 곡용입니다. 곡 중간에 반 박자씩 엇나갈 때 효과적이며, 템포가 변하는 곡에는 맞지 않습니다</string>
+    <string name="ble_interval_title">BLE 전송 설정</string>
+    <string name="ble_interval_desc">응원봉으로 보내는 명령은 기기마다 큐에 쌓여 순서대로 나갑니다. 아래 값은 연결된 모든 기기에 공통이며 바로 적용·저장됩니다. 최소 전송 간격은 앞 명령이 끝난 뒤 다음 명령까지 최소한 기다리는 시간, 큐 크기는 기기당 대기 명령 최대 개수입니다(넘치면 가장 오래된 명령이 버려집니다).</string>
+    <string name="ble_interval_label">최소 전송 간격 (ms)</string>
+    <string name="ble_interval_range">%1$d~%2$d 사이로 입력하세요</string>
+    <string name="ble_interval_reset">기본값으로 초기화 (%1$dms / 큐 %2$d)</string>
+    <string name="ble_queue_label">큐 크기 (대기 명령 수)</string>
+    <string name="ble_delay_estimate">예상 최대 지연 ≈ 큐 × 최소 전송 간격 = %1$dms</string>
+    <string name="ble_stats_title">연결된 기기의 큐 상태</string>
+    <string name="ble_stats_line">대기 %1$d · 피크 %2$d · 실행 %3$d · 치환 %4$d</string>
+    <string name="ble_stats_dropped">드롭(유실) %1$d</string>
+    <string name="ble_stats_reset">통계 초기화</string>
+    <string name="label_show_mode">공연 모드</string>
+    <string name="show_mode_desc">신호가 닿는 모든 응원봉의 버튼 입력을 제한 (전원 버튼 제외)</string>
+    <string name="label_system_off">SYSTEM OFF</string>
+    <string name="system_off_desc">신호가 닿는 모든 응원봉의 전원을 끔 (앱에서 다시 켤 수 없음)</string>
+    <string name="control_unsupported_title">지원하지 않는 기능</string>
+    <string name="control_unsupported_text">연결된 기기가 공연 제어를 지원하지 않습니다.\n펌웨어를 2.200 이상으로 업데이트한 뒤 사용해 주세요.</string>
+    <string name="system_off_confirm_title">전원 끄기</string>
+    <string name="system_off_confirm_text">신호가 닿는 모든 응원봉의 전원이 꺼집니다.\n꺼진 응원봉은 앱에서 다시 켤 수 없고, 응원봉의 버튼으로 직접 켜야 합니다.\n\n전원을 끌까요?</string>
+    <string name="system_off_confirm_ok">전원 끄기</string>
 </resources>

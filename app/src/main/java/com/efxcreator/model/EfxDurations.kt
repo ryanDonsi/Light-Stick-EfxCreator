@@ -24,6 +24,23 @@ object EfxDurations {
 
     fun ticksToMs(ticks: Int): Long = ticks.toLong() * UNIT_MS
 
+    /**
+     * 실기기 타임라인(`playTimeline`)으로 보낼 프레임 목록.
+     * SDK 는 이제 payload 의 effectIndex / duration 을 바꾸지 않고 그대로 전송하므로 앱이 값을 책임진다.
+     * - effectIndex: 파일에 저장된 이펙트별 순번 그대로
+     * - duration: 다음 이펙트가 시작될 때까지(또는 그 이후까지) 이어지는 값은 0(다음 명령까지 유지)으로 보낸다.
+     *   전송 지연으로 다음 프레임이 조금 늦게 도착해도 그 사이 LED 가 꺼지지 않게 하기 위해서다 (규격 §4.4 권장).
+     *   다음 이펙트보다 일찍 끝나도록 일부러 짧게 지정한 값은 그대로 보내 그만큼 꺼지게 한다.
+     */
+    fun timelineFrames(entries: List<EfxEntry>): List<Pair<Long, ByteArray>> =
+        entries.mapIndexed { i, e ->
+            val d = e.payload.duration
+            val next = entries.getOrNull(i + 1)?.timestampMs
+            val sendDuration = if (d > 0 && next != null && e.timestampMs + ticksToMs(d) >= next) 0 else d
+            val payload = if (sendDuration == d) e.payload else e.payload.copy(duration = sendDuration)
+            e.timestampMs to payload.toByteArray()
+        }
+
     /** ms → 10ms 단위(올림, 1~65535) */
     fun msToTicks(ms: Long): Int = ((ms + UNIT_MS - 1) / UNIT_MS).coerceIn(1L, MAX_TICKS.toLong()).toInt()
 

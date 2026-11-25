@@ -53,7 +53,7 @@ class SongPreviewState(private val repository: EfxRepository) {
     private fun reloadFrames(projectId: String) {
         val efx = repository.loadEfx(projectId)
         entries = efx?.body?.entries.orEmpty()
-        frames = entries.map { it.timestampMs to it.payload.toByteArray() }
+        frames = com.efxcreator.model.EfxDurations.timelineFrames(entries)
     }
 
     /** 이 곡을 재생/일시정지한다. 다른 곡이 활성이면 그 곡으로 바꾼다. */

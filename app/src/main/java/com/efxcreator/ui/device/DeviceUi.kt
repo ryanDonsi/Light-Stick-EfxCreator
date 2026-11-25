@@ -19,6 +19,10 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material3.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.efxcreator.data.BleCommandSettings
+import com.efxcreator.data.PreferencesManager
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +35,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.viewmodel.BleViewModel
+import com.lightstick.device.CommandQueueStats
 import com.lightstick.device.Device
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import com.lightstick.types.GroupPalette
 import kotlin.math.roundToInt
 import com.efxcreator.R
@@ -333,10 +340,13 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
     val otaProgress by bleVm.otaProgress.collectAsState()
     val otaCheck by bleVm.otaCheck.collectAsState()
     val autoConnectDevices by bleVm.autoConnectDevices.collectAsState()
+    val showMode by bleVm.showMode.collectAsState()
 
     var showInfo by remember { mutableStateOf(false) }
     var showFind by remember { mutableStateOf(false) }
     var showGroup by remember { mutableStateOf(false) }
+    var showSystemOff by remember { mutableStateOf(false) }
+    var showControlUnsupported by remember { mutableStateOf(false) }
 
     val firmwarePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) bleVm.checkFirmware(uri)
@@ -395,6 +405,31 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             enabled = groupAllowed,
             onClick = { showGroup = true }
         )
+        // 공연 제어(FF0A, 펌웨어 2.200+): 항상 보이지만 미지원 기기는 경고 후 막는다
+        HorizontalDivider()
+        ListItem(
+            headlineContent = { Text(Loc.str(R.string.label_show_mode), style = MaterialTheme.typography.titleSmall) },
+            supportingContent = { Text(Loc.str(R.string.show_mode_desc), style = MaterialTheme.typography.bodySmall) },
+            trailingContent = {
+                Switch(
+                    checked = showMode,
+                    enabled = !otaRunning,
+                    onCheckedChange = { enabled ->
+                        if (bleVm.isControlSupported()) bleVm.toggleShowMode(enabled)
+                        else showControlUnsupported = true
+                    }
+                )
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        HorizontalDivider()
+        // 복구 불가 동작이라 확인 다이얼로그를 거친다. 미지원 기기는 그 전에 경고 후 막는다
+        MenuRow(
+            label = Loc.str(R.string.label_system_off),
+            description = Loc.str(R.string.system_off_desc),
+            enabled = !otaRunning,
+            onClick = { if (bleVm.isControlSupported()) showSystemOff = true else showControlUnsupported = true }
+        )
         HorizontalDivider()
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -437,6 +472,27 @@ fun DeviceManageMenu(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             text = { Text(Loc.str(R.string.device_ui_22)) },
             confirmButton = { TextButton(onClick = { showFind = false; bleVm.sendFind() }) { Text(Loc.str(R.string.efx_edit_screen_19)) } },
             dismissButton = { TextButton(onClick = { showFind = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
+        )
+    }
+    if (showControlUnsupported) {
+        AlertDialog(
+            onDismissRequest = { showControlUnsupported = false },
+            title = { Text(Loc.str(R.string.control_unsupported_title)) },
+            text = { Text(Loc.str(R.string.control_unsupported_text)) },
+            confirmButton = { TextButton(onClick = { showControlUnsupported = false }) { Text(Loc.str(R.string.efx_edit_screen_19)) } }
+        )
+    }
+    if (showSystemOff) {
+        AlertDialog(
+            onDismissRequest = { showSystemOff = false },
+            title = { Text(Loc.str(R.string.system_off_confirm_title)) },
+            text = { Text(Loc.str(R.string.system_off_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = { showSystemOff = false; bleVm.systemOff() }) {
+                    Text(Loc.str(R.string.system_off_confirm_ok), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showSystemOff = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
     }
     if (showGroup) {
@@ -655,6 +711,9 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
                 }
             }
         }
+
+        // 연결 여부와 무관한 전역 설정이지만 개발/진단용이라 debug 빌드에서만 보인다
+        if (com.efxcreator.BuildConfig.DEBUG) BleCommandSettingsCard(connected)
     }
 
     if (confirmDisconnect) {
@@ -685,5 +744,120 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
             },
             dismissButton = { TextButton(onClick = { confirmReconnect = false }) { Text(Loc.str(R.string.efx_edit_screen_16)) } }
         )
+    }
+}
+
+
+/**
+ * BLE 명령 큐 설정 카드 (debug 빌드 전용): 전송 간격(ms)과 큐 크기를 정하고, 연결된 기기의 큐 상태를 본다.
+ *
+ * 두 값은 **연결된 모든 기기에 공통**이며, 유효한 값이면 바로 저장하고 SDK 에 적용한다(연결 중인 기기 포함).
+ * 큐는 기기마다 따로 있고 이펙트뿐 아니라 그 기기의 모든 GATT 작업이 공유한다.
+ * 상태의 `드롭`이 0이 아니면 큐가 넘쳐 명령이 버려진 것이다(실행도 콜백도 없음).
+ */
+@Composable
+private fun BleCommandSettingsCard(device: Device?) {
+    val context = LocalContext.current
+    val iMin = PreferencesManager.BLE_INTERVAL_MIN_MS
+    val iMax = PreferencesManager.BLE_INTERVAL_MAX_MS
+    val qMin = PreferencesManager.BLE_QUEUE_MIN
+    val qMax = PreferencesManager.BLE_QUEUE_MAX
+
+    var intervalText by remember { mutableStateOf(BleCommandSettings.currentIntervalMs().toString()) }
+    var queueText by remember { mutableStateOf(BleCommandSettings.currentQueueSize().toString()) }
+    val interval = intervalText.toLongOrNull()
+    val queue = queueText.toIntOrNull()
+    val intervalOk = interval != null && interval in iMin..iMax
+    val queueOk = queue != null && queue in qMin..qMax
+
+    // 연결된 기기의 큐 상태를 주기적으로 갱신한다
+    var stats by remember { mutableStateOf<CommandQueueStats?>(null) }
+    LaunchedEffect(device) {
+        while (isActive) {
+            stats = device?.getCommandQueueStats()
+            delay(500)
+        }
+    }
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(Loc.str(R.string.ble_interval_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                Loc.str(R.string.ble_interval_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = intervalText,
+                    onValueChange = { v ->
+                        intervalText = v.filter { it.isDigit() }.take(4)
+                        val n = intervalText.toLongOrNull()
+                        // 유효한 값이면 바로 저장하고 적용한다
+                        if (n != null && n in iMin..iMax) BleCommandSettings.setIntervalMs(context, n)
+                    },
+                    singleLine = true,
+                    isError = !intervalOk,
+                    label = { Text(Loc.str(R.string.ble_interval_label)) },
+                    supportingText = { if (!intervalOk) Text(Loc.str(R.string.ble_interval_range, iMin, iMax)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(180.dp)
+                )
+                OutlinedTextField(
+                    value = queueText,
+                    onValueChange = { v ->
+                        queueText = v.filter { it.isDigit() }.take(3)
+                        val n = queueText.toIntOrNull()
+                        if (n != null && n in qMin..qMax) BleCommandSettings.setQueueSize(context, n)
+                    },
+                    singleLine = true,
+                    isError = !queueOk,
+                    label = { Text(Loc.str(R.string.ble_queue_label)) },
+                    supportingText = { if (!queueOk) Text(Loc.str(R.string.ble_interval_range, qMin, qMax)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(180.dp)
+                )
+            }
+            if (intervalOk && queueOk && interval != null && queue != null) {
+                Text(
+                    Loc.str(R.string.ble_delay_estimate, queue * interval),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            TextButton(onClick = {
+                BleCommandSettings.resetToDefaults(context)
+                intervalText = BleCommandSettings.currentIntervalMs().toString()
+                queueText = BleCommandSettings.currentQueueSize().toString()
+            }) {
+                Text(Loc.str(R.string.ble_interval_reset, PreferencesManager.BLE_INTERVAL_DEFAULT_MS, PreferencesManager.BLE_QUEUE_DEFAULT))
+            }
+
+            // 연결된 기기의 큐 상태
+            if (device != null) {
+                Text(Loc.str(R.string.ble_stats_title), style = MaterialTheme.typography.titleSmall)
+                val st = stats
+                if (st != null) {
+                    Text(
+                        Loc.str(R.string.ble_stats_line, st.pending, st.peakPending, st.executed, st.replaced),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        Loc.str(R.string.ble_stats_dropped, st.dropped),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (st.dropped > 0) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = {
+                    device.resetCommandQueueStats()
+                    stats = device.getCommandQueueStats()
+                }) { Text(Loc.str(R.string.ble_stats_reset)) }
+            }
+        }
     }
 }
