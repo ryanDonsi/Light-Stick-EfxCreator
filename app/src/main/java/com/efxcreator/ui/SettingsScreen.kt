@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Layers
@@ -38,7 +37,6 @@ import com.efxcreator.ui.sets.EffectSetsPanel
 import com.efxcreator.ui.sets.PaletteSetsPanel
 import com.efxcreator.data.PreferencesManager
 import com.efxcreator.viewmodel.SettingsViewModel
-import com.efxcreator.BuildConfig
 import com.efxcreator.R
 import com.efxcreator.core.Loc
 
@@ -175,7 +173,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxSize().verticalScroll(menuScroll),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            SettingsSection.entries.filter { it.visible }.forEach { item ->
+                            SettingsSection.entries.forEach { item ->
                                 SettingsMenuRow(
                                     item = item,
                                     selected = item == section,
@@ -371,17 +369,6 @@ fun SettingsScreen(
                                 GameSettingsContent(viewModel(), Modifier.fillMaxSize())
                             }
                         }
-                        SettingsSection.BLE_DEBUG -> {
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().height(64.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(Loc.str(R.string.settings_ble_debug_title), style = MaterialTheme.typography.titleMedium)
-                                }
-                                BleDebugSettingsContent(Modifier.fillMaxSize())
-                            }
-                        }
                         SettingsSection.LANGUAGE -> {
                             Column(modifier = Modifier.fillMaxSize()) {
                                 Row(
@@ -408,20 +395,14 @@ enum class SettingsSection(val route: String, private val labelRes: Int, private
     EFFECT_SETS("effect", R.string.settings_screen_19, R.string.settings_screen_20, Icons.Default.AutoAwesome),
     PALETTE_SETS("palette", R.string.settings_screen_21, R.string.settings_screen_22, Icons.Default.Palette),
     GAME("game", R.string.game_title, R.string.game_subtitle, Icons.Default.SportsEsports),
-    LANGUAGE("language", R.string.settings_screen_14, R.string.settings_screen_23, Icons.Default.Language),
-    /** 개발용 — 디버그 빌드에서만 메뉴에 보인다 (release/releaseTest 에서는 항목 자체가 없다) */
-    BLE_DEBUG("ble_debug", R.string.settings_ble_debug_title, R.string.settings_ble_debug_subtitle, Icons.Default.BugReport);
-
-    /** 현재 빌드에서 메뉴에 보이는지 */
-    val visible: Boolean get() = this != BLE_DEBUG || BuildConfig.DEBUG
+    LANGUAGE("language", R.string.settings_screen_14, R.string.settings_screen_23, Icons.Default.Language);
 
     // 언어를 바꾸면 값이 달라지므로 enum 생성 시점이 아니라 읽을 때마다 문자열을 가져온다
     val label: String get() = Loc.str(labelRes)
     val subtitle: String get() = Loc.str(subtitleRes)
 
     companion object {
-        fun from(route: String?): SettingsSection =
-            entries.firstOrNull { it.route == route && it.visible } ?: STORAGE
+        fun from(route: String?): SettingsSection = entries.firstOrNull { it.route == route } ?: STORAGE
     }
 }
 
