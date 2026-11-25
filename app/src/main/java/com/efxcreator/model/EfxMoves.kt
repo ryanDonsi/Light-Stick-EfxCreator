@@ -89,6 +89,6 @@ object EfxMoves {
         val r = move(list, indices, deltaMs, songEndMs) ?: return null
         val order = r.entries.indices.sortedBy { r.entries[it].timestampMs }
         val sorted = order.map { r.entries[it] }
-        return Result(EfxDurations.clamp(EfxDurations.reconcile(list, sorted)), r.movedTimes, order.map { r.origins[it] })
+        return Result(EfxDurations.clamp(sorted), r.movedTimes, order.map { r.origins[it] })
     }
 }

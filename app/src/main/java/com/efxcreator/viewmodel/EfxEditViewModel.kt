@@ -513,7 +513,8 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         val result = EfxMoves.move(current.body.entries, indices, deltaMs, _analysis.value?.durationMs)
             ?: return emptySet()
         _editingEntry.value = null
-        commitDraft(result.entries)
+        // 이동은 저장된 duration 을 그대로 둔다 (다음 이펙트를 넘지 않게 줄이는 것만 한다)
+        commitDraft(result.entries, keepDurations = true)
         return result.movedTimes
     }
 
@@ -548,10 +549,11 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /** 편집 한 번 = 히스토리 한 칸. 새 편집은 Redo 기록을 지운다. */
-    private fun commitDraft(newEntries: List<EfxEntry>) {
+    private fun commitDraft(newEntries: List<EfxEntry>, keepDurations: Boolean = false) {
         val current = _efx.value ?: return
         // 편집 전에 "다음 이펙트까지 꽉 차 있던" 이펙트는 새 간격에 맞춰 길이를 유지한다 (이웃을 지웠을 때 LED 가 일찍 꺼지지 않게)
-        val normalized = normalize(EfxDurations.reconcile(current.body.entries, sortedIndexZero(newEntries)))
+        val sorted = sortedIndexZero(newEntries)
+        val normalized = normalize(if (keepDurations) sorted else EfxDurations.reconcile(current.body.entries, sorted))
         if (normalized == current.body.entries) return
         undoStack.addLast(current.body.entries)
         if (undoStack.size > MAX_HISTORY) undoStack.removeFirst()
