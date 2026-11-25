@@ -21,7 +21,7 @@ import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material3.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import com.efxcreator.data.BleCommandInterval
+import com.efxcreator.data.BleCommandSettings
 import com.efxcreator.data.PreferencesManager
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,7 +35,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.efxcreator.viewmodel.BleViewModel
+import com.lightstick.device.CommandQueueStats
 import com.lightstick.device.Device
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import com.lightstick.types.GroupPalette
 import kotlin.math.roundToInt
 import com.efxcreator.R
@@ -661,7 +664,7 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
         }
 
         // 연결 여부와 무관한 전역 설정이지만 개발/진단용이라 debug 빌드에서만 보인다
-        if (com.efxcreator.BuildConfig.DEBUG) BleCommandIntervalCard()
+        if (com.efxcreator.BuildConfig.DEBUG) BleCommandSettingsCard(connected)
     }
 
     if (confirmDisconnect) {
@@ -697,18 +700,35 @@ fun DeviceSettingsContent(bleVm: BleViewModel, modifier: Modifier = Modifier) {
 
 
 /**
- * BLE 명령 최소 간격(ms) 설정. 응원봉으로 보내는 모든 명령이 앞 명령이 끝난 뒤 이 간격이 지나야 다음 명령이 나간다.
- * 값을 바꾸면 저장하고 바로 SDK 에 적용한다 (연결 중인 기기 포함). 범위 0~1000, 기본 50.
+ * BLE 명령 큐 설정 카드 (debug 빌드 전용): 전송 간격(ms)과 큐 크기를 정하고, 연결된 기기의 큐 상태를 본다.
+ *
+ * 두 값은 **연결된 모든 기기에 공통**이며, 유효한 값이면 바로 저장하고 SDK 에 적용한다(연결 중인 기기 포함).
+ * 큐는 기기마다 따로 있고 이펙트뿐 아니라 그 기기의 모든 GATT 작업이 공유한다.
+ * 상태의 `드롭`이 0이 아니면 큐가 넘쳐 명령이 버려진 것이다(실행도 콜백도 없음).
  */
 @Composable
-private fun BleCommandIntervalCard() {
+private fun BleCommandSettingsCard(device: Device?) {
     val context = LocalContext.current
-    val min = PreferencesManager.BLE_INTERVAL_MIN_MS
-    val max = PreferencesManager.BLE_INTERVAL_MAX_MS
-    val default = PreferencesManager.BLE_INTERVAL_DEFAULT_MS
-    var text by remember { mutableStateOf(PreferencesManager(context).bleMinCommandIntervalMs.toString()) }
-    val value = text.toLongOrNull()
-    val valid = value != null && value in min..max
+    val iMin = PreferencesManager.BLE_INTERVAL_MIN_MS
+    val iMax = PreferencesManager.BLE_INTERVAL_MAX_MS
+    val qMin = PreferencesManager.BLE_QUEUE_MIN
+    val qMax = PreferencesManager.BLE_QUEUE_MAX
+
+    var intervalText by remember { mutableStateOf(BleCommandSettings.currentIntervalMs().toString()) }
+    var queueText by remember { mutableStateOf(BleCommandSettings.currentQueueSize().toString()) }
+    val interval = intervalText.toLongOrNull()
+    val queue = queueText.toIntOrNull()
+    val intervalOk = interval != null && interval in iMin..iMax
+    val queueOk = queue != null && queue in qMin..qMax
+
+    // 연결된 기기의 큐 상태를 주기적으로 갱신한다
+    var stats by remember { mutableStateOf<CommandQueueStats?>(null) }
+    LaunchedEffect(device) {
+        while (isActive) {
+            stats = device?.getCommandQueueStats()
+            delay(500)
+        }
+    }
 
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -718,37 +738,76 @@ private fun BleCommandIntervalCard() {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(Loc.str(R.string.ble_interval_title), style = MaterialTheme.typography.titleSmall)
             Text(
-                Loc.str(R.string.ble_interval_desc, default, min, max),
+                Loc.str(R.string.ble_interval_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
-                    value = text,
+                    value = intervalText,
                     onValueChange = { v ->
-                        text = v.filter { it.isDigit() }.take(4)
-                        val n = text.toLongOrNull()
+                        intervalText = v.filter { it.isDigit() }.take(4)
+                        val n = intervalText.toLongOrNull()
                         // 유효한 값이면 바로 저장하고 적용한다
-                        if (n != null && n in min..max) BleCommandInterval.set(context, n)
+                        if (n != null && n in iMin..iMax) BleCommandSettings.setIntervalMs(context, n)
                     },
                     singleLine = true,
-                    isError = !valid,
+                    isError = !intervalOk,
                     label = { Text(Loc.str(R.string.ble_interval_label)) },
-                    supportingText = { if (!valid) Text(Loc.str(R.string.ble_interval_range, min, max)) },
+                    supportingText = { if (!intervalOk) Text(Loc.str(R.string.ble_interval_range, iMin, iMax)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.width(180.dp)
                 )
-                TextButton(onClick = {
-                    text = default.toString()
-                    BleCommandInterval.set(context, default)
-                }) { Text(Loc.str(R.string.ble_interval_reset, default)) }
-            }
-            if (!BleCommandInterval.isSupported) {
-                Text(
-                    Loc.str(R.string.ble_interval_unsupported),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                OutlinedTextField(
+                    value = queueText,
+                    onValueChange = { v ->
+                        queueText = v.filter { it.isDigit() }.take(3)
+                        val n = queueText.toIntOrNull()
+                        if (n != null && n in qMin..qMax) BleCommandSettings.setQueueSize(context, n)
+                    },
+                    singleLine = true,
+                    isError = !queueOk,
+                    label = { Text(Loc.str(R.string.ble_queue_label)) },
+                    supportingText = { if (!queueOk) Text(Loc.str(R.string.ble_interval_range, qMin, qMax)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.width(180.dp)
                 )
+            }
+            if (intervalOk && queueOk && interval != null && queue != null) {
+                Text(
+                    Loc.str(R.string.ble_delay_estimate, queue * interval),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            TextButton(onClick = {
+                BleCommandSettings.resetToDefaults(context)
+                intervalText = BleCommandSettings.currentIntervalMs().toString()
+                queueText = BleCommandSettings.currentQueueSize().toString()
+            }) {
+                Text(Loc.str(R.string.ble_interval_reset, PreferencesManager.BLE_INTERVAL_DEFAULT_MS, PreferencesManager.BLE_QUEUE_DEFAULT))
+            }
+
+            // 연결된 기기의 큐 상태
+            if (device != null) {
+                Text(Loc.str(R.string.ble_stats_title), style = MaterialTheme.typography.titleSmall)
+                val st = stats
+                if (st != null) {
+                    Text(
+                        Loc.str(R.string.ble_stats_line, st.pending, st.peakPending, st.executed, st.replaced),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        Loc.str(R.string.ble_stats_dropped, st.dropped),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (st.dropped > 0) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = {
+                    device.resetCommandQueueStats()
+                    stats = device.getCommandQueueStats()
+                }) { Text(Loc.str(R.string.ble_stats_reset)) }
             }
         }
     }

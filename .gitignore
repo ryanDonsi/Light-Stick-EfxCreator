@@ -1,6 +1,8 @@
 # Built application files
 *.apk
 *.aar
+# SDK 라이브러리(app/libs)는 저장소에 포함한다 (Light-Stick-Music 과 동일)
+!app/libs/*.aar
 *.ap_
 *.aab
 

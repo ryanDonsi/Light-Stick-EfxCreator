@@ -676,10 +676,15 @@
     <string name="efx_beat_method_forced_desc">BPM 由您输入，节拍跟随声音寻找\n当自动估计把 BPM 误判为一半或两倍时，输入正确的值重新寻找。速度变化的歌曲也能跟上</string>
     <string name="efx_beat_method_grid">固定速度</string>
     <string name="efx_beat_method_grid_desc">BPM 由应用在输入值附近精确调整，节拍固定为均匀间隔\n适用于速度稳定的歌曲。适合中途节拍偏移半拍的情况，不适合速度变化的歌曲</string>
-    <string name="ble_interval_title">BLE 指令间隔</string>
-    <string name="ble_interval_desc">上一条指令结束后,经过此时间才会发送下一条指令。默认 %1$dms,范围 %2$d~%3$dms。间隔过大可能使连续发送变慢。</string>
+    <string name="ble_interval_title">BLE 传输设置</string>
+    <string name="ble_interval_desc">发送给应援棒的指令按设备排入队列并依次发送。以下数值对所有已连接设备通用,并会立即应用和保存。间隔为上一条指令结束到下一条指令的最短时间,队列大小为每台设备的最大待发指令数(溢出时最旧的指令会被丢弃)。</string>
     <string name="ble_interval_label">间隔 (ms)</string>
     <string name="ble_interval_range">请输入 %1$d~%2$d 之间的值</string>
-    <string name="ble_interval_reset">默认值 (%1$dms)</string>
-    <string name="ble_interval_unsupported">当前 SDK 版本不支持此设置,更新 SDK 后即可生效。</string>
+    <string name="ble_interval_reset">恢复默认值 (%1$dms / 队列 %2$d)</string>
+    <string name="ble_queue_label">队列大小 (待发指令数)</string>
+    <string name="ble_delay_estimate">预计最大延迟 ≈ 队列 × 间隔 = %1$dms</string>
+    <string name="ble_stats_title">已连接设备的队列状态</string>
+    <string name="ble_stats_line">待发 %1$d · 峰值 %2$d · 已执行 %3$d · 已替换 %4$d</string>
+    <string name="ble_stats_dropped">丢弃(丢失) %1$d</string>
+    <string name="ble_stats_reset">重置统计</string>
 </resources>
