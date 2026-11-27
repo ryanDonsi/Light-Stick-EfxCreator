@@ -594,6 +594,10 @@ fun EfxTabletEditorScreen(
                                 // 옮긴 자리에 이펙트가 있으면 지우지 않고 서로 자리를 바꾼다
                                 editVm.moveTimelineEntries(listOf(index), newMs - moved.timestampMs)
                             },
+                            onEntryResize = { index, left, edgeMs ->
+                                // 끝을 끌어 길이를 바꾼다. 겹치는 이펙트는 덮어쓰고, 바뀐 이펙트는 선택을 이어 간다
+                                editVm.resizeTimelineEntry(index, left, edgeMs)?.let { pendingSelectTs = it }
+                            },
                             onBoundsChanged = { timelineBounds = it }
                         )
                         TimelineScrollBar(timeline = timeline, durationMs = durationMs)

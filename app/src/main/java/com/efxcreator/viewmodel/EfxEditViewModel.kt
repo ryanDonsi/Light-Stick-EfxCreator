@@ -14,6 +14,7 @@ import com.efxcreator.music.MusicAnalysis
 import com.efxcreator.music.sets.GenerationOptions
 import com.efxcreator.model.EfxDurations
 import com.efxcreator.model.EfxMoves
+import com.efxcreator.model.EfxResize
 import com.efxcreator.model.EfxOverwrite
 import com.lightstick.efx.Efx
 import com.lightstick.efx.EfxBody
@@ -516,6 +517,18 @@ class EfxEditViewModel(application: Application) : AndroidViewModel(application)
         // 이동은 저장된 duration 을 그대로 둔다 (다음 이펙트를 넘지 않게 줄이는 것만 한다)
         commitDraft(result.entries, keepDurations = true)
         return result.movedTimes
+    }
+
+    /**
+     * 선택한 이펙트의 왼쪽([left]) 또는 오른쪽 끝을 [edgeMs] 로 옮겨 길이를 바꾼다 (겹친 이펙트는 덮어씀).
+     * 바뀐 이펙트의 새 시작 시각을 돌려준다 (선택을 이어 가는 데 쓴다). 바뀐 것이 없으면 null.
+     */
+    fun resizeTimelineEntry(index: Int, left: Boolean, edgeMs: Long): Long? {
+        val current = _efx.value ?: return null
+        val r = EfxResize.resize(current.body.entries, index, left, edgeMs, _analysis.value?.durationMs) ?: return null
+        _editingEntry.value = null
+        commitDraft(r.entries, keepDurations = true)
+        return r.startMs
     }
 
     fun deleteTimelineEntry(index: Int) {

@@ -52,6 +52,7 @@ import com.lightstick.types.EffectType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import com.efxcreator.model.EfxMoves
+import com.efxcreator.model.EfxResize
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
@@ -95,6 +96,8 @@ class TimelineState {
     }
 
     fun msAtX(x: Float): Float = viewStartMs + x / pxPerMs
+
+    fun xOfMs(ms: Float): Float = (ms - viewStartMs) * pxPerMs
 
     /** 현재 위치 드래그용: 화면 안 + 0 ~ 곡 길이로 제한해 플레이헤드가 화면 밖으로 사라지지 않게 한다 */
     fun seekMsAtX(x: Float, durationMs: Long): Long {
@@ -144,6 +147,8 @@ private val SECTION_H = 22.dp
 private val BEAT_H = 22.dp
 private val LANE_GAP = 6.dp
 private val LANE_H = 72.dp
+private val HANDLE_RADIUS = 9.dp
+private val HANDLE_HIT = 28.dp
 val TIMELINE_TOTAL_HEIGHT = RULER_H + WAVE_H + SECTION_H + BEAT_H + LANE_GAP + LANE_H
 
 /**
@@ -218,7 +223,7 @@ private fun DrawScope.drawEffectBlock(
     )
 }
 
-private enum class DragMode { NONE, SEEK, PAN, MOVE, GROUP, MARQUEE }
+private enum class DragMode { NONE, SEEK, PAN, MOVE, GROUP, MARQUEE, RESIZE }
 
 /**
  * 타임라인 블록마다 "지금 화면에 보이는 위치"를 들고 있다가 목표 위치로 부드럽게 다가가게 한다.
@@ -310,6 +315,8 @@ fun TimelineView(
     onSeekFinished: (Long) -> Unit = {},
     onEntryClick: (Int) -> Unit,
     onEntryMove: (Int, Long) -> Unit,
+    /** 선택한 이펙트의 끝을 끌어 길이를 바꿨다: (인덱스, 왼쪽 끝이면 true, 새 끝 시각 ms) */
+    onEntryResize: (Int, Boolean, Long) -> Unit = { _, _, _ -> },
     onEntryToggle: (Int) -> Unit = {},
     onSelectionChange: (Set<Int>) -> Unit = {},
     /** 선택한 이펙트들을 함께 옮긴다: (인덱스들, 이동량 ms) */
@@ -370,6 +377,8 @@ fun TimelineView(
     val lastSeekMs = remember { longArrayOf(0L) }
     val onEntryClickState by rememberUpdatedState(onEntryClick)
     val onEntryMoveState by rememberUpdatedState(onEntryMove)
+    val onEntryResizeState by rememberUpdatedState(onEntryResize)
+    val selectedIndexState by rememberUpdatedState(selectedIndex)
     val selectModeState by rememberUpdatedState(selectMode)
     val selectedIndicesState by rememberUpdatedState(selectedIndices)
     val onEntryToggleState by rememberUpdatedState(onEntryToggle)
@@ -382,6 +391,14 @@ fun TimelineView(
     val drag = remember { DragHolder() }
     var dragIndex by remember { mutableIntStateOf(-1) }
     var dragDeltaMs by remember { mutableFloatStateOf(0f) }
+    // 길이 조정(양 끝 핸들 드래그): 조정 중인 이펙트, 어느 쪽 끝인지, 손가락을 잡은 위치와 끝의 차이(ms), 미리보기 결과
+    var resizeIndex by remember { mutableIntStateOf(-1) }
+    var resizeLeft by remember { mutableStateOf(false) }
+    var resizeGrabMs by remember { mutableFloatStateOf(0f) }
+    var resizeEdgeMs by remember { mutableLongStateOf(0L) }
+    var resizePreview by remember { mutableStateOf<EfxResize.Result?>(null) }
+    val handleHitPx = with(density) { HANDLE_HIT.toPx() }
+    val handleRadiusPx = with(density) { HANDLE_RADIUS.toPx() }
     // 선택 모드의 범위 선택(마키): 시작/끝 시각(ms), 없으면 -1
     var marqueeA by remember { mutableFloatStateOf(-1f) }
     var marqueeB by remember { mutableFloatStateOf(-1f) }
@@ -407,6 +424,19 @@ fun TimelineView(
         if (idx < 0) return -1
         val end = TimelineMath.blocks(list, currentDuration)[idx].endMs
         return if (ms <= end) idx else -1
+    }
+
+    /** 선택된 이펙트의 좌/우 핸들 근처를 눌렀나: (인덱스, 왼쪽이면 true) 또는 null */
+    fun handleAt(x: Float, y: Float, hit: Float = handleHitPx): Pair<Int, Boolean>? {
+        val idx = selectedIndexState
+        val list = currentEntries
+        if (selectModeState || idx !in list.indices || !EfxResize.resizable(list[idx])) return null
+        if (y < laneTop || y > laneTop + laneH) return null
+        val b = TimelineMath.blocks(list, currentDuration)[idx]
+        val dl = abs(x - state.xOfMs(b.startMs.toFloat()))
+        val dr = abs(x - state.xOfMs(b.endMs.toFloat()))
+        if (min(dl, dr) > hit) return null
+        return idx to (dl < dr)
     }
 
     fun snapMs(ms: Long): Long {
@@ -566,6 +596,7 @@ fun TimelineView(
                 detectTapGestures { o ->
                     if (suppressNextTap) { suppressNextTap = false; return@detectTapGestures }
                     if (o.y >= laneTop) {
+                        if (handleAt(o.x, o.y, handleRadiusPx * 1.4f) != null) return@detectTapGestures   // 핸들을 눌렀을 뿐이면 선택을 바꾸지 않는다
                         val idx = blockAt(o.x)
                         if (selectModeState) { if (idx >= 0) onEntryToggleState(idx) } else onEntryClickState(idx)
                     } else {
@@ -578,7 +609,17 @@ fun TimelineView(
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { o ->
-                        if (o.y >= laneTop) {
+                        val handle = if (o.y >= laneTop) handleAt(o.x, o.y) else null
+                        if (handle != null) {
+                            val b = TimelineMath.blocks(currentEntries, currentDuration)[handle.first]
+                            val edge = if (handle.second) b.startMs else b.endMs
+                            drag.mode = DragMode.RESIZE
+                            resizeIndex = handle.first
+                            resizeLeft = handle.second
+                            resizeGrabMs = edge - state.msAtX(o.x)
+                            resizeEdgeMs = edge
+                            resizePreview = null
+                        } else if (o.y >= laneTop) {
                             val idx = blockAt(o.x)
                             if (selectModeState && idx < 0) {
                                 // 선택 모드에서 빈 곳을 끌면 범위 선택
@@ -611,10 +652,19 @@ fun TimelineView(
                             DragMode.PAN -> state.panByMs(-amount.x / state.pxPerMs, currentDuration)
                             DragMode.MOVE, DragMode.GROUP -> dragDeltaMs += amount.x / state.pxPerMs
                             DragMode.MARQUEE -> marqueeB = state.msAtX(change.position.x)
+                            DragMode.RESIZE -> {
+                                resizeEdgeMs = snapMs((state.msAtX(change.position.x) + resizeGrabMs).toLong())
+                                resizePreview = EfxResize.resize(currentEntries, resizeIndex, resizeLeft, resizeEdgeMs, currentDuration)
+                            }
                             DragMode.NONE -> Unit
                         }
                     },
                     onDragEnd = {
+                        if (drag.mode == DragMode.RESIZE && resizeIndex >= 0) {
+                            if (resizePreview != null) onEntryResizeState(resizeIndex, resizeLeft, resizeEdgeMs)
+                            resizeIndex = -1
+                            resizePreview = null
+                        }
                         if (drag.mode == DragMode.SEEK) onSeekFinishedState(lastSeekMs[0])
                         if (drag.mode == DragMode.MOVE || drag.mode == DragMode.GROUP) settling = true
                         if (drag.mode == DragMode.MOVE && dragIndex >= 0) {
@@ -648,6 +698,8 @@ fun TimelineView(
                         dragDeltaMs = 0f
                     },
                     onDragCancel = {
+                        resizeIndex = -1
+                        resizePreview = null
                         if (drag.mode == DragMode.SEEK) onSeekFinishedState(lastSeekMs[0])
                         if (drag.mode == DragMode.MOVE || drag.mode == DragMode.GROUP) settling = true
                         marqueeA = -1f
@@ -783,8 +835,11 @@ fun TimelineView(
         drawBeats(laneTop, laneTop + laneH, beatLight.copy(alpha = 0.09f), beatLight.copy(alpha = 0.25f), withNumbers = false)
         // 블록마다 애니메이션이 만든 "지금 보이는 위치"로 그린다 (끌 때 이웃이 비켜 미끄러지고, 놓으면 자리로 정렬)
         @Suppress("UNUSED_VARIABLE") val animFrame = animTick
-        val blocks = TimelineMath.blocks(entries, durationMs)
-        val animOk = anim.curStart.size == blocks.size
+        val preview = resizePreview
+        val drawEntries = preview?.entries ?: entries
+        val pickedIndex = if (preview != null) preview.index else selectedIndex
+        val blocks = TimelineMath.blocks(drawEntries, durationMs)
+        val animOk = preview == null && anim.curStart.size == blocks.size
         for (b in blocks) {
             val moving = b.index in anim.movedSet
             val x0 = xOf(if (animOk) anim.curStart[b.index] else b.startMs.toFloat())
@@ -794,7 +849,7 @@ fun TimelineView(
             val p = b.entry.payload
             val left = max(-2f, x0)
             val width = max(2f, min(x1, w + 2f) - left - 1f)
-            val isPicked = if (anim.movedSet.isNotEmpty()) moving else if (selectMode) b.index in selectedIndices else b.index == selectedIndex
+            val isPicked = if (anim.movedSet.isNotEmpty()) moving else if (selectMode) b.index in selectedIndices else b.index == pickedIndex
             // 선택 모드에서는 선택되지 않은 블록을 흐리게 해서 선택된 것이 도드라지게 한다
             val alpha = when {
                 moving -> 0.7f
@@ -814,6 +869,17 @@ fun TimelineView(
                     Offset(left, laneTop + 3f), Size(width, laneH - 6f),
                     style = Stroke(width = if (selectMode) 4f else 3f)
                 )
+                if (!selectMode && !moving && EfxResize.resizable(b.entry)) {
+                    // 길이 조정 핸들: 좌/우 테두리 위의 동그라미 (끌어서 길이를 바꿀 수 있다는 표시)
+                    val cy = laneTop + laneH / 2f
+                    val active = drag.mode == DragMode.RESIZE
+                    for (edgeX in listOf(x0, x1)) {
+                        if (edgeX < -handleRadiusPx || edgeX > w + handleRadiusPx) continue
+                        drawCircle(Color.Black.copy(alpha = 0.35f), handleRadiusPx + 2f, Offset(edgeX, cy + 1.5f))
+                        drawCircle(Color.White, handleRadiusPx, Offset(edgeX, cy))
+                        drawCircle(cs.primary, handleRadiusPx, Offset(edgeX, cy), style = Stroke(width = if (active) 4f else 3f))
+                    }
+                }
                 if (selectMode && width > 26f) {
                     // 선택됨 표시: 블록 오른쪽 위의 체크 원
                     val r = 9f
