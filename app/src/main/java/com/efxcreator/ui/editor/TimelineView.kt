@@ -840,6 +840,8 @@ fun TimelineView(
         val pickedIndex = if (preview != null) preview.index else selectedIndex
         val blocks = TimelineMath.blocks(drawEntries, durationMs)
         val animOk = preview == null && anim.curStart.size == blocks.size
+        var handleL = Float.NaN
+        var handleR = Float.NaN
         for (b in blocks) {
             val moving = b.index in anim.movedSet
             val x0 = xOf(if (animOk) anim.curStart[b.index] else b.startMs.toFloat())
@@ -863,23 +865,13 @@ fun TimelineView(
                 bg = Color(p.backgroundColor.r, p.backgroundColor.g, p.backgroundColor.b),
                 left = left, top = laneTop + 3f, width = width, height = laneH - 6f, alpha = alpha
             )
+            if (isPicked && !selectMode && !moving && EfxResize.resizable(b.entry)) { handleL = x0; handleR = x1 }
             if (isPicked) {
                 drawRect(
                     if (selectMode) cs.primary else Color.White,
                     Offset(left, laneTop + 3f), Size(width, laneH - 6f),
                     style = Stroke(width = if (selectMode) 4f else 3f)
                 )
-                if (!selectMode && !moving && EfxResize.resizable(b.entry)) {
-                    // 길이 조정 핸들: 좌/우 테두리 위의 동그라미 (끌어서 길이를 바꿀 수 있다는 표시)
-                    val cy = laneTop + laneH / 2f
-                    val active = drag.mode == DragMode.RESIZE
-                    for (edgeX in listOf(x0, x1)) {
-                        if (edgeX < -handleRadiusPx || edgeX > w + handleRadiusPx) continue
-                        drawCircle(Color.Black.copy(alpha = 0.35f), handleRadiusPx + 2f, Offset(edgeX, cy + 1.5f))
-                        drawCircle(Color.White, handleRadiusPx, Offset(edgeX, cy))
-                        drawCircle(cs.primary, handleRadiusPx, Offset(edgeX, cy), style = Stroke(width = if (active) 4f else 3f))
-                    }
-                }
                 if (selectMode && width > 26f) {
                     // 선택됨 표시: 블록 오른쪽 위의 체크 원
                     val r = 9f
@@ -899,6 +891,21 @@ fun TimelineView(
                     ),
                     maxWidth = width - 8f
                 )
+            }
+        }
+
+        // ── 길이 조정 핸들: 다른 블록에 가려지지 않게 모든 블록 위에 그린다. 테두리 없이 그림자로 떠 있는 느낌 ──
+        if (!handleL.isNaN()) {
+            val cy = laneTop + laneH / 2f
+            val lift = if (drag.mode == DragMode.RESIZE) 1.25f else 1f
+            for (edgeX in listOf(handleL, handleR)) {
+                if (edgeX < -handleRadiusPx * 2 || edgeX > w + handleRadiusPx * 2) continue
+                val r = handleRadiusPx * lift
+                // 부드러운 그림자: 아래로 살짝 치우친 반투명 원을 겹친다
+                for (i in 4 downTo 1) {
+                    drawCircle(Color.Black.copy(alpha = 0.07f), r + i * 2.5f, Offset(edgeX, cy + 3f + i))
+                }
+                drawCircle(Color.White, r, Offset(edgeX, cy))
             }
         }
 
