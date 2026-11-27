@@ -1,10 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- GLOWSYNC 로고를 Safe Zone 내에 맞게 축소 -->
-    <!-- Safe Zone: 66dp, 로고: 60dp x 20dp (3:1 비율 유지) -->
-    <item
-        android:width="60dp"
-        android:height="20dp"
-        android:gravity="center"
-        android:drawable="@drawable/logo_glowsync" />
-</layer-list>
+<!-- GLOWSYNC EfxCreator 런처 아이콘 전경: 네온 G + 원형 레벨미터 스펙트럼 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 꺼진 레벨미터 칸 -->
+    <path
+        android:pathData="M72.39,38.57 L73.92,37.29 M74.68,36.64 L76.22,35.36 M69.49,31.88 L70.63,30.24 M63.23,28.63 L63.92,26.75 M50.35,33.32 L50.01,31.35 M49.83,30.36 L49.49,28.39 M49.31,27.41 L48.96,25.44 M42.59,29.53 L41.74,27.72 M34.34,40.23 L32.70,39.09 M31.88,38.51 L30.24,37.37 M34.27,46.82 L32.39,46.13 M31.45,45.79 L29.57,45.11 M28.63,44.77 L26.75,44.08 M27.10,51.65 L25.11,51.47 M32.25,64.14 L30.44,64.99 M29.53,65.41 L27.72,66.26 M37.91,67.50 L36.38,68.78 M35.61,69.43 L34.08,70.71 M33.32,71.36 L31.78,72.64 M38.51,76.12 L37.37,77.76 M44.77,79.37 L44.08,81.25 M52.17,74.92 L52.00,76.91 M51.91,77.91 L51.73,79.90 M51.65,80.90 L51.47,82.89 M58.69,80.59 L59.04,82.56 M64.14,75.75 L64.99,77.56 M65.41,78.47 L66.26,80.28 M71.36,74.68 L72.64,76.22 M73.66,67.77 L75.30,68.91 M76.12,69.49 L77.76,70.63 M79.37,63.23 L81.25,63.92 M80.90,56.35 L82.89,56.53"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeAlpha="0.06"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="butt" />
+
+    <!-- 레벨미터 1단 -->
+    <path
+        android:pathData="M65.49,44.36 L67.02,43.07 M62.60,41.71 L63.75,40.07 M59.13,39.90 L59.81,38.03 M55.31,39.06 L55.48,37.06 M51.40,39.23 L51.05,37.26 M47.66,40.41 L46.82,38.59 M44.36,42.51 L43.07,40.98 M41.71,45.40 L40.07,44.25 M39.90,48.87 L38.03,48.19 M39.06,52.69 L37.06,52.52 M39.23,56.60 L37.26,56.95 M40.41,60.34 L38.59,61.18 M42.51,63.64 L40.98,64.93 M45.40,66.29 L44.25,67.93 M48.87,68.10 L48.19,69.97 M52.69,68.94 L52.52,70.94 M56.60,68.77 L56.95,70.74 M60.34,67.59 L61.18,69.41 M63.64,65.49 L64.93,67.02 M66.29,62.60 L67.93,63.75 M68.10,59.13 L69.97,59.81 M68.94,55.31 L70.94,55.48"
+        android:strokeColor="#FFA774FF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="butt" />
+
+    <!-- 레벨미터 2단 -->
+    <path
+        android:pathData="M67.79,42.43 L69.32,41.14 M64.32,39.26 L65.47,37.62 M60.16,37.09 L60.84,35.21 M55.57,36.07 L55.74,34.08 M50.87,36.27 L50.53,34.30 M46.39,37.69 L45.55,35.87 M42.43,40.21 L41.14,38.68 M39.26,43.68 L37.62,42.53 M37.09,47.84 L35.21,47.16 M36.07,52.43 L34.08,52.26 M36.27,57.13 L34.30,57.47 M37.69,61.61 L35.87,62.45 M40.21,65.57 L38.68,66.86 M43.68,68.74 L42.53,70.38 M47.84,70.91 L47.16,72.79 M52.43,71.93 L52.26,73.92 M57.13,71.73 L57.47,73.70 M61.61,70.31 L62.45,72.13 M65.57,67.79 L66.86,69.32 M68.74,64.32 L70.38,65.47 M70.91,60.16 L72.79,60.84 M71.93,55.57 L73.92,55.74"
+        android:strokeColor="#FFBD8CDB"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="butt" />
+
+    <!-- 레벨미터 3단 -->
+    <path
+        android:pathData="M70.09,40.50 L71.62,39.22 M66.05,36.80 L67.19,35.16 M61.18,34.27 L61.87,32.39 M55.83,33.08 L56.00,31.09 M45.13,34.97 L44.28,33.15 M40.50,37.91 L39.22,36.38 M36.80,41.95 L35.16,40.81 M33.08,52.17 L31.09,52.00 M33.32,57.65 L31.35,57.99 M34.97,62.87 L33.15,63.72 M41.95,71.20 L40.81,72.84 M46.82,73.73 L46.13,75.61 M57.65,74.68 L57.99,76.65 M62.87,73.03 L63.72,74.85 M67.50,70.09 L68.78,71.62 M71.20,66.05 L72.84,67.19 M73.73,61.18 L75.61,61.87 M74.92,55.83 L76.91,56.00"
+        android:strokeColor="#FFD3A4B7"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="butt" />
+
+    <!-- 레벨미터 4단 -->
+    <path
+        android:pathData="M67.77,34.34 L68.91,32.70 M62.21,31.45 L62.89,29.57 M56.09,30.09 L56.27,28.10 M43.86,32.25 L43.01,30.44 M38.57,35.61 L37.29,34.08 M30.09,51.91 L28.10,51.73 M30.36,58.17 L28.39,58.51 M40.23,73.66 L39.09,75.30 M45.79,76.55 L45.11,78.43 M58.17,77.64 L58.51,79.61 M69.43,72.39 L70.71,73.92 M76.55,62.21 L78.43,62.89 M77.91,56.09 L79.90,56.27"
+        android:strokeColor="#FFE9BC93"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="butt" />
+
+    <!-- 레벨미터 5단 -->
+    <path
+        android:pathData="M56.35,27.10 L56.53,25.11 M36.64,33.32 L35.36,31.78 M27.41,58.69 L25.44,59.04"
+        android:strokeColor="#FFFFD46F"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="butt" />
+
+    <!-- 네온 G 번짐 -->
+    <path
+        android:pathData="M63.58,45.97 A12.5,12.5 0 1,0 66.45,55.09 L54,55.09"
+        android:strokeColor="#FFA774FF"
+        android:strokeAlpha="0.35"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- 네온 G 심지 -->
+    <path
+        android:pathData="M63.58,45.97 A12.5,12.5 0 1,0 66.45,55.09 L54,55.09"
+        android:strokeColor="#FFF1E6FF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
