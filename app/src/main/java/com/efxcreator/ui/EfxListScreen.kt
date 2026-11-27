@@ -422,7 +422,7 @@ fun EfxListScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AppIcon(size = 36.dp)
                         Spacer(Modifier.width(12.dp))
-                        Text("GLOWSYNC Editor")
+                        Text("GLOWSYNC Pro")
                     }
                 },
                 actions = {
